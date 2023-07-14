@@ -5,7 +5,7 @@ library(SpATS)
 library(tidyverse)
 library(viridis)
 # Read in data and change NP so all NP fields have the same loc but different fields --> range/row are unique within a field
-hybrids <- read.table('HIPS_2022_V2.3.tsv', header = TRUE, sep = '\t') %>%
+hybrids <- read.table('outData/HIPS_2022_V2.5.tsv', header = TRUE, sep = '\t') %>%
   filter(population == 'Hybrid') %>%
   mutate(field = case_when(loc=='North Platte1' ~ 'Full Irrigation',
                            loc=='North Platte2' ~ 'Partial Irrigation',

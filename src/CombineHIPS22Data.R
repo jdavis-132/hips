@@ -2,6 +2,7 @@ library(tidyverse)
 library(readxl)
 library(readr)
 library(grDevices)
+library(lubridate)
 # Read in field data
 linc22combined <- read_excel("data/Summary of Lincoln Hybrid HIPS 2022 Data.xlsx", 
                              sheet = "Combined Dataset", col_types = c("text", 
@@ -2104,8 +2105,11 @@ hips_v2.5 <- hips_v2.5 %>%
          notes = str_c(notes, notes.mv, sep = ';')) %>%
   select(!contains('.mv')) %>%
   ungroup() %>%
-  mutate(across(where(is.double) & !where(is.POSIXct), ~na_if(., -Inf))))
-
+  mutate(across(where(is.double) & !where(is.POSIXct), ~na_if(., -Inf))) %>%
+  mutate(across(where(is.integer), ~na_if(., as.integer(-Inf)))) %>%
+  mutate(across(where(is.POSIXct), ~na_if(., as.POSIXct(-Inf))))
+# Export v2.5
+write.table(hips_v2.5, 'outData/HIPS_2022_V2.5.tsv', sep = '\t', row.names = FALSE, col.names = TRUE)
 
 
 
