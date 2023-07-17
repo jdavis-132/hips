@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-df = pd.read_excel("../data/NIRData.xlsx")
+df = pd.read_excel("NIRData.xlsx")
 dd = {}
 for index, row in df.iterrows():
     myid = str(row["Sample ID"]).upper().replace(' ','')
@@ -91,7 +91,7 @@ for myid in dd:
         myhybrid = idfields[3]
 
     plist = [dd[myid]["RawBC"],mylocation,mynitrogen,myirrigation,myrep,myrow,myrange,myplot,myhybrid]
-    for x in ["StarchPCT","ProteinPCT","OilPCT","FiberPCT","AshPCT", "MoisturePCT"]:
+    for x in ["StarchPCT","ProteinPCT","OilPCT","FiberPCT","AshPCT"]:
         if len(dd[myid][x]) == 0:
             plist.append('')
         else:

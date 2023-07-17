@@ -1369,16 +1369,21 @@ hips1.5_genoFixKey <- tibble(orig = hips1.5genos_fix, correct = hips1.5genos_cor
 
 # Okay, let's try just putting together the nir and ear data cleaned by schnable
 # Read in new nir file
-nir_v2 <- read_excel("data/HybridHIPS_plotlevelNIR_v2.xlsx")
+nir_v2 <- read_csv("data/HybridHIPS_plotlevelNIR_v2.5.csv", 
+                   col_names = c('qr', 'loc', 'nLvl', 'irrigation', 'rep', 'row', 'range', 'plot', 'genotype',
+                                 'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh',
+                                 'pctMoistureNIR'),
+                   col_types = c(rep('c', 4), rep('i', 4), 'c', rep('d', 7)))
 # Change column names
-orig_colnames_nirv2 <- colnames(nir_v2)
-colnames(nir_v2) <- c('qr', 'loc', 'nLvl', 'irrigation', 'row', 'range', 'genotype', 
-                      'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh')
+# orig_colnames_nirv2 <- colnames(nir_v2)
+# colnames(nir_v2) <- c('qr', 'loc', 'nLvl', 'irrigation', 'row', 'range', 'genotype', 
+#                       'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh')
 # Separate by location and parse
 nir_v2_np <- filter(nir_v2, str_detect(loc, 'Platte')) %>%
   parseNorthPlatteQR()
 nir_v2_lnk <- filter(nir_v2, str_detect(loc, 'Lincoln')) %>%
-  parseLincolnQR()
+  parseLincolnQR() %>%
+  mutate(rep = as.numeric(rep))
 nir_v2_mv <- filter(nir_v2, str_detect(loc, 'Missouri Valley')) %>%
   parseMissouriValleyQR()
 nir_v2_sb <- filter(nir_v2, str_detect(loc, 'Scottsbluff')|str_detect(str_to_upper(qr), 'ROW 23 RANGE 26 PLOT# 1099')) %>%
@@ -1748,9 +1753,9 @@ colnames(mv_hyb) <- c('exp', 'check', 'genotype', 'plot', 'latitude', 'longitude
 # And add metadata
 # And drop plotDiscarded & columns moved to notes
 mv_hyb <- mv_hyb %>%
-  filter(is.na(plotDiscarded) & !is.na(genotype) & exp=='ISU.IA.MOValley') %>%
+  filter(is.na(plotDiscarded) & !is.na(genotype) & exp == 'ISU.IA.MOValley') %>%
   rowwise() %>%
-  mutate(notes = case_when(check=='Y' ~ 'Check'),
+  mutate(notes = case_when(check == 'Y' ~ 'Check'),
          genotype = str_to_upper(genotype),
          loc = 'Missouri Valley',
          field = 'Hybrid HIPS',
@@ -2102,7 +2107,11 @@ hips_v2.5 <- hips_v2.5 %>%
          field = max(field, field.mv, na.rm = TRUE),
          nLvl = max(nLvl, nLvl.mv, na.rm = TRUE),
          irrigation = max(irrigation, irrigation.mv, na.rm = TRUE),
-         notes = str_c(notes, notes.mv, sep = ';')) %>%
+         notes = str_c(notes, notes.mv, sep = ';'),
+         moistureCorrectedKernelMass = kernelMass/(1 - pctMoistureNIR),
+         moistureCorrectedHundredKernelWt = hundredKernelWt/(1 - pctMoistureNIR)) %>%
+  mutate(plantHt = case_when(loc=='Scottsbluff' & plot==1172 ~ NA, .default = plantHt),
+         shelledCobWidth = case_when(shelledCobWidth > earWidth ~ NA, .default = shelledCobWidth)) %>%
   select(!contains('.mv')) %>%
   ungroup() %>%
   mutate(across(where(is.double) & !where(is.POSIXct), ~na_if(., -Inf))) %>%
@@ -2330,5 +2339,4 @@ c_inb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
 
 plantDataEast <- bind_rows(ames_hyb1, ames_hyb2, ames_hyb3, ames_inb1, ames_inb2, ames_inb3, 
                            c_hyb1, c_hyb2, c_hyb3, c_inb1, c_inb2, c_inb3)
-# Need to investigate further: (at least in MV, the height data ranges are the range from the yield data + 22 ???)
-#
+

@@ -36,9 +36,10 @@ mapResponse <- function(data, trait)
 }
 
 response_vars <- c('earHt', 'flagLeafHt', 'plantHt', 'combineMoisture', 'combineTestWt', 
-                   'earLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'kernelsPerEar', 'kernelMass', 'hundredKernelWt', 
+                   'earLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'kernelsPerEar',
                    'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
-                   'yieldPerAc', 'daysToAnthesis', 'daysToSilk')#, 'kernelsPerRow', 'kernelRows')
+                   'yieldPerAc', 'daysToAnthesis', 'daysToSilk', 
+                   'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass', 'moistureCorrectedHundredKernelWt', 'pctMoistureNIR')
 for(i in response_vars[c(12, 22, 23)])
 {
   print(i)
@@ -68,83 +69,85 @@ for (i in response_vars)
 # Cast nLvl, genotype, and irrigation as factors
 hybrids <- mutate(hybrids, across(c(nLvl, genotype, irrigation, loc), as.factor))
 
-# Function to do variance partitioning for each location for a given response variable
-partitionVariance <- function(data, response)
-{
-  # Loop over locations
-  locs <- c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3')
-  vc.df <- tibble(modelTerm = NULL, Variance = NULL, SD = NULL, `log10l(lambda)` = NULL, pctVar = NULL, loc = NULL, .rows = 0) 
-  for(i in locs)
-  {
-    loc.df <- filter(data, loc==i & !is.na(range) & !is.na(row) & !is.na(.data[[response]]))
-    print(length(loc.df$plot))
-    if(length(loc.df$plot)==0)
-    {
-      next
-    }
-    # Fit model
-    rangeKnots <- floor(max(loc.df$range, na.rm = TRUE)/2) + 1
-    rowKnots <- floor(max(loc.df$row, na.rm = TRUE)/2) + 1
-    print(i)
-    print(rangeKnots)
-    print(rowKnots)
-    print(response)
-    if(i=='Missouri Valley')
-    {
-      model <- SpATS(response, genotype = 'genotype', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)),
-                     data = loc.df)
-    }
-    else
-    {
-      model <- SpATS(response, genotype = 'genotype', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)),
-                   random = ~ nLvl + nLvl:genotype, data = loc.df)
-    }
-    # Extract variance components
-    summary <- summary.SpATS(model, 'all')
-    vc <- summary$p.table.vc %>%
-      as_tibble(rownames = 'modelTerm') %>%
-      filter(modelTerm!='NA.') %>%
-      mutate(across(!modelTerm, as.numeric))
-    # Calculate total variance
-    totalVar <- sum(vc$Variance)
-    # Calculate pctVar
-    vc <- vc %>%
-      rowwise() %>%
-      mutate(pctVar = Variance/totalVar*100, 
-             loc = i)
-    summary(vc)
-    # Bind to df
-    vc.df <- bind_rows(vc.df, vc)
-    
-    # Plot the spatial output
-    plot.SpATS(model, main = paste0(response, ':', i))
-  }
-  vc.df <- filter(vc.df, !is.na(pctVar))
-  vc.plot <- ggplot(vc.df, aes(1, pctVar, fill = modelTerm)) + 
-    geom_col(position = 'stack') + 
-    facet_wrap(vars(loc)) + 
-    labs(title = response)
-    theme_minimal()
-  
-  print(vc.plot)
-  return(vc.df)
-}
+# # Function to do variance partitioning for each location for a given response variable
+# partitionVariance <- function(data, response)
+# {
+#   # Loop over locations
+#   locs <- c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3')
+#   vc.df <- tibble(modelTerm = NULL, Variance = NULL, SD = NULL, `log10l(lambda)` = NULL, pctVar = NULL, loc = NULL, .rows = 0) 
+#   for(i in locs)
+#   {
+#     loc.df <- filter(data, loc==i & !is.na(range) & !is.na(row) & !is.na(.data[[response]]))
+#     print(length(loc.df$plot))
+#     if(length(loc.df$plot)==0)
+#     {
+#       next
+#     }
+#     # Fit model
+#     rangeKnots <- floor(max(loc.df$range, na.rm = TRUE)/2) + 1
+#     rowKnots <- floor(max(loc.df$row, na.rm = TRUE)/2) + 1
+#     print(i)
+#     print(rangeKnots)
+#     print(rowKnots)
+#     print(response)
+#     if(i=='Missouri Valley')
+#     {
+#       model <- SpATS(response, genotype = 'genotype', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)),
+#                      data = loc.df)
+#     }
+#     else
+#     {
+#       model <- SpATS(response, genotype = 'genotype', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)),
+#                    random = ~ nLvl + nLvl:genotype, data = loc.df)
+#     }
+#     # Extract variance components
+#     summary <- summary.SpATS(model, 'all')
+#     vc <- summary$p.table.vc %>%
+#       as_tibble(rownames = 'modelTerm') %>%
+#       filter(modelTerm!='NA.') %>%
+#       mutate(across(!modelTerm, as.numeric))
+#     # Calculate total variance
+#     totalVar <- sum(vc$Variance)
+#     # Calculate pctVar
+#     vc <- vc %>%
+#       rowwise() %>%
+#       mutate(pctVar = Variance/totalVar*100, 
+#              loc = i)
+#     summary(vc)
+#     # Bind to df
+#     vc.df <- bind_rows(vc.df, vc)
+#     
+#     # Plot the spatial output
+#     plot.SpATS(model, main = paste0(response, ':', i))
+#   }
+#   vc.df <- filter(vc.df, !is.na(pctVar))
+#   vc.plot <- ggplot(vc.df, aes(1, pctVar, fill = modelTerm)) + 
+#     geom_col(position = 'stack') + 
+#     facet_wrap(vars(loc)) + 
+#     labs(title = response)
+#     theme_minimal()
+#   
+#   print(vc.plot)
+#   return(vc.df)
+# }
+# 
+# vp <- list()
+# for (j in response_vars)
+# {
+#   vp[[j]] <- partitionVariance(hybrids, j)
+# }
+# 
+# lnk_lowN <- hybrids %>%
+#   filter(loc=='Lincoln' & nLvl=='Low') %>%
+#   mutate(plot = as.factor(plot)) %>%
+#   select(c(plot, range, row, yieldPerAc))
+# m <- SpATS('yieldPerAc', genotype = 'plot', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(8, 14)), fixed = NULL, data = lnk_lowN)
+# s <- summary(m)
+# plot.SpATS(m)
+# p.blups <- s$coeff %>%
+#   as_tibble(rownames = 'plot')
 
-vp <- list()
-for (j in response_vars)
-{
-  vp[[j]] <- partitionVariance(hybrids, j)
-}
-
-lnk_lowN <- hybrids %>%
-  filter(loc=='Lincoln' & nLvl=='Low') %>%
-  mutate(plot = as.factor(plot)) %>%
-  select(c(plot, range, row, yieldPerAc))
-m <- SpATS('yieldPerAc', genotype = 'plot', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(8, 14)), fixed = NULL, data = lnk_lowN)
-s <- summary(m)
-plot.SpATS(m)
-p.blups <- s$coeff %>%
-  as_tibble(rownames = 'plot')
+hybrids.vp <- hybrids 
 
 # Okay, now let's write a function to get the spatial BLUES for each response on a plot level
 # Will fit model by individual location, nitrogen treatment combination
@@ -159,6 +162,7 @@ getSpatialCorrections <- function(data, response)
     loc.df <- filter(data, loc==currLoc & !is.na(row) & !is.na(range) & !is.na(.data[[response]] & !is.na(nLvl)))
     if(length(loc.df$plot)==0)
     {
+      print(paste0('No data for ', response, ' at ', currLoc))
       next
     }
     nLvls <- unique(loc.df$nLvl)
@@ -181,7 +185,7 @@ getSpatialCorrections <- function(data, response)
       plot.SpATS(model, main = paste0(response, ':', currLoc, ':', currTrt))
       # Extract BLUPS
       summary <- summary(model)
-      if(cor(loc.n.df[[response]], summary$fitted + summary$residuals)==1)
+      if(cor(loc.n.df[[response]], summary$fitted + summary$residuals) > 0.99)
       {
         sp <- tibble(loc = currLoc,
                      nLvl = currTrt, 
@@ -190,6 +194,7 @@ getSpatialCorrections <- function(data, response)
       }
       else
       {
+        print(paste0('Fitted values misordered. r =', cor(loc.n.df[[response]], summary$fitted + summary$residuals), '; ', currLoc, '; ', currTrt))
         next
       }
       # Bind to df
@@ -231,7 +236,16 @@ partitionVariance2 <- function(df, response)
 
 vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
 spatiallyCorrectedResponseVars <- paste0(response_vars, '.blup')
-spatiallyCorrectedResponseVars <- paste0(spatiallyCorrectedResponseVars, '.blup')
+#spatiallyCorrectedResponseVars <- paste0(spatiallyCorrectedResponseVars, '.blup')
+
+# hybrids.vp <- hybrids %>%
+#   rowwise() %>%
+#   mutate(earHt.blup = earHt.blup.blup, 
+#          moistureCorrectedOil.blup = case_when(loc=='North Platte1' ~ moistureCorrectedOil, .default = moistureCorrectedOil.blup),
+#          earFillLen.blup = case_when(loc=='North Platte1' ~ earFillLen, .default = earFillLen.blup),
+#          moistureCorrectedFiber.blup = case_when(loc=='North Platte1' ~ moistureCorrectedFiber, .default = moistureCorrectedFiber.blup),
+#          moistureCorrectedHundredKernelWt.blup = case_when(loc=='North Platte1' ~ moistureCorrectedHundredKernelWt, 
+#                                                            .default = moistureCorrectedHundredKernelWt.blup))
 for(i in spatiallyCorrectedResponseVars)
 {
   vc_all <- bind_rows(vc_all, partitionVariance2(hybrids, i))
@@ -246,15 +260,14 @@ vp.plot <- ggplot(vc_all, aes(responseVar, pctVar, fill = grp)) +
 vp.plot
 
 # Is there shrinkage toward the mean of a treatment ?
-for(i in 1:21)
+for(i in 1:length(response_vars))
 {
   sp.correction.plot <- ggplot(hybrids, (aes(.data[[response_vars[i]]], .data[[spatiallyCorrectedResponseVars[i]]], color = nLvl))) +
     geom_point() +
-    facet_wrap(vars(loc))
+    geom_abline(slope = 1) +
+    facet_wrap(vars(loc)) 
   print(sp.correction.plot)
 }
-
-
 
 # # Let's drop some outliers: moved to CombineHIPS22Data.R
 # combineNotes_drop <- c("Left row ran over", "Right row gone", "Run over", "Clog", "Animal damage", "Animal damage, not enough grain for accurate moisture", "One row", 
