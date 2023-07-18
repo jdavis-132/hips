@@ -2152,9 +2152,75 @@ hips_v2.5 <- hips_v2.5 %>%
 # Export v2.5
 write.table(hips_v2.5, 'outData/HIPS_2022_V2.5.tsv', sep = '\t', row.names = FALSE, col.names = TRUE)
 
+# Work on summarizing ames and crawfordsville data
+ac.ears <- tibble(loc = NULL, plot = NULL, qr = NULL, population = NULL, irrigation = NULL, kernelRows = NULL, notes = NULL, .rows = 0)
+# Read in and parse KRN data
+krn.hyb.files <- list.files(path = 'data/2 KRN And Ear Documenation/Hybrid', pattern = '2_KRN_and_ear_documenation_', full.names = TRUE)
 
+for (currFile in krn.hyb.files)
+{
+  curr.df <- read_excel(currFile, 
+                        skip = 3,
+                        col_names = c('qr', 'kernelRows', 'notes', 'sweetcorn'),
+                        col_types = c('text', 'numeric', 'text', 'text')) %>%
+    rowwise() %>%
+    mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-') %>%
+             str_to_upper(),
+           notes = case_when(!is.na(sweetcorn) ~ str_c(notes, 'sweetcorn', sep = ';'), .default = notes),
+           loc = case_when(str_split_i(qr, '-', 2)=='C' ~ 'Crawfordsville',
+                           str_split_i(qr, '-', 2)=='A' ~ 'Ames'),
+           plot = str_split_i(qr, '-', 3) %>%
+             as.numeric(), 
+           population = 'Hybrid', 
+           irrigation = 'Dryland') %>%
+    group_by(qr, loc, plot, population, irrigation) %>%
+    summarise(kernelRows = mean(kernelRows),
+              notes = max(notes, na.rm = TRUE))
+  ac.ears <- bind_rows(ac.ears, curr.df)
+}
 
+krn.inb.files <- list.files(path = 'data/2 KRN And Ear Documenation', pattern = '2_KRN_and_ear_documenation_inbred', full.names = TRUE, recursive = TRUE, 
+                            include.dirs = FALSE)
 
+for (currFile in krn.inb.files)
+{
+  curr.df <- read_excel(currFile,
+                        skip = 3,
+                        col_names = c('qr', 'kernelRows', 'notes', 'smoothCob', 'sweetcorn'),
+                        col_types = c('text', 'numeric', rep('text', 3))) %>%
+    rowwise() %>%
+    mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-'),
+           notes = case_when(!is.na(sweetcorn) & is.na(smoothCob) ~ str_c(notes, 'sweetcorn', sep = ';'),
+                             !is.na(smoothCob) & is.na(sweetcorn) ~ str_c(notes, 'smooth cob - ovule issue', sep = ';'),
+                             !is.na(sweetcorn) & !is.na(smoothCob) ~ str_c(notes, 'sweetcorn', 'smooth cob - ovule issue', sep = ';'), 
+                             .default = notes),
+           loc = case_when(str_split_i(qr, '-', 2)=='C' ~ 'Crawfordsville',
+                           str_split_i(qr, '-', 2)=='A' ~ 'Ames'),
+           plot = str_split_i(qr, '-', 3) %>%
+             as.numeric(), 
+           population = 'Inbred', 
+           irrigation = 'Dryland', 
+           field = case_when(str_detect(currFile, '2231')|str_detect(currFile, '2232') ~ 'B1',
+                             str_detect(currFile, '2233') ~ 'E1',
+                             str_detect(currFile, '2351')|str_detect(currFile, '2352') ~ 'A',
+                             str_detect(currFile, '2353') ~ 'B'),
+           nLvl = case_when(str_detect(currFile, '2233')|str_detect(currFile, '2352') ~ 'Low', 
+                            str_detect(currFile, '2232')|str_detect(currFile, '2353') ~ 'Medium',
+                            str_detect(currFile, '2231')|str_detect(currFile, '2351') ~ 'High')) %>%
+    group_by(qr, loc, plot, population, irrigation, field, nLvl) %>%
+    summarise(kernelRows = mean(kernelRows),
+              notes = max(notes, na.rm = TRUE))
+  ac.ears <- bind_rows(ac.ears, curr.df)
+}
+
+ear.files <- list.files(path = 'data/3 Ear Traits Station', pattern = '3_Ear_Traits_', full.names = TRUE, recursive = TRUE, include.dirs = FALSE)
+
+for (currFile in ear.files)
+{
+  curr.df <- read_excel(currFile, 
+                        col_names = c('qr', 'earLen', 'earWt', 'collectionStation', 'string', 'seedMissingAtWidest'),
+                        col_types = c('text', 'numeric', 'numeric', rep('text', 3)))
+}
 
 
 
@@ -2162,213 +2228,213 @@ write.table(hips_v2.5, 'outData/HIPS_2022_V2.5.tsv', sep = '\t', row.names = FAL
 
 # Repeat for Ames 
 # Keep unique ids for Ames, Crawfordsville as qrs so we can bring in ear data processed at ISU
-ames_hyb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
-                        sheet = '4231',
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
-                        col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'numeric', 'numeric', 'skip', 'numeric', 'numeric', 'skip', 'text'), 
-                        skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr), 
-         genotype = str_to_upper(genotype),
-         loc = 'Ames',
-         nLvl = 'High', 
-         field = 'Hybrid HIPS',
-         irrigation = 'Dryland',
-         population = 'Hybrid', 
-         plot = case_when(rep==1 ~ plot + 100,
-                          rep==2 ~ plot + 200)) %>%
-  fixGenos(hips1.5_genoFixKey)
-
-ames_hyb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
-                        sheet = '4232',
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
-                        col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'numeric', 'numeric', 'skip', 'numeric', 'numeric', 'skip', 'text'), 
-                        skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr), 
-         genotype = str_to_upper(genotype),
-         loc = 'Ames',
-         nLvl = 'Medium', 
-         field = 'Hybrid HIPS',
-         irrigation = 'Dryland',
-         population = 'Hybrid', 
-         plot = case_when(rep==1 ~ plot + 100,
-                          rep==2 ~ plot + 200)) %>%
-  fixGenos(hips1.5_genoFixKey)
-
-ames_hyb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
-                        sheet = '4233',
-                        col_names = c('range', 'row', 'qr', 'plantHt', 'earHt','rep', 'plot', 'genotype'),
-                        col_types = c('numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'skip', 'numeric', 'numeric', 'skip', 'text'), 
-                        skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr), 
-         genotype = str_to_upper(genotype),
-         loc = 'Ames',
-         nLvl = 'Low', 
-         field = 'Hybrid HIPS',
-         irrigation = 'Dryland',
-         population = 'Hybrid',
-         plot = case_when(rep==1 ~ plot + 100,
-                          rep==2 ~ plot + 200)) %>%
-  fixGenos(hips1.5_genoFixKey)
-
-ames_inb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
-                        sheet = '2231',
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'notes2', 'genotype'),
-                        col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
-                        skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr),
-         notes = str_c(notes, notes2, sep = ';'),
-         genotype = str_to_upper(genotype),
-         loc = 'Ames',
-         nLvl = 'High',
-         field = 'Inbred HIPS',
-         irrigation = 'Dryland', 
-         population = 'Inbred',
-         plantHt = case_when(plantHt=='n/a' ~ NA, .default = plantHt),
-         earHt = case_when(earHt=='n/a' ~ NA, .default = earHt)) %>%
-  select(!notes2)
-
-ames_inb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
-                        sheet = '2232',
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'notes2', 'genotype'),
-                        col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'text', 'numeric', 'text', 'text', 'skip'),
-                        skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr),
-         notes = str_c(notes, notes2, sep = ';'),
-         genotype = str_to_upper(genotype),
-         loc = 'Ames',
-         nLvl = 'Medium', 
-         field = 'Inbred HIPS',
-         irrigation = 'Dryland',
-         population = 'Inbred',
-         earHt = case_when(earHt=='n/a' ~ NA, .default = earHt)) %>%
-  mutate(notes = case_when(plantHt=='break' ~ str_c(notes, plantHt, sep = ';'), .default = notes),
-         plantHt = case_when(plantHt %in% c('break', 'n/a') ~ NA, .default = plantHt) %>%
-           as.numeric()) %>%
-  select(!notes2)
-
-ames_inb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
-                        sheet = '2233', 
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'notes2', 'genotype'),
-                        col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'text', 'numeric', 'text', 'text', 'skip'),
-                        skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr),
-         notes = case_when(plantHt=='break' ~ str_c(notes, notes2, plantHt), .default = str_c(notes, notes2)),
-         plantHt = case_when(plantHt %in% c('break', 'n/a') ~ NA, .default = plantHt) %>%
-           as.numeric(),
-         earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
-         genotype = str_to_upper(genotype),
-         loc = 'Ames',
-         nLvl = 'Low',
-         field = 'Inbred HIPS',
-         irrigation = 'Dryland', 
-         population = 'Inbred') %>%
-  select(!notes2)
-
-c_hyb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
-                     sheet = '4351 (east)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
-                     col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
-                     skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr), 
-         plot = case_when(rep==1 ~ plot + 100,
-                          rep==2 ~ plot + 200),
-         genotype = str_to_upper(genotype), 
-         loc = 'Crawfordsville',
-         nLvl = 'High', 
-         field = 'Hybrid HIPS', 
-         irrigation = 'Dryland', 
-         population = 'Hybrid') %>%
-  fixGenos(hips1.5_genoFixKey)
-
-c_hyb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx', 
-                     sheet = '4352 (west)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
-                     col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
-                     skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr),
-         plot = case_when(rep==1 ~ plot + 100, 
-                          rep==2 ~ plot + 200),
-         genotype = str_to_upper(genotype),
-         loc = 'Crawfordsville', 
-         nLvl = 'Low',
-         field = 'Hybrid HIPS',
-         irrigation = 'Dryland',
-         population = 'Hybrid') %>%
-  fixGenos(hips1.5_genoFixKey)
-
-c_hyb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
-                     sheet = '4353 (south)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
-                     col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
-                     skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr), 
-         plot = case_when(rep==1 ~ plot + 100,
-                          rep==2 ~ plot + 200), 
-         genotype = str_to_upper(genotype),
-         loc = 'Crawfordsville',
-         nLvl = 'Medium', 
-         field = 'Hybrid HIPS',
-         irrigation = 'Dryland', 
-         population = 'Hybrid') %>%
-  fixGenos(hips1.5_genoFixKey)
-
-c_inb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
-                     sheet = '2351 (east)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'notes', 'genotype'),
-                     col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
-                     skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr), 
-         plantHt = case_when(str_detect(plantHt, 'n/a') ~ NA, .default = plantHt),
-         earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt), 
-         genotype = str_to_upper(genotype),
-         loc = 'Crawfordsville',
-         nLvl = 'High',
-         field = 'Inbred HIPS',
-         irrigation = 'Dryland',
-         population = 'Inbred')
-
-c_inb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
-                     sheet = '2352 (west)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'notes', 'genotype'),
-                     col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
-                     skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr), 
-         plantHt = case_when(str_detect(plantHt, 'n/a') ~ NA, .default = plantHt),
-         earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
-         genotype = str_to_upper(genotype),
-         loc = 'Crawfordsville',
-         nLvl = 'Low',
-         field = 'Inbred HIPS', 
-         irrigation = 'Dryland',
-         population = 'Inbred')
-
-c_inb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
-                     sheet = '2353 (south)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'notes', 'genotype'),
-                     col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'), 
-                     skip = 1) %>%
-  rowwise() %>%
-  mutate(qr = str_to_upper(qr), 
-         plantHt = case_when(str_detect(plantHt, 'filler') ~ NA, .default = plantHt),
-         earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
-         genotype = str_to_upper(genotype),
-         loc = 'Crawfordsville',
-         nLvl = 'Medium', 
-         field = 'Inbred HIPS',
-         irrigation = 'Dryland',
-         population = 'Inbred')
-
-plantDataEast <- bind_rows(ames_hyb1, ames_hyb2, ames_hyb3, ames_inb1, ames_inb2, ames_inb3, 
-                           c_hyb1, c_hyb2, c_hyb3, c_inb1, c_inb2, c_inb3)
-
+# ames_hyb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
+#                         sheet = '4231',
+#                         col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+#                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'numeric', 'numeric', 'skip', 'numeric', 'numeric', 'skip', 'text'), 
+#                         skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr), 
+#          genotype = str_to_upper(genotype),
+#          loc = 'Ames',
+#          nLvl = 'High', 
+#          field = 'Hybrid HIPS',
+#          irrigation = 'Dryland',
+#          population = 'Hybrid', 
+#          plot = case_when(rep==1 ~ plot + 100,
+#                           rep==2 ~ plot + 200)) %>%
+#   fixGenos(hips1.5_genoFixKey)
+# 
+# ames_hyb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
+#                         sheet = '4232',
+#                         col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+#                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'numeric', 'numeric', 'skip', 'numeric', 'numeric', 'skip', 'text'), 
+#                         skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr), 
+#          genotype = str_to_upper(genotype),
+#          loc = 'Ames',
+#          nLvl = 'Medium', 
+#          field = 'Hybrid HIPS',
+#          irrigation = 'Dryland',
+#          population = 'Hybrid', 
+#          plot = case_when(rep==1 ~ plot + 100,
+#                           rep==2 ~ plot + 200)) %>%
+#   fixGenos(hips1.5_genoFixKey)
+# 
+# ames_hyb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
+#                         sheet = '4233',
+#                         col_names = c('range', 'row', 'qr', 'plantHt', 'earHt','rep', 'plot', 'genotype'),
+#                         col_types = c('numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'skip', 'numeric', 'numeric', 'skip', 'text'), 
+#                         skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr), 
+#          genotype = str_to_upper(genotype),
+#          loc = 'Ames',
+#          nLvl = 'Low', 
+#          field = 'Hybrid HIPS',
+#          irrigation = 'Dryland',
+#          population = 'Hybrid',
+#          plot = case_when(rep==1 ~ plot + 100,
+#                           rep==2 ~ plot + 200)) %>%
+#   fixGenos(hips1.5_genoFixKey)
+# 
+# ames_inb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
+#                         sheet = '2231',
+#                         col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'notes2', 'genotype'),
+#                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
+#                         skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr),
+#          notes = str_c(notes, notes2, sep = ';'),
+#          genotype = str_to_upper(genotype),
+#          loc = 'Ames',
+#          nLvl = 'High',
+#          field = 'Inbred HIPS',
+#          irrigation = 'Dryland', 
+#          population = 'Inbred',
+#          plantHt = case_when(plantHt=='n/a' ~ NA, .default = plantHt),
+#          earHt = case_when(earHt=='n/a' ~ NA, .default = earHt)) %>%
+#   select(!notes2)
+# 
+# ames_inb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
+#                         sheet = '2232',
+#                         col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'notes2', 'genotype'),
+#                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'text', 'numeric', 'text', 'text', 'skip'),
+#                         skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr),
+#          notes = str_c(notes, notes2, sep = ';'),
+#          genotype = str_to_upper(genotype),
+#          loc = 'Ames',
+#          nLvl = 'Medium', 
+#          field = 'Inbred HIPS',
+#          irrigation = 'Dryland',
+#          population = 'Inbred',
+#          earHt = case_when(earHt=='n/a' ~ NA, .default = earHt)) %>%
+#   mutate(notes = case_when(plantHt=='break' ~ str_c(notes, plantHt, sep = ';'), .default = notes),
+#          plantHt = case_when(plantHt %in% c('break', 'n/a') ~ NA, .default = plantHt) %>%
+#            as.numeric()) %>%
+#   select(!notes2)
+# 
+# ames_inb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
+#                         sheet = '2233', 
+#                         col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'notes2', 'genotype'),
+#                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'text', 'numeric', 'text', 'text', 'skip'),
+#                         skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr),
+#          notes = case_when(plantHt=='break' ~ str_c(notes, notes2, plantHt), .default = str_c(notes, notes2)),
+#          plantHt = case_when(plantHt %in% c('break', 'n/a') ~ NA, .default = plantHt) %>%
+#            as.numeric(),
+#          earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
+#          genotype = str_to_upper(genotype),
+#          loc = 'Ames',
+#          nLvl = 'Low',
+#          field = 'Inbred HIPS',
+#          irrigation = 'Dryland', 
+#          population = 'Inbred') %>%
+#   select(!notes2)
+# 
+# c_hyb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
+#                      sheet = '4351 (east)',
+#                      col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+#                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
+#                      skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr), 
+#          plot = case_when(rep==1 ~ plot + 100,
+#                           rep==2 ~ plot + 200),
+#          genotype = str_to_upper(genotype), 
+#          loc = 'Crawfordsville',
+#          nLvl = 'High', 
+#          field = 'Hybrid HIPS', 
+#          irrigation = 'Dryland', 
+#          population = 'Hybrid') %>%
+#   fixGenos(hips1.5_genoFixKey)
+# 
+# c_hyb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx', 
+#                      sheet = '4352 (west)',
+#                      col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+#                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
+#                      skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr),
+#          plot = case_when(rep==1 ~ plot + 100, 
+#                           rep==2 ~ plot + 200),
+#          genotype = str_to_upper(genotype),
+#          loc = 'Crawfordsville', 
+#          nLvl = 'Low',
+#          field = 'Hybrid HIPS',
+#          irrigation = 'Dryland',
+#          population = 'Hybrid') %>%
+#   fixGenos(hips1.5_genoFixKey)
+# 
+# c_hyb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
+#                      sheet = '4353 (south)',
+#                      col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+#                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
+#                      skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr), 
+#          plot = case_when(rep==1 ~ plot + 100,
+#                           rep==2 ~ plot + 200), 
+#          genotype = str_to_upper(genotype),
+#          loc = 'Crawfordsville',
+#          nLvl = 'Medium', 
+#          field = 'Hybrid HIPS',
+#          irrigation = 'Dryland', 
+#          population = 'Hybrid') %>%
+#   fixGenos(hips1.5_genoFixKey)
+# 
+# c_inb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
+#                      sheet = '2351 (east)',
+#                      col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'notes', 'genotype'),
+#                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
+#                      skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr), 
+#          plantHt = case_when(str_detect(plantHt, 'n/a') ~ NA, .default = plantHt),
+#          earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt), 
+#          genotype = str_to_upper(genotype),
+#          loc = 'Crawfordsville',
+#          nLvl = 'High',
+#          field = 'Inbred HIPS',
+#          irrigation = 'Dryland',
+#          population = 'Inbred')
+# 
+# c_inb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
+#                      sheet = '2352 (west)',
+#                      col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'notes', 'genotype'),
+#                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
+#                      skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr), 
+#          plantHt = case_when(str_detect(plantHt, 'n/a') ~ NA, .default = plantHt),
+#          earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
+#          genotype = str_to_upper(genotype),
+#          loc = 'Crawfordsville',
+#          nLvl = 'Low',
+#          field = 'Inbred HIPS', 
+#          irrigation = 'Dryland',
+#          population = 'Inbred')
+# 
+# c_inb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
+#                      sheet = '2353 (south)',
+#                      col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'notes', 'genotype'),
+#                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'), 
+#                      skip = 1) %>%
+#   rowwise() %>%
+#   mutate(qr = str_to_upper(qr), 
+#          plantHt = case_when(str_detect(plantHt, 'filler') ~ NA, .default = plantHt),
+#          earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
+#          genotype = str_to_upper(genotype),
+#          loc = 'Crawfordsville',
+#          nLvl = 'Medium', 
+#          field = 'Inbred HIPS',
+#          irrigation = 'Dryland',
+#          population = 'Inbred')
+# 
+# plantDataEast <- bind_rows(ames_hyb1, ames_hyb2, ames_hyb3, ames_inb1, ames_inb2, ames_inb3, 
+#                            c_hyb1, c_hyb2, c_hyb3, c_inb1, c_inb2, c_inb3)
+# 
