@@ -2117,6 +2117,38 @@ hips_v2.5 <- hips_v2.5 %>%
   mutate(across(where(is.double) & !where(is.POSIXct), ~na_if(., -Inf))) %>%
   mutate(across(where(is.integer), ~na_if(., as.integer(-Inf)))) %>%
   mutate(across(where(is.POSIXct), ~na_if(., as.POSIXct(-Inf))))
+# Remove some outliers id'ed based on visual plots or fix them when 1 obs is throwing them off
+hips_v2.5 <- hips_v2.5 %>%
+  rowwise() %>%
+  mutate(moistureCorrectedHundredKernelWt = case_when(loc=='Lincoln' & plot==5122 ~ mean(23.06, 19.64, 13.53)/(1 - pctMoistureNIR), 
+                                                      loc=='Lincoln' & plot==5245 ~ mean(22.9, 24, 18)/(1 - pctMoistureNIR),
+                                                      loc=='North Platte2' & plot==835 ~ mean(27.26, 28.78, 27.51)/(1 - pctMoistureNIR),
+                                                      loc=='North Platte2' & plot==838 ~ mean(39.9, 32.48, 36)/(1 - pctMoistureNIR),
+                                                      loc=='North Platte3' & plot==1169 ~ mean(24.17, 23.59, 27.22)/(1- pctMoistureNIR),
+                                                      loc=='North Platte3' & plot==1211 ~ mean(20.3, 19.8, 17.7)/(1 - pctMoistureNIR),
+                                                      .default = moistureCorrectedHundredKernelWt),
+         hundredKernelWt = case_when(loc=='Lincoln' & plot==5122 ~ mean(23.06, 19.64, 13.53), 
+                                     loc=='Lincoln' & plot==5245 ~ mean(22.9, 24, 18),
+                                     loc=='North Platte2' & plot==835 ~ mean(27.26, 28.78, 27.51), 
+                                     loc=='North Platte2' & plot==838 ~ mean(39.9, 32.48, 36),
+                                     loc=='North Platte3' & plot==1169 ~ mean(24.17, 23.59, 27.22),
+                                     loc=='North Platte3' & plot==1211 ~ mean(20.3, 19.8, 17.7),
+                                     .default = hundredKernelWt),
+         kernelRows = case_when(loc=='North Platte1' & plot==367 ~ mean(14, 18, 14), .default = kernelRows),
+         kernelsPerRow = case_when(loc=='Lincoln' & plot==4209 ~ mean(26, 28, 22), .default = kernelsPerRow),
+         daysToSilk = case_when((loc=='North Platte3' & plot==1397)|(loc=='Scottsbluff' & plot==1346) ~ NA, 
+                                .default = daysToSilk),
+         shelledCobWt = case_when(loc=='North Platte3' & plot==1226 ~ mean(15.5, 18, 19), .default = shelledCobWt),
+         earWidth = case_when(loc=='Lincoln' & plot==6129 ~ mean(rep(3.5, 3)), .default = earWidth),
+         earFillLen = case_when(loc=='North Platte2' & plot==837 ~ mean(16.5, 16, 16), .default = earFillLen),
+         kernelsPerEar = case_when(loc=='North Platte3' & plot==1381 ~ mean(412, 492, 487), .default = kernelsPerEar),
+         moistureCorrectedKernelMass = case_when(loc=='Missouri Valley' & plot==256 ~ mean(232.86 - 22.57, 168.35 - 18.65, 139.89 - 14.55)/(1 - pctMoistureNIR), 
+                                                 loc=='North Platte2' & plot==664 ~ mean(91.33 - 17.5, 170.48 - 22.56, 236.75 - 24.17)/(1 - pctMoistureNIR),
+                                                 .default = moistureCorrectedKernelMass),
+         kernelMass = case_when(loc=='Missouri Valley' & plot==256 ~ mean(232.86 - 22.57, 168.35 - 18.65, 139.89 - 14.55), 
+                                loc=='North Platte2' & plot==664 ~ mean(91.33 - 17.5, 170.48 - 22.56, 236.75 - 24.17),
+                                .default = kernelMass),
+         flagLeafHt = case_when(loc=='Scottsbluff' & plot==1172 ~ NA, .default = flagLeafHt))
 # Export v2.5
 write.table(hips_v2.5, 'outData/HIPS_2022_V2.5.tsv', sep = '\t', row.names = FALSE, col.names = TRUE)
 

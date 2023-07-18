@@ -40,7 +40,8 @@ response_vars <- c('earHt', 'flagLeafHt', 'plantHt', 'combineMoisture', 'combine
                    'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
                    'yieldPerAc', 'daysToAnthesis', 'daysToSilk', 
                    'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass', 'moistureCorrectedHundredKernelWt', 'pctMoistureNIR')
-for(i in response_vars[c(12, 22, 23)])
+
+for(i in response_vars[c(4, 24)])
 {
   print(i)
   mapResponse(hybrids, i)
@@ -147,8 +148,6 @@ hybrids <- mutate(hybrids, across(c(nLvl, genotype, irrigation, loc), as.factor)
 # p.blups <- s$coeff %>%
 #   as_tibble(rownames = 'plot')
 
-hybrids.vp <- hybrids 
-
 # Okay, now let's write a function to get the spatial BLUES for each response on a plot level
 # Will fit model by individual location, nitrogen treatment combination
 getSpatialCorrections <- function(data, response)
@@ -209,7 +208,7 @@ getSpatialCorrections <- function(data, response)
 
 for(i in response_vars)
 {
-  hybrids <- full_join(hybrids, getSpatialCorrections(hybrids, i), by = join_by(loc, plot, nLvl), suffix = c('', '.blup'), keep = FALSE)
+  hybrids <- full_join(hybrids, getSpatialCorrections(hybrids, i), by = join_by(loc, plot, nLvl), suffix = c('', '.sp'), keep = FALSE)
 }
 
 hybrids <- hybrids %>%
@@ -235,20 +234,23 @@ partitionVariance2 <- function(df, response)
 
 
 vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
-spatiallyCorrectedResponseVars <- paste0(response_vars, '.blup')
+spatiallyCorrectedResponseVars <- paste0(response_vars, '.sp')
 #spatiallyCorrectedResponseVars <- paste0(spatiallyCorrectedResponseVars, '.blup')
+# Don't use the spatially corrected vals when there's fitting issues
+hybrids.vp <- hybrids %>%
+  rowwise() %>%
+  mutate(kernelRows.sp = case_when(loc=='North Platte1' ~ kernelRows, .default = kernelRows.sp),
+         kernelsPerRow.sp = case_when(loc=='North Platte1' ~ kernelsPerRow, .default = kernelsPerRow.sp),
+         moistureCorrectedFiber.sp = case_when(loc=='North Platte1' ~ moistureCorrectedFiber, .default = moistureCorrectedFiber.sp),
+         moistureCorrectedProtein.sp = case_when(loc=='North Platte1' ~ moistureCorrectedProtein, .default = moistureCorrectedProtein.sp),
+         earFillLen.sp = case_when(loc=='North Platte1' ~ earFillLen, .default = earFillLen.sp),
+         moistureCorrectedOil.sp = case_when(loc=='North Platte1' ~ moistureCorrectedOil, .default = moistureCorrectedOil.sp),
+         moistureCorrectedHundredKernelWt.sp = case_when(loc=='North Platte1' ~ moistureCorrectedHundredKernelWt, .default = moistureCorrectedHundredKernelWt.sp),
+         moistureCorrectedKernelMass.sp = case_when(loc=='North Platte1' ~ moistureCorrectedKernelMass, .default = moistureCorrectedKernelMass.sp))
 
-# hybrids.vp <- hybrids %>%
-#   rowwise() %>%
-#   mutate(earHt.blup = earHt.blup.blup, 
-#          moistureCorrectedOil.blup = case_when(loc=='North Platte1' ~ moistureCorrectedOil, .default = moistureCorrectedOil.blup),
-#          earFillLen.blup = case_when(loc=='North Platte1' ~ earFillLen, .default = earFillLen.blup),
-#          moistureCorrectedFiber.blup = case_when(loc=='North Platte1' ~ moistureCorrectedFiber, .default = moistureCorrectedFiber.blup),
-#          moistureCorrectedHundredKernelWt.blup = case_when(loc=='North Platte1' ~ moistureCorrectedHundredKernelWt, 
-#                                                            .default = moistureCorrectedHundredKernelWt.blup))
 for(i in spatiallyCorrectedResponseVars)
 {
-  vc_all <- bind_rows(vc_all, partitionVariance2(hybrids, i))
+  vc_all <- bind_rows(vc_all, partitionVariance2(hybrids.vp, i))
 }
 
 vp.plot <- ggplot(vc_all, aes(responseVar, pctVar, fill = grp)) +
