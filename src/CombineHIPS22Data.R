@@ -2153,7 +2153,7 @@ hips_v2.5 <- hips_v2.5 %>%
 write.table(hips_v2.5, 'outData/HIPS_2022_V2.5.tsv', sep = '\t', row.names = FALSE, col.names = TRUE)
 
 # Work on summarizing ames and crawfordsville data
-ac.ears <- tibble(loc = NULL, plot = NULL, qr = NULL, population = NULL, irrigation = NULL, kernelRows = NULL, notes = NULL, .rows = 0)
+ac.ears <- tibble(loc = NULL, plot = NULL, qr = NULL, population = NULL, irrigation = NULL, kernelRows = NULL, notes = NULL, earLen = NULL, earWidth = NULL, earWt = NULL, .rows = 0)
 # Read in and parse KRN data
 krn.hyb.files <- list.files(path = 'data/2 KRN And Ear Documenation/Hybrid', pattern = '2_KRN_and_ear_documenation_', full.names = TRUE)
 
@@ -2165,17 +2165,18 @@ for (currFile in krn.hyb.files)
                         col_types = c('text', 'numeric', 'text', 'text')) %>%
     rowwise() %>%
     mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-') %>%
-             str_to_upper(),
+             str_to_upper() %>%
+             str_remove('.') %>%
+             str_remove('`') %>%
+             str_remove('U') %>%
+             str_remove('R'),
            notes = case_when(!is.na(sweetcorn) ~ str_c(notes, 'sweetcorn', sep = ';'), .default = notes),
            loc = case_when(str_split_i(qr, '-', 2)=='C' ~ 'Crawfordsville',
                            str_split_i(qr, '-', 2)=='A' ~ 'Ames'),
            plot = str_split_i(qr, '-', 3) %>%
              as.numeric(), 
            population = 'Hybrid', 
-           irrigation = 'Dryland') %>%
-    group_by(qr, loc, plot, population, irrigation) %>%
-    summarise(kernelRows = mean(kernelRows),
-              notes = max(notes, na.rm = TRUE))
+           irrigation = 'Dryland')
   ac.ears <- bind_rows(ac.ears, curr.df)
 }
 
@@ -2189,7 +2190,12 @@ for (currFile in krn.inb.files)
                         col_names = c('qr', 'kernelRows', 'notes', 'smoothCob', 'sweetcorn'),
                         col_types = c('text', 'numeric', rep('text', 3))) %>%
     rowwise() %>%
-    mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-'),
+    mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-') %>%
+             str_remove('.') %>%
+             str_remove('`') %>%
+             str_remove('u') %>%
+             str_to_upper() %>%
+             str_remove('R'),
            notes = case_when(!is.na(sweetcorn) & is.na(smoothCob) ~ str_c(notes, 'sweetcorn', sep = ';'),
                              !is.na(smoothCob) & is.na(sweetcorn) ~ str_c(notes, 'smooth cob - ovule issue', sep = ';'),
                              !is.na(sweetcorn) & !is.na(smoothCob) ~ str_c(notes, 'sweetcorn', 'smooth cob - ovule issue', sep = ';'), 
@@ -2206,24 +2212,73 @@ for (currFile in krn.inb.files)
                              str_detect(currFile, '2353') ~ 'B'),
            nLvl = case_when(str_detect(currFile, '2233')|str_detect(currFile, '2352') ~ 'Low', 
                             str_detect(currFile, '2232')|str_detect(currFile, '2353') ~ 'Medium',
-                            str_detect(currFile, '2231')|str_detect(currFile, '2351') ~ 'High')) %>%
-    group_by(qr, loc, plot, population, irrigation, field, nLvl) %>%
-    summarise(kernelRows = mean(kernelRows),
-              notes = max(notes, na.rm = TRUE))
+                            str_detect(currFile, '2231')|str_detect(currFile, '2351') ~ 'High'))
   ac.ears <- bind_rows(ac.ears, curr.df)
 }
 
-ear.files <- list.files(path = 'data/3 Ear Traits Station', pattern = '3_Ear_Traits_', full.names = TRUE, recursive = TRUE, include.dirs = FALSE)
+ac.ears <- ac.ears %>%
+  group_by(qr, loc, plot, population, irrigation, nLvl, field) %>%
+  summarise(kernelRows = mean(kernelRows, na.rm = TRUE),
+            notes = max(notes, na.rm = TRUE))
 
+ear.files <- list.files(path = 'data/3 Ear Traits Station', pattern = '3_Ear_Traits_', full.names = TRUE, recursive = TRUE, include.dirs = FALSE)
+ear.df <- tibble(loc = NULL, plot = NULL, qr = NULL, population = NULL, irrigation = NULL, notes = NULL, earLen = NULL, earWidth = NULL, earWt = NULL, .rows = 0)
 for (currFile in ear.files)
 {
   curr.df <- read_excel(currFile, 
-                        col_names = c('qr', 'earLen', 'earWt', 'collectionStation', 'string', 'seedMissingAtWidest'),
-                        col_types = c('text', 'numeric', 'numeric', rep('text', 3)))
+                        col_names = c('qr', 'earLen', 'earWidth', 'earWt', 'collectionStation', 'string', 'seedMissingAtWidest'),
+                        col_types = c('text', rep('numeric', 3), rep('text', 3))) %>%
+    rowwise() %>%
+    mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-') %>%
+             str_remove('.') %>%
+             str_remove('`') %>%
+             str_remove('u') %>%
+             str_to_upper() %>%
+             str_remove('R'),
+           earLen = earLen/10,
+           earWidth = earWidth/10,
+           notes = case_when(!is.na(string) & is.na(seedMissingAtWidest) ~ 'Severe bend in ear. String used to measure ear length',
+                             is.na(string) & !is.na(seedMissingAtWidest) ~ 'Seed missing on both sides at widest point of ear',
+                             !is.na(string) & !is.na(seedMissingAtWidest) ~ 'Severe bend in ear. String used to measure ear length; Seed missing on both sides at widest point of ear'),
+           loc = case_when(str_split_i(qr, '-', 2)=='C' ~ 'Crawfordsville',
+                                 str_split_i(qr, '-', 2)=='A' ~ 'Ames'),
+           plot = str_split_i(qr, '-', 3) %>%
+             as.numeric(), 
+           population = case_when(str_detect(currFile, 'Hybrid') ~ 'Hybrid',
+                                  str_detect(currFile, 'Inbred') ~ 'Inbred'),
+           irrigation = 'Dryland',
+           field = case_when(str_detect(currFile, '2231')|str_detect(currFile, '2232') ~ 'B1',
+                             str_detect(currFile, '2233') ~ 'E1',
+                             str_detect(currFile, '2351')|str_detect(currFile, '2352') ~ 'A',
+                             str_detect(currFile, '2353') ~ 'B'),
+           nLvl = case_when(str_detect(currFile, '2233')|str_detect(currFile, '2352') ~ 'Low', 
+                            str_detect(currFile, '2232')|str_detect(currFile, '2353') ~ 'Medium',
+                            str_detect(currFile, '2231')|str_detect(currFile, '2351') ~ 'High'))
+  ear.df <- bind_rows(ear.df, curr.df)
 }
-
-
-
+ear.df <- ear.df %>%
+  group_by(qr, loc, plot, population, irrigation) %>%
+  summarise(earLen = mean(earLen, na.rm = TRUE),
+            earWidth = mean(earWidth, na.rm = TRUE),
+            earWt = mean(earWt, na.rm = TRUE), 
+            notes = max(notes, na.rm = TRUE),
+            nLvl = max(nLvl, na.rm = TRUE))
+# Remove example rows: they have no qrs
+ac.ears <- filter(ac.ears, !is.na(qr))
+ear.df <- filter(ear.df, !is.na(qr))
+# Merge ear traits with krn data
+ac.ears <- full_join(ac.ears, ear.df, join_by(qr), suffix = c('', '.3'), keep = FALSE)
+ac.ears <- ac.ears %>%
+  rowwise() %>%
+  mutate(loc = max(loc, loc.3, na.rm = TRUE),
+         plot = max(plot, plot.3, na.rm = TRUE),
+         population = max(population, population.3, na.rm = TRUE),
+         irrigation = max(irrigation, irrigation.3, na.rm = TRUE), 
+         nLvl = max(nLvl, nLvl.3, na.rm = TRUE),
+         notes = case_when(is.na(notes) & !is.na(notes.3) ~ notes.3,
+                           !is.na(notes) & is.na(notes.3) ~ notes,
+                           !is.na(notes) & !is.na(notes.3) ~ str_c(notes, notes.3, sep = ';'))) %>%
+  select(!ends_with('.3'))
 
 
 # Repeat for Ames 
