@@ -2674,3 +2674,55 @@ ac.df <- ac.df %>%
          nLvl = max(nLvl, nLvl.seed)) %>%
   select(!ends_with('.seed'))
 hips_v3 <- bind_rows(hips_v2.5, ac.df)
+# Remove empty rows
+hips_v3 <- hips_v3 %>%
+  filter(!is.na(loc)|!is.na(plot)|!is.na(row)|!is.na(range))
+# Drop collector columns
+hips_v3 <- hips_v3 %>%
+  select(!ends_with('Collector'))
+
+# Integrate combine data for Ames & Crawfordsville
+ac.yield.hyb <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx', 
+                           sheet = 'RawData (4-Row)', 
+                           col_names = c('loc', 'exp', 'qr', 'genotype', 'latitude', 'longitude', 'row', 'range', 'rep', 'plotDiscarded', 'combineYield', 'combineMoisture',
+                                         'combineTestWt','plantDensity', 'pcRootLodge', 'pctStalkLodge', 'plantDate', 'harvestDate', 'combineNotes', 'totalStandCt', 'solar', 'tattooSensor',
+                                         'nitrateSensor', 'commercialSoilMoistureSensor'),
+                           col_types = c(rep('skip', 3), 'text', 'text', rep('skip', 3), 'text', 'skip', 'text', 'skip', 'skip', rep('numeric', 5), 'text', rep('numeric', 2), 'skip', 
+                                         rep('numeric', 2), 'skip', 'numeric', 'skip', 'numeric', 'date', 'date', 'text', 'numeric', 'skip', 'skip', rep('text', 4)),
+                           skip = 1)
+ac.yield.hyb <- ac.yield.hyb %>%
+  filter(loc %in% c("ISU.IA.Ames", "ISU.IA.Crawfordsville") & is.na(plotDiscarded) & !is.na(genotype)) %>%
+  rowwise() %>%
+  mutate(loc = case_when(str_detect(qr, 'A') ~ 'Ames',
+                         str_detect(qr, 'C') ~ 'Crawfordsville'),
+         nLvl = case_when(exp %in% c('LC_4233', 'LC_4352') ~ 'Low',
+                          exp %in% c('LC_4232', 'LC_4353') ~ 'Medium',
+                          exp %in% c('LC_4231', 'LC_4351') ~ 'High'),
+         plot = str_split_i(qr, '-', 3) %>%
+           as.numeric(),
+         genotype = str_to_upper(genotype),
+         plotLen = 17.5, 
+         field = case_when(exp %in% c('LC_4233') ~ 'E1',
+                           exp %in% c('LC_4231', 'LC_4232') ~ 'B1',
+                           exp %in% c('LC_4352', 'LC_4351') ~ 'A',
+                           exp %in% c('LC_4353') ~ 'B'),
+         irrigation = 'Dryland',
+         population = 'Hybrid',
+         yieldPerAc = case_when(!is.na(combineYield) & !is.na(combineMoisture) ~ buPerAc15.5(combineYield, combineMoisture, plotLen)),
+         notes = case_when(!is.na(solar) & is.na(nitrateSensor) & is.na(commercialSoilMoistureSensor) ~ 'Solar panel',
+                           is.na(solar) & !is.na(nitrateSensor) & is.na(commercialSoilMoistureSensor) ~ 'Nitrate sensor', 
+                           is.na(solar) & is.na(nitrateSensor) & !is.na(commercialSoilMoistureSensor) ~ 'Commercial soil moisture sensor',
+                           !is.na(solar) & !is.na(nitrateSensor) & is.na(commercialSoilMoistureSensor) ~ 'Solar panel; Nitrate sensor',
+                           !is.na(solar) & is.na(nitrateSensor) & !is.na(commercialSoilMoistureSensor) ~ 'Solar panel; Commercial soil moisture '))
+
+# Drop pctMoistureEarPhenotyping - only present for part of UNL ear phenotyping & not used to calculate other values
+hips_v3 <- hips_v3 %>%
+  select(!pctMoistureEarPhenotyping)
+# Export v3, there will still be some data cleaning to do here
+#write.table(hips_v3, file = 'outData/HIPS_2022_V3.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+
+# Sweetcorn: average kernel mass is off (also, calculate this for other locs & calc hundredKernelWt 
+# -- these should be moisture adjusted but we have no moisture data for Ames and Crawfordsville?
+# Cob broke - cob len is off
+# Seed spilled - kernel mass is off; use diff between earWt and kernelWt instead?
+# Seed missing on both sides - ear width is off?
