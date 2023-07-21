@@ -2163,6 +2163,7 @@ for (currFile in krn.hyb.files)
                         skip = 3,
                         col_names = c('qr', 'kernelRows', 'notes', 'sweetcorn'),
                         col_types = c('text', 'numeric', 'text', 'text')) %>%
+    filter(!is.na(qr)|!is.na(kernelRows)) %>%
     rowwise() %>%
     mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-') %>%
              str_to_upper() %>%
@@ -2189,6 +2190,7 @@ for (currFile in krn.inb.files)
                         skip = 3,
                         col_names = c('qr', 'kernelRows', 'notes', 'smoothCob', 'sweetcorn'),
                         col_types = c('text', 'numeric', rep('text', 3))) %>%
+    filter(!is.na(qr)|!is.na(kernelRows)) %>%
     rowwise() %>%
     mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-') %>%
              str_remove('.') %>%
@@ -2231,6 +2233,7 @@ for (currFile in ear.files)
   curr.df <- read_excel(currFile, 
                         col_names = c('qr', 'earLen', 'earWidth', 'earWt', 'collectionStation', 'string', 'seedMissingAtWidest'),
                         col_types = c('text', rep('numeric', 3), rep('text', 3))) %>%
+    filter(!is.na(qr)|!is.na(earLen)|!is.na(earWidth)|!is.na(earWt)) %>%
     rowwise() %>%
     mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-') %>%
              str_remove('.') %>%
@@ -2295,6 +2298,7 @@ for(currFile in cob.files)
                         col_names = c('qr', 'shelledCobLen', 'shelledCobWidth', 'shelledCobWt', 'station', 'brokenCob', 'string', 'box'),
                         col_types = c('text', rep('numeric', 3), rep('text', 4)))
   curr.df <- curr.df %>%
+    filter(!is.na(qr)|!is.na(shelledCobLen)|!is.na(shelledCobWidth)|!is.na(shelledCobWt)) %>%
     rowwise() %>%
     mutate(qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-') %>%
              str_remove('.') %>%
@@ -2366,7 +2370,7 @@ ames_hyb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Ames',
          nLvl = 'High',
-         field = 'Hybrid HIPS',
+         field = 'B1',
          irrigation = 'Dryland',
          population = 'Hybrid',
          plot = str_split_i(qr, '-', 3)) %>%
@@ -2382,7 +2386,7 @@ ames_hyb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Ames',
          nLvl = 'Medium',
-         field = 'Hybrid HIPS',
+         field = 'B1',
          irrigation = 'Dryland',
          population = 'Hybrid',
          plot = str_split_i(qr, '-', 3)) %>%
@@ -2398,7 +2402,7 @@ ames_hyb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Ames',
          nLvl = 'Low',
-         field = 'Hybrid HIPS',
+         field = 'E1',
          irrigation = 'Dryland',
          population = 'Hybrid',
          plot = str_split_i(qr, '-', 3)) %>%
@@ -2415,7 +2419,7 @@ ames_inb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Ames',
          nLvl = 'High',
-         field = 'Inbred HIPS',
+         field = 'B1',
          irrigation = 'Dryland',
          population = 'Inbred',
          plantHt = case_when(plantHt=='n/a' ~ NA, .default = plantHt),
@@ -2434,7 +2438,7 @@ ames_inb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Ames',
          nLvl = 'Medium',
-         field = 'Inbred HIPS',
+         field = 'B1',
          irrigation = 'Dryland',
          population = 'Inbred',
          earHt = case_when(earHt=='n/a' ~ NA, .default = earHt),
@@ -2458,7 +2462,7 @@ ames_inb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Ames',
          nLvl = 'Low',
-         field = 'Inbred HIPS',
+         field = 'E1',
          irrigation = 'Dryland',
          population = 'Inbred',
          plot = str_split_i(qr, '-', 3)) %>%
@@ -2475,7 +2479,7 @@ c_hyb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Crawfordsville',
          nLvl = 'High',
-         field = 'Hybrid HIPS',
+         field = 'A',
          irrigation = 'Dryland',
          population = 'Hybrid') %>%
   fixGenos(hips1.5_genoFixKey)
@@ -2491,7 +2495,7 @@ c_hyb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Crawfordsville',
          nLvl = 'Low',
-         field = 'Hybrid HIPS',
+         field = 'A',
          irrigation = 'Dryland',
          population = 'Hybrid') %>%
   fixGenos(hips1.5_genoFixKey)
@@ -2507,7 +2511,7 @@ c_hyb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Crawfordsville',
          nLvl = 'Medium',
-         field = 'Hybrid HIPS',
+         field = 'B',
          irrigation = 'Dryland',
          population = 'Hybrid') %>%
   fixGenos(hips1.5_genoFixKey)
@@ -2524,7 +2528,7 @@ c_inb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Crawfordsville',
          nLvl = 'High',
-         field = 'Inbred HIPS',
+         field = 'A',
          irrigation = 'Dryland',
          population = 'Inbred',
          plot = str_split_i(qr, '-', 3))
@@ -2541,7 +2545,7 @@ c_inb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Crawfordsville',
          nLvl = 'Low',
-         field = 'Inbred HIPS',
+         field = 'A',
          irrigation = 'Dryland',
          population = 'Inbred',
          plot = str_split_i(qr, '-', 3))
@@ -2558,7 +2562,7 @@ c_inb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
          genotype = str_to_upper(genotype),
          loc = 'Crawfordsville',
          nLvl = 'Medium',
-         field = 'Inbred HIPS',
+         field = 'B',
          irrigation = 'Dryland',
          population = 'Inbred', 
          plot = str_split_i(qr, '-', 3))
@@ -2670,25 +2674,19 @@ ac.df <- ac.df %>%
          loc = max(loc, loc.seed, na.rm = TRUE),
          population = max(population, population.seed, na.rm = TRUE), 
          irrigation = max(irrigation, irrigation.seed, na.rm = TRUE),
-         field = max(field, field.seed, na.rm = TRUE), 
+         field = min(field, field.seed, na.rm = TRUE), 
          nLvl = max(nLvl, nLvl.seed)) %>%
   select(!ends_with('.seed'))
-hips_v3 <- bind_rows(hips_v2.5, ac.df)
-# Remove empty rows
-hips_v3 <- hips_v3 %>%
-  filter(!is.na(loc)|!is.na(plot)|!is.na(row)|!is.na(range))
-# Drop collector columns
-hips_v3 <- hips_v3 %>%
-  select(!ends_with('Collector'))
+
 
 # Integrate combine data for Ames & Crawfordsville
 ac.yield.hyb <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx', 
                            sheet = 'RawData (4-Row)', 
                            col_names = c('loc', 'exp', 'check', 'qr', 'genotype', 'latitude', 'longitude', 'row', 'range', 'rep', 'plotDiscarded', 'combineYield', 'combineMoisture',
-                                         'combineTestWt','plantDensity', 'pcRootLodge', 'pctStalkLodge', 'plantDate', 'harvestDate', 'combineNotes', 'totalStandCt', 'solar', 'tattooSensor',
-                                         'nitrateSensor', 'commercialSoilMoistureSensor'),
-                           col_types = c(rep('skip', 3), 'text', 'text', rep('skip', 2), 'text', 'text', 'skip', 'text', 'skip', 'skip', rep('numeric', 5), 'text', rep('numeric', 2), 'skip', 
-                                         rep('numeric', 2), 'skip', 'numeric', 'skip', 'numeric', 'date', 'date', 'text', 'numeric', 'skip', 'skip', rep('text', 4)),
+                                         'combineTestWt','plantDensity', 'pctRootLodge', 'pctStalkLodge', 'plantDate', 'harvestDate', 'combineNotes', 'totalStandCt', 'solar', 
+                                         'tattooSensor', 'nitrateSensor', 'commercialSoilMoistureSensor'),
+                           col_types = c(rep('skip', 3), 'text', 'text', rep('skip', 2), 'text', 'text', 'skip', 'text', 'skip', 'skip', rep('numeric', 5), 'text', rep('numeric', 2),
+                                         'skip', rep('numeric', 2), 'skip', 'numeric', 'skip', 'numeric', 'date', 'date', 'text', 'numeric', 'skip', 'skip', rep('text', 4)),
                            skip = 1)
 ac.yield.hyb <- ac.yield.hyb %>%
   filter(loc %in% c("ISU.IA.Ames", "ISU.IA.Crawfordsville") & is.na(plotDiscarded) & !is.na(genotype)) %>%
@@ -2713,10 +2711,9 @@ ac.yield.hyb <- ac.yield.hyb %>%
          check = case_when(!is.na(check) ~ 'Check'),
          nitrateSensor = case_when(!is.na(nitrateSensor) ~ 'Nitrate sensor'),
          commercialSoilMoistureSensor = case_when(!is.na(commercialSoilMoistureSensor) ~ 'Commercial soil moisture sensor'),
-         tattooSensor = case_when(!is.na(tattooSensor) ~ 'Tattoo sensor'),
-         notes = paste0(check, solar, nitrateSensor, commercialSoilMoistureSensor, tattooSensor, sep = ';') %>%
-           str_remove_all('NA;')) %>%
-  select(!c(solar, nitrateSensor, commercialSoilMoistureSensor, tattooSensor, check, plotDiscarded, exp)) %>%
+         tattooSensor = case_when(!is.na(tattooSensor) ~ 'Tattoo sensor')) %>%
+  unite('notes', c(check, solar, nitrateSensor, commercialSoilMoistureSensor, tattooSensor), na.rm = TRUE, sep = ';', remove = TRUE) %>%        
+  select(!c(plotDiscarded, exp)) %>%
   fixGenos(hips1.5_genoFixKey)
 
 ac.yield.inb <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx', 
@@ -2745,36 +2742,85 @@ ac.yield.inb <- ac.yield.inb %>%
                            exp %in% c('LC_2353') ~ 'B'),
          irrigation = 'Dryland',
          population = 'Inbred', 
-         check = case_when(!is.na(check) ~ 'Check'),
-         notes = paste0(notes, check, sep = ';') %>%
-           str_remove_all('NA;') %>%
-           str_remove_all('NA')) %>%
-  select(!c(exp, check, plotDiscarded))
+         check = case_when(!is.na(check) ~ 'Check')) %>%
+  unite('notes', c(notes, check), sep = ';', na.rm = TRUE, remove = TRUE) %>%
+  select(!c(exp, plotDiscarded))
 ac.yield <- bind_rows(ac.yield.hyb, ac.yield.inb)
 
-hips_v3 <- full_join(hips_v3, ac.yield, join_by(qr), suffix = c('', '.yield'), keep = FALSE)
-hips_v3 <- hips_v3 %>%
+# Get qrs in each treatment x loc combo so we can set nLvl for ac.df before we merge
+low <- filter(ac.yield, nLvl=='Low') %>%
+  select(qr) %>%
+  as.vector()
+med <- filter(ac.yield, nLvl=='Medium') %>%
+  select(qr) %>%
+  as.vector()
+high <- filter(ac.yield, nLvl=='High') %>%
+  select(qr) %>%
+  as.vector()
+a <- filter(ac.yield, field=='A') %>%
+  select(qr) %>%
+  as.vector()
+b <- filter(ac.yield, field=='B') %>%
+  select(qr) %>%
+  as.vector()
+b1 <- filter(ac.yield, field=='B1') %>%
+  select(qr) %>%
+  as.vector()
+e1 <- filter(ac.yield, field=='E1') %>%
+  select(qr) %>%
+  as.vector()
+# Remove two filler row that accidentally got assigned the same qrs as actual check plots in another nitrogen block
+ac.df <- ac.df %>%
   rowwise() %>%
-  mutate(loc = max(loc, loc.yield, na.rm = TRUE),
-         genotype = max(genotype, genotype.yield, na.rm = TRUE),
-         latitude = max(latitude, latitude.yield, na.rm = TRUE),
-         longitude = max(longitude, longitude.yield, na.rm = TRUE),
-         row = max(row, row.yield, na.rm = TRUE),
-         range = max(range, range.yield, na.rm = TRUE),
+  mutate(field = case_when(qr %in% a$qr ~ 'A',
+                           qr %in% b$qr ~ 'B',
+                           qr %in% b1$qr ~ 'B1',
+                           qr %in% e1$qr ~ 'E1'),
+         nLvl = case_when(qr %in% low$qr ~ 'Low',
+                          qr %in% med$qr ~ 'Medium',
+                          qr %in% high$qr ~ 'High')) %>%
+  filter(!c(qr %in% c('22-A-1585271', '22-A-1585190') & str_detect(notes, 'toss')))
+ac.all.df <- full_join(ac.df, ac.yield, join_by(range, row, loc, field, nLvl, population), suffix = c('', '.yield'))
+ac.all.df <- ac.all.df %>%
+  rowwise() %>%
+  mutate(qr = max(qr, qr.yield, na.rm = TRUE),
          rep = max(rep, rep.yield, na.rm = TRUE),
-         combineYield = max(combineYield, combineYield.yield, na.rm = TRUE),
-         combineMoisture = max(combineMoisture, combineMoisture.yield, na.rm = TRUE),
-         combineTestWt = max(combineTestWt, combineTestWt.yield, na.rm = TRUE),
-         plantDensity = max(plantDensity, plantDensity.yield, na.rm = TRUE),
-         )
+         plot = max(plot, plot.yield, na.rm = TRUE), 
+         irrigation = 'Dryland') %>%
+  unite('notes', c(notes, notes.yield), na.rm = TRUE, sep = ';', remove = TRUE) %>%
+  mutate(notes = case_when(str_detect(genotype, 'SOLAR') & is.na(notes) ~ 'Solar panel',
+                           str_detect(genotype, 'SOLAR') & !is.na(notes) ~ str_c(notes, 'Solar panel', sep = ';'),
+                           .default = notes),
+         genotype = genotype.yield) %>%
+  select(!ends_with('.yield'))
+hips_v2.5 <- hips_v2.5 %>%
+  mutate(histFT = as.double(histFT),
+         histPlantHt = as.double(histPlantHt))
+
+hips_v3 <- bind_rows(hips_v2.5, ac.all.df)
+# Remove empty rows
+hips_v3 <- hips_v3 %>%
+  filter(!is.na(loc)|!is.na(plot)|!is.na(row)|!is.na(range))
+# Drop collector columns
+hips_v3 <- hips_v3 %>%
+  select(!ends_with('Collector'))
 # Drop pctMoistureEarPhenotyping - only present for part of UNL ear phenotyping & not used to calculate other values
 hips_v3 <- hips_v3 %>%
   select(!pctMoistureEarPhenotyping)
+# Change -Inf to NA
+hips_v3 <- hips_v3 %>%
+  ungroup() %>%
+  mutate(across(where(is.double) & !where(is.POSIXct), ~na_if(., -Inf))) %>%
+  mutate(across(where(is.POSIXct), ~na_if(., as.POSIXct(-Inf))))
+# Remove plot where the qr is a box number that has no observations
+hips_v3 <- filter(hips_v3, qr!='C-2351-006')
 # Export v3, there will still be some data cleaning to do here
 #write.table(hips_v3, file = 'outData/HIPS_2022_V3.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 
-# Sweetcorn: average kernel mass is off (also, calculate this for other locs & calc hundredKernelWt 
-# -- these should be moisture adjusted but we have no moisture data for Ames and Crawfordsville?
-# Cob broke - cob len is off
-# Seed spilled - kernel mass is off; use diff between earWt and kernelWt instead?
-# Seed missing on both sides - ear width is off?
+# Sweetcorn: average kernel mass is off (also, calculate this for other locs & calc hundredKernelWt --> add var T/F for sweetcorn (56 plots between Ames & Crawfordsville)
+# --- we did not note sweetcorn at UNL, but fairly heritable, so we need to calc heritability for this and decide if we list TRUE for those lines in other locs
+# -- these should be moisture adjusted but we have no moisture data for Ames and Crawfordsville? --> if small range of moistures seen at UNL, adjust to the mean
+## ---- min = 0.02, max = 0.12, mean = 0.055, sd = 0.018--> still need to plot histogram --- it was fairly normal
+# Cob broke - cob len is off? --> check pct data affected: 38 plots
+# Seed spilled - kernel mass is off; use diff between earWt and kernelWt instead? --> check pct of data within locs: 44 plots between Ames and Crawfordsville
+# Seed missing on both sides - ear width is off? --> check pct of data affected: 103 plots between Crawfordsville & Ames, maybe this measurement isn't off: this is how it is 
