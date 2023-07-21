@@ -2684,10 +2684,10 @@ hips_v3 <- hips_v3 %>%
 # Integrate combine data for Ames & Crawfordsville
 ac.yield.hyb <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx', 
                            sheet = 'RawData (4-Row)', 
-                           col_names = c('loc', 'exp', 'qr', 'genotype', 'latitude', 'longitude', 'row', 'range', 'rep', 'plotDiscarded', 'combineYield', 'combineMoisture',
+                           col_names = c('loc', 'exp', 'check', 'qr', 'genotype', 'latitude', 'longitude', 'row', 'range', 'rep', 'plotDiscarded', 'combineYield', 'combineMoisture',
                                          'combineTestWt','plantDensity', 'pcRootLodge', 'pctStalkLodge', 'plantDate', 'harvestDate', 'combineNotes', 'totalStandCt', 'solar', 'tattooSensor',
                                          'nitrateSensor', 'commercialSoilMoistureSensor'),
-                           col_types = c(rep('skip', 3), 'text', 'text', rep('skip', 3), 'text', 'skip', 'text', 'skip', 'skip', rep('numeric', 5), 'text', rep('numeric', 2), 'skip', 
+                           col_types = c(rep('skip', 3), 'text', 'text', rep('skip', 2), 'text', 'text', 'skip', 'text', 'skip', 'skip', rep('numeric', 5), 'text', rep('numeric', 2), 'skip', 
                                          rep('numeric', 2), 'skip', 'numeric', 'skip', 'numeric', 'date', 'date', 'text', 'numeric', 'skip', 'skip', rep('text', 4)),
                            skip = 1)
 ac.yield.hyb <- ac.yield.hyb %>%
@@ -2709,12 +2709,64 @@ ac.yield.hyb <- ac.yield.hyb %>%
          irrigation = 'Dryland',
          population = 'Hybrid',
          yieldPerAc = case_when(!is.na(combineYield) & !is.na(combineMoisture) ~ buPerAc15.5(combineYield, combineMoisture, plotLen)),
-         notes = case_when(!is.na(solar) & is.na(nitrateSensor) & is.na(commercialSoilMoistureSensor) ~ 'Solar panel',
-                           is.na(solar) & !is.na(nitrateSensor) & is.na(commercialSoilMoistureSensor) ~ 'Nitrate sensor', 
-                           is.na(solar) & is.na(nitrateSensor) & !is.na(commercialSoilMoistureSensor) ~ 'Commercial soil moisture sensor',
-                           !is.na(solar) & !is.na(nitrateSensor) & is.na(commercialSoilMoistureSensor) ~ 'Solar panel; Nitrate sensor',
-                           !is.na(solar) & is.na(nitrateSensor) & !is.na(commercialSoilMoistureSensor) ~ 'Solar panel; Commercial soil moisture '))
+         solar = case_when(!is.na(solar) ~ 'Solar panel'),
+         check = case_when(!is.na(check) ~ 'Check'),
+         nitrateSensor = case_when(!is.na(nitrateSensor) ~ 'Nitrate sensor'),
+         commercialSoilMoistureSensor = case_when(!is.na(commercialSoilMoistureSensor) ~ 'Commercial soil moisture sensor'),
+         tattooSensor = case_when(!is.na(tattooSensor) ~ 'Tattoo sensor'),
+         notes = paste0(check, solar, nitrateSensor, commercialSoilMoistureSensor, tattooSensor, sep = ';') %>%
+           str_remove_all('NA;')) %>%
+  select(!c(solar, nitrateSensor, commercialSoilMoistureSensor, tattooSensor, check, plotDiscarded, exp)) %>%
+  fixGenos(hips1.5_genoFixKey)
 
+ac.yield.inb <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx', 
+                           sheet = 'RawData (2-Row)', 
+                           skip = 1,
+                           col_types = c(rep('skip', 3), rep('text', 2), 'skip', 'text', 'skip', 'text', 'skip', 'text', 'skip', 'text', 'skip', rep('numeric', 5), 'text', rep('skip', 4),
+                                         'numeric', rep('skip', 4), 'date', rep('skip', 2), 'numeric', rep('skip', 2), rep('numeric', 3)),
+                           col_names = c('loc', 'exp', 'check', 'qr', 'genotype', 'notes', 'latitude', 'longitude', 'row', 'range', 'rep', 'plotDiscarded', 'plantDensity', 'plantDate',
+                                         'totalStandCt', 'histFT', 'histPlantHt', 'block'))
+ac.yield.inb <- ac.yield.inb %>%
+  filter(loc %in% c("ISU.IA.Ames", "ISU.IA.Crawfordsville") & is.na(plotDiscarded) & !is.na(genotype)) %>%
+  rowwise() %>%
+  mutate(qr = str_to_upper(qr),
+         loc = case_when(str_detect(qr, 'A') ~ 'Ames',
+                         str_detect(qr, 'C') ~ 'Crawfordsville'),
+         nLvl = case_when(exp %in% c('LC_2233', 'LC_2352') ~ 'Low',
+                          exp %in% c('LC_2232', 'LC_2353') ~ 'Medium',
+                          exp %in% c('LC_2231', 'LC_2351') ~ 'High'),
+         plot = str_split_i(qr, '-', 3) %>%
+           as.numeric(),
+         genotype = str_to_upper(genotype),
+         plotLen = 7.5,
+         field = case_when(exp %in% c('LC_2233') ~ 'E1',
+                           exp %in% c('LC_2231', 'LC_2232') ~ 'B1',
+                           exp %in% c('LC_2351', 'LC_2352') ~ 'A',
+                           exp %in% c('LC_2353') ~ 'B'),
+         irrigation = 'Dryland',
+         population = 'Inbred', 
+         check = case_when(!is.na(check) ~ 'Check'),
+         notes = paste0(notes, check, sep = ';') %>%
+           str_remove_all('NA;') %>%
+           str_remove_all('NA')) %>%
+  select(!c(exp, check, plotDiscarded))
+ac.yield <- bind_rows(ac.yield.hyb, ac.yield.inb)
+
+hips_v3 <- full_join(hips_v3, ac.yield, join_by(qr), suffix = c('', '.yield'), keep = FALSE)
+hips_v3 <- hips_v3 %>%
+  rowwise() %>%
+  mutate(loc = max(loc, loc.yield, na.rm = TRUE),
+         genotype = max(genotype, genotype.yield, na.rm = TRUE),
+         latitude = max(latitude, latitude.yield, na.rm = TRUE),
+         longitude = max(longitude, longitude.yield, na.rm = TRUE),
+         row = max(row, row.yield, na.rm = TRUE),
+         range = max(range, range.yield, na.rm = TRUE),
+         rep = max(rep, rep.yield, na.rm = TRUE),
+         combineYield = max(combineYield, combineYield.yield, na.rm = TRUE),
+         combineMoisture = max(combineMoisture, combineMoisture.yield, na.rm = TRUE),
+         combineTestWt = max(combineTestWt, combineTestWt.yield, na.rm = TRUE),
+         plantDensity = max(plantDensity, plantDensity.yield, na.rm = TRUE),
+         )
 # Drop pctMoistureEarPhenotyping - only present for part of UNL ear phenotyping & not used to calculate other values
 hips_v3 <- hips_v3 %>%
   select(!pctMoistureEarPhenotyping)
