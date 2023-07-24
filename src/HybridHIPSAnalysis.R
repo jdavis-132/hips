@@ -1,5 +1,4 @@
 library(lme4)
-library(nlme)
 library(car)
 library(SpATS)
 library(tidyverse)
@@ -26,7 +25,7 @@ mapResponse <- function(data, trait)
 {
   plot <- ggplot(data, aes(range, row, fill = .data[[trait]], color = 'white')) + 
     geom_raster() +
-    facet_wrap(vars(loc)) + 
+    facet_wrap(vars(loc, field)) + 
     scale_x_continuous(breaks = 0:40) +
     scale_y_continuous(breaks = 0:40) +
     scale_fill_viridis(option = 'turbo', direction = -1) +
@@ -40,7 +39,7 @@ response_vars <- c('earHt', 'flagLeafHt', 'plantHt', 'combineMoisture', 'combine
                    'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
                    'yieldPerAc', 'daysToAnthesis', 'daysToSilk', 
                    'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass', 'moistureCorrectedHundredKernelWt', 'pctMoistureNIR')
-
+mapResponse(hybrids, 'kernelMass')
 for(i in response_vars)
 {
   print(i)
@@ -154,7 +153,7 @@ getSpatialCorrections <- function(data, response)
 {
   # Declare empty df and levels of locs
   df.sp <- tibble(loc = NULL, plot = NULL, '{response}':= NULL, nLvl = NULL)
-  locs <-  c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3')
+  locs <-  c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Ames', 'Crawfordsville')
   # Loop over locations
   for(currLoc in locs)
   {
@@ -219,7 +218,7 @@ partitionVariance2 <- function(df, response)
 {
   df <- filter(df, !is.na(response))
   lm_formula <- as.formula(paste(response, "~ (1|loc/nLvl) + (1|genotype) + (1|loc:genotype) + (1|nLvl:genotype)"))
-  model <- lmer(lm_formula, data = df)
+  model <- lmer(lm_formula, data = df, na.action = na.omit)
   vc <- as.data.frame(VarCorr(model), row.names = TRUE, order = 'cov.last', comp = 'Variance') %>%
     as_tibble() %>%
     mutate(responseVar = response)
@@ -243,7 +242,7 @@ hybrids.vp <- hybrids %>%
          kernelsPerRow.sp = case_when(loc=='North Platte1' ~ kernelsPerRow, .default = kernelsPerRow.sp),
          moistureCorrectedFiber.sp = case_when(loc=='North Platte1' ~ moistureCorrectedFiber, .default = moistureCorrectedFiber.sp),
          moistureCorrectedProtein.sp = case_when(loc=='North Platte1' ~ moistureCorrectedProtein, .default = moistureCorrectedProtein.sp),
-         earFillLen.sp = case_when(loc=='North Platte1' ~ earFillLen, .default = earFillLen.sp),
+         earFillLen.sp = case_when(loc %in% c('North Platte1', 'North Platte3') ~ earFillLen, .default = earFillLen.sp),
          moistureCorrectedOil.sp = case_when(loc=='North Platte1' ~ moistureCorrectedOil, .default = moistureCorrectedOil.sp),
          moistureCorrectedHundredKernelWt.sp = case_when(loc=='North Platte1' ~ moistureCorrectedHundredKernelWt, .default = moistureCorrectedHundredKernelWt.sp),
          moistureCorrectedKernelMass.sp = case_when(loc=='North Platte1' ~ moistureCorrectedKernelMass, .default = moistureCorrectedKernelMass.sp))
@@ -271,117 +270,56 @@ for(i in 1:length(response_vars))
   print(sp.correction.plot)
 }
 
-# # Let's drop some outliers: moved to CombineHIPS22Data.R
-# combineNotes_drop <- c("Left row ran over", "Right row gone", "Run over", "Clog", "Animal damage", "Animal damage, not enough grain for accurate moisture", "One row", 
-#                        "Same as last", "11/9/2022, 11:45:04 AM, Tare Warning, Test Weight: 5.75", "Plot lost to belt issue")
-# combineVars <- c('combineYield', 'combineMoisture', 'combineTestWt', 'yieldPerAc')
-# combineNotes_dropMoisture <- c( "Water stress, not enough grain for accurate moisture", "Not enough grain for accurate moisture")
-# 
-# hybrids <- hybrids %>%
-#   mutate(across(all_of(combineVars), ~case_when(combineNotes %in% combineNotes_drop ~ NA, .default = .))) %>%
-#   mutate(combineMoisture = case_when(combineNotes %in% combineNotes_dropMoisture | combineMoisture==0 ~ NA, .default = combineMoisture),
-#          earHt = case_when(loc=='Lincoln' & plot %in% c(5244, 5283, 5141) ~ NA, .default = earHt),
-#          combineYield = case_when(loc=='North Platte1' & plot==250 ~ NA, .default = combineYield),
-#          yieldPerAc = case_when(loc=='North Platte1' & plot==250 ~ NA, .default = yieldPerAc),
-#          combineTestWt = na_if(combineTestWt, 0),
-#          earLen = case_when(loc=='North Platte1' & plot==426 ~ NA, .default = earLen),
-#          earFillLen = case_when(loc=='North Platte1' & plot==426 ~ NA,
-#                                 loc=='North Platte2' & plot==879 ~ mean(15.5, 16, 12), 
-#                                 .default = earFillLen),
-#          earWidth = case_when(loc=='North Plattte1' & plot==426 ~ NA, .default = earWidth),
-#          shelledCobWidth = case_when(loc=='North Platte1' & plot==426 ~ NA, .default = shelledCobWidth))
-# np1 <- hybrids %>% 
-#   filter(loc=='North Platte' & field == 'North Platte1' & !is.na(row) & !is.na(range) & ! is.na(combineYield))
-# # np.spLm <- lme(combineYield ~ 1, correlation = corGaus(~ range + row |field), data = np, na.action = na.omit)
-# # np.spLm <- lme(combineYield ~ 1, random = ~ 1 | field / (range + row), correlation = corGaus(form = ~ range + row), data = np, na.action = na.omit)
-# # np.spLm <- lme(combineYield ~ 1, correlation = corGaus(form = ~ range + row | field), data = np, na.action = na.omit)
-# # np.spLm <- gls(combineYield ~ (1 | field / range) + (1 | field / row), data = np, na.action = na.omit,
-# #                correlation = corGaus(form = ~ range + row | field),
-# #                method = "ML",
-# #                control = lmeControl(msMaxIter = 50))
-# # Use a variogram & kriging to understand the spatial variance-covariance structure in each field - essentially BLUPS, but for spatial data
-# np1.gstat <- gstat(id = 'yieldSpatialCovar', formula = combineYield ~ 1, locations = ~ row + range, data = np1, model = vgm(psill = 1, 'Gau', range =1000))
-# np1.spPred <- predict(np1.gstat, np1.)
-# # partitionVariance <- function(df, phenotype)
-# # {
-# #   lm <- lmer(substitute(phenotype) ~ (1|loc) + (1|row) + (1|range) + (1|rep) + (1|nLvl) + (1|irrigation) + (1|genotype), data = as.matrix(df))
-# #   sigmas <- as.data.frame(lm, row.names = TRUE, order = 'cov.last', comp = 'Variance')
-# #   return(sigmas)
-# # }
-# # 
-# # combineYield <- partitionVariance(hybrids, combineYield)
-# # Fit spatial model; think through nesting and interactions
-# # Write function
-# # Model: spatial nesting + nLvl + genotype + irrigation
-# 
-# # yield.lm <- lmer(combineYield ~ (1|loc / field / range:row) + (1| loc / field / row) + (1|nLvl) + (1|irrigation) + (1|genotype) + 
-# #                    (1|genotype:nLvl) + (1|genotype:irrigation) + (1|nLvl:irrigation) + (1|nLvl:irrigation:genotype), data = hybrids) 
-# # summary(yield.lm)
-# # anova(yield.lm)
-# # Anova(yield.lm, type = 'III')
-# # yield.sigmas <- as.data.frame(VarCorr(yield.lm), row.names = TRUE, order = 'cov.last', comp = 'Variance')
-# # yield.totalVar <- sum(yield.sigmas$vcov)
-# # yield.sigmas <- yield.sigmas %>%
-# #   as_tibble() %>%
-# #   rowwise() %>%
-# #   mutate(pctVar = vcov/yield.totalVar*100)
-# 
-# yield.lm <- lmer(combineYield ~ (1|loc / nLvl) + (1|irrigation) + (1|genotype) + 
-#                    (1|genotype:nLvl) + (1|genotype:irrigation) + (1|nLvl:irrigation) + (1|nLvl:irrigation:genotype), data = hybrids) 
-# summary(yield.lm)
-# anova(yield.lm)
-# Anova(yield.lm, type = 'III')
-# yield.sigmas2 <- as.data.frame(VarCorr(yield.lm), row.names = TRUE, order = 'cov.last', comp = 'Variance')
-# yield.totalVar <- sum(yield.sigmas2$vcov)
-# yield.sigmas2 <- yield.sigmas2 %>%
-#   as_tibble() %>%
-#   rowwise() %>%
-#   mutate(pctVar = vcov/yield.totalVar*100)
-# 
-# yield.lm <- lmer(combineYield ~ (1|loc / nLvl) + (1|genotype) + 
-#                    (1|genotype:nLvl), data = hybrids) 
-# summary(yield.lm)
-# anova(yield.lm)
-# Anova(yield.lm, type = 'III')
-# yield.sigmas3 <- as.data.frame(VarCorr(yield.lm), row.names = TRUE, order = 'cov.last', comp = 'Variance')
-# yield.totalVar <- sum(yield.sigmas3$vcov)
-# yield.sigmas3 <- yield.sigmas3 %>%
-#   as_tibble() %>%
-#   rowwise() %>%
-#   mutate(pctVar = vcov/yield.totalVar*100)
-# 
-# yield.lm <- lmer(combineYield ~ (1|loc / field / nLvl) + (1|irrigation) + (1|genotype) + 
-#                    (1|genotype:nLvl) + (1|genotype:irrigation) + (1|nLvl:irrigation) + (1|nLvl:irrigation:genotype), data = hybrids) 
-# summary(yield.lm)
-# anova(yield.lm)
-# Anova(yield.lm, type = 'III')
-# yield.sigmas4 <- as.data.frame(VarCorr(yield.lm), row.names = TRUE, order = 'cov.last', comp = 'Variance')
-# yield.totalVar <- sum(yield.sigmas4$vcov)
-# yield.sigmas4 <- yield.sigmas4 %>%
-#   as_tibble() %>%
-#   rowwise() %>%
-#   mutate(pctVar = vcov/yield.totalVar*100)
-# 
-# yield.lm <- lmer(combineYield ~ (1|loc / field / nLvl) + (1|irrigation) + (1|genotype) + 
-#                    (1|genotype:nLvl) + (1|genotype:irrigation) + (1|nLvl:irrigation), data = hybrids) 
-# summary(yield.lm)
-# anova(yield.lm)
-# Anova(yield.lm, type = 'III')
-# yield.sigmas5 <- as.data.frame(VarCorr(yield.lm), row.names = TRUE, order = 'cov.last', comp = 'Variance')
-# yield.totalVar <- sum(yield.sigmas5$vcov)
-# yield.sigmas5 <- yield.sigmas5 %>%
-#   as_tibble() %>%
-#   rowwise() %>%
-#   mutate(pctVar = vcov/yield.totalVar*100)
-# 
-# yield.lm <- lmer(combineYield ~ (1|loc /  nLvl) + (1|irrigation) + (1|genotype) + 
-#                    (1|genotype:nLvl) + (1|genotype:irrigation) + (1|nLvl:irrigation), data = hybrids) 
-# summary(yield.lm)
-# anova(yield.lm)
-# Anova(yield.lm, type = 'III')
-# yield.sigmas6 <- as.data.frame(VarCorr(yield.lm), row.names = TRUE, order = 'cov.last', comp = 'Variance')
-# yield.totalVar <- sum(yield.sigmas6$vcov)
-# yield.sigmas6 <- yield.sigmas6 %>%
-#   as_tibble() %>%
-#   rowwise() %>%
-#   mutate(pctVar = vcov/yield.totalVar*100)
+# Calculate genotypic BLUES of the spatially corrected vals within an nLvl in each loc
+getSpBLUES <- function(data, response)
+{
+  # Declare empty df and levels of locs
+  df.blues <- tibble(loc = NULL, genotype = NULL, '{response}':= NULL, nLvl = NULL)
+  locs <-  c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Ames', 'Crawfordsville')
+  # Loop over locations
+  for(currLoc in locs)
+  {
+    loc.df <- filter(data, loc==currLoc & !is.na(row) & !is.na(range) & !is.na(.data[[response]] & !is.na(nLvl)))
+    if(length(loc.df$plot)==0)
+    {
+      print(paste0('No data for ', response, ' at ', currLoc))
+      next
+    }
+    nLvls <- unique(loc.df$nLvl)
+    
+    # Loop over nitrogen treatments
+    for(currTrt in nLvls)
+    {
+      if(is.na(currTrt)|currTrt=='Border')
+      {
+        next
+      }
+      loc.n.df <- filter(loc.df, nLvl==currTrt)
+      print(currLoc)
+      print(currTrt)
+      lm_formula <- as.formula(paste(response, "~ genotype"))
+      model <- lm(lm_formula, data = loc.n.df)
+      # Plot model
+      # Extract BLUPS
+  #     summary <- summary(model)
+  #     if(cor(loc.n.df[[response]], summary$fitted + summary$residuals) > 0.99)
+  #     {
+  #       sp <- tibble(loc = currLoc,
+  #                    nLvl = currTrt, 
+  #                    plot = loc.n.df$plot,
+  #                    '{response}':=summary$fitted)
+  #     }
+  #     else
+  #     {
+  #       print(paste0('Fitted values misordered. r =', cor(loc.n.df[[response]], summary$fitted + summary$residuals), '; ', currLoc, '; ', currTrt))
+  #       next
+  #     }
+  #     # Bind to df
+  #     df.sp <- bind_rows(df.sp, sp) %>%
+  #       mutate(plot = as.numeric(plot))
+  #   }
+  # }
+  # print(length(df.sp$plot))
+  # # Return df
+  # return(df.sp)
+}

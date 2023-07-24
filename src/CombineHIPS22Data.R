@@ -2611,8 +2611,7 @@ for(currFile in seed.files)
                         col_types = c('text', rep('numeric', 3), rep('text', 3)))
   curr.df <- curr.df %>%
     rowwise() %>%
-    mutate(avgKernelWt = case_when(is.na(avgKernelWt) ~ kernelMass/kernelsPerEar, .default = avgKernelWt),
-           plot = str_split_i(qr, '-', 3),
+    mutate(plot = str_split_i(qr, '-', 3),
            loc = case_when(str_detect(qr, 'A') ~ 'Ames',
                            str_detect(qr, 'C') ~ 'Crawfordsville'),
            population = case_when(str_detect(currFile, 'Hybrid') ~ 'Hybrid',
@@ -2654,7 +2653,7 @@ seed.df <- seed.df %>%
          qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-')) %>%
   group_by(qr) %>%
   summarise(kernelsPerEar = mean(kernelsPerEar, na.rm = TRUE), 
-            avgKernelWt = mean(avgKernelWt, na.rm = TRUE),
+            kernelMass = mean(kernelMass, na.rm = TRUE),
             notes = max(notes, na.rm = TRUE),
             plot = max(plot, na.rm = TRUE),
             loc = max(loc, na.rm = TRUE), 
@@ -2786,7 +2785,16 @@ ac.all.df <- ac.all.df %>%
   mutate(qr = max(qr, qr.yield, na.rm = TRUE),
          rep = max(rep, rep.yield, na.rm = TRUE),
          plot = max(plot, plot.yield, na.rm = TRUE), 
-         irrigation = 'Dryland') %>%
+         irrigation = 'Dryland', 
+         field = case_when((loc=='Ames' & range>=25 & population=='Hybrid' & is.na(field)) | 
+                             (loc=='Ames' & plot %in% c(1550244:1550300, 1571923:1572000, 1583701:1583710, 1585301:1585331, 1583799:1583886, 1585420:1585507) & is.na(field)) | 
+                             (loc=='Ames' & row>10 & is.na(field)) ~ 'B1',
+                           loc=='Ames' & plot %in% c(1570100:1585275) & is.na(field) & population=='Hybrid' ~ 'E1', 
+                           loc=='Crawfordsville' & plot %in% c(1584342:1584700, 1584901:1585063) & is.na(field) |
+                             (loc=='Crawfordsville' & row<40 & is.na(field) & population=='Hybrid') ~ 'A',
+                           (loc=='Crawfordsville' & plot %in% c(1585064:1585100, 1585801:1585933) & is.na(field)) | 
+                             (loc=='Crawfordsville' & row>40 & is.na(field) & population=='Hybrid') ~ 'B',
+                           .default = field)) %>%
   unite('notes', c(notes, notes.yield), na.rm = TRUE, sep = ';', remove = TRUE) %>%
   mutate(notes = case_when(str_detect(genotype, 'SOLAR') & is.na(notes) ~ 'Solar panel',
                            str_detect(genotype, 'SOLAR') & !is.na(notes) ~ str_c(notes, 'Solar panel', sep = ';'),
@@ -2814,13 +2822,27 @@ hips_v3 <- hips_v3 %>%
   mutate(across(where(is.POSIXct), ~na_if(., as.POSIXct(-Inf))))
 # Remove plot where the qr is a box number that has no observations
 hips_v3 <- filter(hips_v3, qr!='C-2351-006')
+
+meanNIRMoisturePCT <- mean(hips_v3$pctMoistureNIR, na.rm = TRUE)
+
+hips_v3 <- hips_v3 %>%
+  rowwise() %>%
+  mutate(kernelMass = case_when(str_detect(notes, 'spill') ~ earWt - shelledCobWt, .default = kernelMass),
+         moistureCorrectedKernelMass = case_when(loc %in% c('Ames', 'Crawfordsville') & !is.na(kernelMass) ~ kernelMass/(1 - meanNIRMoisturePCT),
+                                                      .default = moistureCorrectedKernelMass),
+         moistureCorrectedHundredKernelWt = case_when(loc %in% c('Ames', 'Crawfordsville') & !is.na(moistureCorrectedKernelMass) & !is.na(kernelsPerEar)
+                                                      ~ moistureCorrectedKernelMass/kernelsPerEar*100,
+                                                      .default = moistureCorrectedHundredKernelWt),
+         hundredKernelWt = case_when(loc %in% c('Ames', 'Crawfordsville') & !is.na(kernelMass) & !is.na(kernelsPerEar) ~ kernelMass/kernelsPerEar*100),
+         earWidth = case_when(loc=='Ames' & plot==1585236 ~ mean(4.292, 4.328, 4.461), .default = earWidth))
 # Export v3, there will still be some data cleaning to do here
-#write.table(hips_v3, file = 'outData/HIPS_2022_V3.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+write.table(hips_v3, file = 'outData/HIPS_2022_V3.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 
 # Sweetcorn: average kernel mass is off (also, calculate this for other locs & calc hundredKernelWt --> add var T/F for sweetcorn (56 plots between Ames & Crawfordsville)
 # --- we did not note sweetcorn at UNL, but fairly heritable, so we need to calc heritability for this and decide if we list TRUE for those lines in other locs
+###  broad sense heritability of sweetcorn = 0.54
 # -- these should be moisture adjusted but we have no moisture data for Ames and Crawfordsville? --> if small range of moistures seen at UNL, adjust to the mean
-## ---- min = 0.02, max = 0.12, mean = 0.055, sd = 0.018--> still need to plot histogram --- it was fairly normal
-# Cob broke - cob len is off? --> check pct data affected: 38 plots
-# Seed spilled - kernel mass is off; use diff between earWt and kernelWt instead? --> check pct of data within locs: 44 plots between Ames and Crawfordsville
+## ---- min = 0.02, max = 0.12, mean = 0.055, sd = 0.018, median = 0.05--> still need to plot histogram --- it was fairly normal
+# Cob broke - cob len is off? --> check pct data affected: 38 plots; these all look reasonable
+# Seed spilled - kernel mass is off; use diff between earWt and cobWt instead? --> check pct of data within locs: 44 plots between Ames and Crawfordsville
 # Seed missing on both sides - ear width is off? --> check pct of data affected: 103 plots between Crawfordsville & Ames, maybe this measurement isn't off: this is how it is 
