@@ -858,7 +858,7 @@ approximate location of the dryland field.
 The irrigation amounts and timing for the full and partial fields is as
 follows:
 
-![](images/Screenshot from 2023-07-25 16-30-18.png)
+![](images/Screenshot%20from%202023-07-25%2016-30-18.png)
 
 ## Scottsbluff
 
@@ -909,6 +909,20 @@ These fields were planted on May 11, 2022 and harvested on October 7,
 Medium, and Low). The field coordinates were 41.199066, -91.486991. The
 nitrogen treatments were applied on June 2, 2022 using 32% UAN.
 
+### Field A - Low and High Nitrogen
+
+Low nitrogen is to the west in these maps.
+
+![](images/LC-Crawfordsville-CF2235.png)
+
+![](images/LC-Crawfordsville-CF2235-Inbreds_offset_marking.png)
+
+### Field B - Medium Nitrogen
+
+![](images/LC-Crawfordsville-CF2235-NormalN(150).png)
+
+![](images/LC-Crawfordsville-CF2235-NormalN(150)-Inbreds_offset_markup.png)
+
 ## Ames
 
 These fields were planted on May 23, 2022 and harvested on October 16,
@@ -918,10 +932,23 @@ hybrids and inbreds were located in the B1 field. The Low nitrogen
 treatments for both hybrids and inbreds were located in the E1 field.
 
 ### B1
-This field was planted on May 22, 2022. Nitrogen was applied using urea and 32% UAN on May 17, 2022, and June 1, 2022. The field coordinates were 42.015354, -93.732519.
+
+This field was planted on May 22, 2022. Nitrogen was applied using urea
+and 32% UAN on May 17, 2022, and June 1, 2022. The field coordinates
+were 42.015354, -93.732519.
+
+![](images/LC-Ames-CF2223.B1.png)
+
+![](images/LC-Ames-CF2223.B1-Inbreds_offset_markup.png)
 
 ### E1
-This field was planted on May 23, 2022. Nitrogen was applied using urea on May 21, 2022. The field coordinates were 42.012376, -93.737301. 
+
+This field was planted on May 23, 2022. Nitrogen was applied using urea
+on May 21, 2022. The field coordinates were 42.012376, -93.737301.
+
+![](images/LC-Ames-CF2223.E1.png)
+
+![](images/LC-Ames-CF2223.E1-Inbreds_offset_markup.png)
 
 # Additional Data Available
 
