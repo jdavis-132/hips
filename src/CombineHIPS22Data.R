@@ -1396,7 +1396,7 @@ nir_v2 <- fixGenos(nir_v2, hips1.5_genoFixKey)
 e_v1.5 <- read_csv('./data/plotleveleardata_v2.csv')
 # Change column names
 orig_colnames_ev15 <- colnames(e_v1.5)
-colnames(e_v1.5) <- c('qr', 'earLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'kernelsPerEar', 'hundredKernelWt', 
+colnames(e_v1.5) <- c('qr', 'shelledCobLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'kernelsPerEar', 'hundredKernelWt', 
                       'pctMoistureEarPhenotyping', 'kernelsPerRow', 'kernelRows', 'kernelMass', 'kernelColor', 'kernelStriping')
 # Separate by location and parse
 ev1.5_np <- filter(e_v1.5, str_detect(qr, 'pLATTE')|str_detect(qr, 'Platte')) %>%
@@ -1440,7 +1440,7 @@ e_v1.5 <- e_v1.5 %>%
                               loc=='North Platte1' & plot==214 ~ 'PHK56 X LH198',
                               .default = genotype)) %>%
   add_row(qr = '5135$ROW19$RANGE8$PHJ40 X LH82',
-          earLen = mean(19, 15.5, 14, 14.5),
+          shelledCobLen = mean(19, 15.5, 14, 14.5),
           earFillLen = mean(17, 15, 12.5, 13),
           earWidth = mean(4, 4, 3.5, 3.5),
           shelledCobWidth = mean(3, 3, 2.5, 2.5),
@@ -1461,7 +1461,7 @@ e_v1.5 <- e_v1.5 %>%
           genotype = 'PHJ40 X LH82',
           population = 'Hybrid') %>%
   add_row(qr = 'NORTH PLATTE$HIPS - NO IRRIGATION - MEDIUM NITROGEN$REP2$PLOT1493$ROW19$RANGE24$PHP02 X PHJ89',
-          earLen = mean(16.5, 17, 16, 17.5),
+          shelledCobLen = mean(16.5, 17, 16, 17.5),
           earFillLen = mean(12, 13.5, 13, 13.5),
           earWidth = mean(4, 3.5, 4, 4),
           shelledCobWidth = mean(3, 3, 3, 3),
@@ -1482,7 +1482,7 @@ e_v1.5 <- e_v1.5 %>%
           genotype = 'PHP02 X PHJ89',
           population = 'Hybrid') %>%
   add_row(qr = 'NORTH PLATTE$HIPS - NO IRRIGATION - MEDIUM NITROGEN$REP2$PLOT1496$ROW22$RANGE24$4N506 X 3IIH6',
-          earLen = mean(16, 16, 17, 18),
+          shelledCobLen = mean(16, 16, 17, 18),
           earFillLen = mean(13.5, 14.5, 15, 15.5),
           earWidth = mean(4, 4, 4, 4),
           shelledCobWidth = mean(2.5, 2.5, 2.5, 3),
@@ -1510,7 +1510,7 @@ e_v1.5 <- e_v1.5 %>%
             rep = max(rep),
             population = max(population),
             irrigation = max(irrigation),
-            earLen = mean(earLen),
+            shelledCobLen = mean(shelledCobLen),
             earFillLen = mean(earFillLen),
             earWidth = mean(earWidth),
             shelledCobWidth = mean(shelledCobWidth),
@@ -2030,7 +2030,7 @@ hips_v2.3 <- hips_v2.2 %>%
          combineYield = case_when(loc=='North Platte1' & plot==250 ~ NA, .default = combineYield),
          yieldPerAc = case_when(loc=='North Platte1' & plot==250 ~ NA, .default = yieldPerAc),
          combineTestWt = na_if(combineTestWt, 0),
-         earLen = case_when(loc=='North Platte1' & plot==426 ~ NA, .default = earLen),
+         shelledCobLen = case_when(loc=='North Platte1' & plot==426 ~ NA, .default = shelledCobLen),
          earFillLen = case_when(loc=='North Platte1' & plot==426 ~ NA,
                                 loc=='North Platte2' & plot==879 ~ mean(15.5, 16, 12), 
                                 .default = earFillLen),
@@ -2794,7 +2794,9 @@ ac.all.df <- ac.all.df %>%
                              (loc=='Crawfordsville' & row<40 & is.na(field) & population=='Hybrid') ~ 'A',
                            (loc=='Crawfordsville' & plot %in% c(1585064:1585100, 1585801:1585933) & is.na(field)) | 
                              (loc=='Crawfordsville' & row>40 & is.na(field) & population=='Hybrid') ~ 'B',
-                           .default = field)) %>%
+                           .default = field),
+         combineYield = case_when(combineNotes %in% c("Large gap in plot", "Missing one harvest row", "Very low stand") ~ NA, 
+                                  .default = combineYield)) %>%
   unite('notes', c(notes, notes.yield), na.rm = TRUE, sep = ';', remove = TRUE) %>%
   mutate(notes = case_when(str_detect(genotype, 'SOLAR') & is.na(notes) ~ 'Solar panel',
                            str_detect(genotype, 'SOLAR') & !is.na(notes) ~ str_c(notes, 'Solar panel', sep = ';'),
@@ -2834,7 +2836,8 @@ hips_v3 <- hips_v3 %>%
                                                       ~ moistureCorrectedKernelMass/kernelsPerEar*100,
                                                       .default = moistureCorrectedHundredKernelWt),
          hundredKernelWt = case_when(loc %in% c('Ames', 'Crawfordsville') & !is.na(kernelMass) & !is.na(kernelsPerEar) ~ kernelMass/kernelsPerEar*100),
-         earWidth = case_when(loc=='Ames' & plot==1585236 ~ mean(4.292, 4.328, 4.461), .default = earWidth))
+         earWidth = case_when(loc=='Ames' & plot==1585236 ~ mean(4.292, 4.328, 4.461), .default = earWidth),
+         genotype = case_when(str_detect(genotype, 'SOLAR') ~ NA, .default = genotype))
 # Export v3, there will still be some data cleaning to do here
 write.table(hips_v3, file = 'outData/HIPS_2022_V3.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 

@@ -275,7 +275,7 @@ getSpBLUES <- function(data, response)
 {
   # Declare empty df and levels of locs
   df.blues <- tibble(loc = NULL, genotype = NULL, '{response}':= NULL, nLvl = NULL)
-  locs <-  c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Ames', 'Crawfordsville')
+  locs <-  c('Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Ames', 'Crawfordsville')
   # Loop over locations
   for(currLoc in locs)
   {
@@ -298,28 +298,23 @@ getSpBLUES <- function(data, response)
       print(currLoc)
       print(currTrt)
       lm_formula <- as.formula(paste(response, "~ genotype"))
-      model <- lm(lm_formula, data = loc.n.df)
-      # Plot model
-      # Extract BLUPS
-  #     summary <- summary(model)
-  #     if(cor(loc.n.df[[response]], summary$fitted + summary$residuals) > 0.99)
-  #     {
-  #       sp <- tibble(loc = currLoc,
-  #                    nLvl = currTrt, 
-  #                    plot = loc.n.df$plot,
-  #                    '{response}':=summary$fitted)
-  #     }
-  #     else
-  #     {
-  #       print(paste0('Fitted values misordered. r =', cor(loc.n.df[[response]], summary$fitted + summary$residuals), '; ', currLoc, '; ', currTrt))
-  #       next
-  #     }
-  #     # Bind to df
-  #     df.sp <- bind_rows(df.sp, sp) %>%
-  #       mutate(plot = as.numeric(plot))
-  #   }
-  # }
-  # print(length(df.sp$plot))
-  # # Return df
-  # return(df.sp)
+      model <- lm(lm_formula, data = loc.n.df, na.action = na.omit)
+      # Extract BLUES and rescale to original scale
+      blues <- coef(model) %>%
+        as_tibble(rownames = 'genotype') %>%
+        mutate(genotype = str_remove(genotype, 'genotype'))
+      intercept <- filter(blues, genotype=='(Intercept)')
+      intercept <- intercept$value
+      blues <- filter(blues, genotype!='(Intercept)') %>%
+        rowwise() %>%
+        mutate('{response}':= value + intercept, ) %>%
+        select(!value)
+      # Bind to df
+      df.blues <- bind_rows(df.blues, blues) %>%
+        mutate(plot = as.numeric(plot))
+    }
+  }
+  print(length(df.sp$plot))
+  # Return df
+  return(df.blues)
 }

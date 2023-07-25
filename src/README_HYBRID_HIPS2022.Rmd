@@ -24,9 +24,7 @@ abbreviated variable name used in data processing, along with any
 specific notes regarding errors or data cleaning done. Data was exported
 with the abbreviated variable names for ease of programming future
 analyses. Variables are listed by the name given to them in the original
-file they were taken from, with the exception of cases where an
-additional suffix needed to be added in cases of replicated measurements
-per plot.
+file they were taken from.
 
 ### QR Code
 
@@ -35,7 +33,10 @@ This information for the Lincoln location hybrids was taken from the
 sheet 'Combined Dataset' in the file 'Summary of Lincoln Hybrid HIPS
 2022 Data.xlsx'. This information for hybrids in the Scottsbluff,
 Missouri Valley, and North Platte locations was taken from the file
-'HybridHIPS_plotlevelNIR\$\_v2.xlsx'
+'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This information for the Ames and
+Crawfordsville locations was taken from the unique id field in the
+sheets 'RawData (4-Row)' and 'RawData (2-Row)' in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Plot
 
@@ -44,7 +45,11 @@ This is the number assigned to the plot. It is abbreviated as
 from the sheet 'Combined Dataset' in the file 'Summary of Lincoln Hybrid
 HIPS 2022 Data.xlsx'.This information for hybrids in the Scottsbluff,
 Missouri Valley, and North Platte locations was taken from the file
-'HybridHIPS_plotlevelNIR\$\_v2.xlsx'
+'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This information for the Ames and
+Crawfordsville locations was taken from the unique id field in the
+sheets 'RawData (4-Row)' and 'RawData (2-Row)' in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx' and uses the number sequence at the
+end of the QR.
 
 ### Location
 
@@ -56,6 +61,10 @@ location hybrids was taken from the sheet 'Combined Dataset' in the file
 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This information for
 the hybrids in the Scottsbluff, Missouri Valley, and North Platte
 locations was taken from the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'.
+This information for the Ames and Crawfordsville locations was taken
+from the unique id field in the sheets 'RawData (4-Row)' and 'RawData
+(2-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx' and uses the
+letter contained in the QR.
 
 ### Field
 
@@ -64,7 +73,10 @@ abbreviated as **'field'**. This information for the Lincoln location
 hybrids was taken from the sheet 'Combined Dataset' in the file 'Summary
 of Lincoln Hybrid HIPS 2022 Data.xlsx'. This information for the hybrids
 in the Scottsbluff, Missouri Valley, and North Platte locations was
-taken from the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'
+taken from the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This is
+information for the Ames and Crawfordsville locations was determined
+based on experiment code, which was dependent on the nitrogen level and
+the field maps.
 
 ### Nitrogen Treatment
 
@@ -79,7 +91,9 @@ the correction of this error. This information for the Lincoln location
 hybrids was taken from the sheet 'Combined Dataset' in the file 'Summary
 of Lincoln Hybrid HIPS 2022 Data.xlsx'. This information for the hybrids
 in the Scottsbluff, Missouri Valley, and North Platte locations was
-taken from the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'.
+taken from the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This is
+information for the Ames and Crawfordsville locations was determined
+based on experiment code, which was dependent on the nitrogen level.
 
 ### Irrigation Treatment
 
@@ -102,7 +116,9 @@ Lincoln location hybrids was taken from the sheet 'Combined Dataset' in
 the file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This
 information for the hybrids in the Scottsbluff, Missouri Valley, and
 North Platte locations was taken from the file
-'HybridHIPS_plotlevelNIR\$\_v2.xlsx'.
+'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This information for the Ames and
+Crawfordsville locations was taken from the sheets 'RawData (4-Row)' and
+'RawData (2-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Range
 
@@ -111,7 +127,10 @@ abbreviated as **'range'**. This information for the Lincoln location
 hybrids was taken from the sheet 'Combined Dataset' in the file 'Summary
 of Lincoln Hybrid HIPS 2022 Data.xlsx'. This information for the hybrids
 in the Scottsbluff, Missouri Valley, and North Platte locations was
-taken from the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'.
+taken from the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This
+information for the Ames and Crawfordsville locations was taken from the
+sheets 'RawData (4-Row)' and 'RawData (2-Row)' in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Row
 
@@ -120,7 +139,10 @@ abbreviated as **'range'**. This information for the Lincoln location
 hybrids was taken from the sheet 'Combined Dataset' in the file 'Summary
 of Lincoln Hybrid HIPS 2022 Data.xlsx'. This information for hybrids in
 the Scottsbluff, Missouri Valley, and North Platte locations was taken
-from the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'.
+from the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This information for
+the Ames and Crawfordsville locations was taken from the sheets 'RawData
+(4-Row)' and 'RawData (2-Row)' in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Name
 
@@ -129,7 +151,13 @@ This is the genotype name grown in the plot. It is abbreviated as
 taken from the sheet 'Combined Dataset' in the file 'Summary of Lincoln
 Hybrid HIPS 2022 Data.xlsx'.This information for hybrids in the
 Scottsbluff, Missouri Valley, and North Platte locations was taken from
-the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'
+the file 'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This information for the
+Ames and Crawfordsville locations was taken from the sheets 'RawData
+(4-Row)' and 'RawData (2-Row)' in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. In Missouri Valley, Ames, and
+Crawfordsville, some plots' genotypes were listed as 'SOLAR' 1-4, with
+no note on the hybrid grown in the plot. These plots' genotypes were
+transformed to NA, with a note on the solar panel in the notes field.
 
 ### Population
 
@@ -146,15 +174,11 @@ for the Lincoln location hybrids was taken from the sheet 'Combined
 Dataset' in the file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'.
 This information for the Scottsbluff location hybrids was taken from the
 sheet 'Hybrid_flowering data' in the file
-'Corn_data_Scottsbluff-2022_rk_11.11.2022'. This information for the North Platte location was taken from the sheets 'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file '2022_Schnable_HIPS_data_v4.xlsx'. This data was not collected at the Missouri Valley, Crawfordsville, and Ames locations. 
-
-### MF Collector
-
-This is the person who collected the male flowering date for this plot.
-It is abbreviated as **'anthesisCollector'**. This information for the
-Lincoln location hybrids was taken from the sheet 'Combined Dataset' in
-the file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This data was
-not recorded at the Scottsbluff location.
+'Corn_data_Scottsbluff-2022_rk_11.11.2022'. This information for the
+North Platte location was taken from the sheets 'Full Data', 'Reduced
+Irr Data', and 'No Irr Data' in the file
+'2022_Schnable_HIPS_data_v4.xlsx'. This data was not collected at the
+Missouri Valley, Crawfordsville, and Ames locations.
 
 ### Female Flowering
 
@@ -164,15 +188,11 @@ location hybrids was taken from the sheet 'Combined Dataset' in the file
 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This information for
 the Scottsbluff hybrids location was taken from the sheet
 'Hybrid_flowering data' in the file
-'Corn_data_Scottsbluff-2022_rk_11.11.2022'. This information for the North Platte location was taken from the sheets 'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file '2022_Schnable_HIPS_data_v4.xlsx'. This data was not collected at the Missouri Valley, Crawfordsville, and Ames locations. 
-
-### FF Collector
-
-This is the person who collected the female flowering date for this
-plot. It is abbreviated as **'silkingCollector'**. This information for
-the Lincoln location was taken from the sheet 'Combined Dataset' in the
-file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This data was not
-recorded at the Scottsbluff location.
+'Corn_data_Scottsbluff-2022_rk_11.11.2022'. This information for the
+North Platte location was taken from the sheets 'Full Data', 'Reduced
+Irr Data', and 'No Irr Data' in the file
+'2022_Schnable_HIPS_data_v4.xlsx'. This data was not collected at the
+Missouri Valley, Crawfordsville, and Ames locations.
 
 ### Notes on Plot (Optional)
 
@@ -202,7 +222,19 @@ abbreviated as **'earHt'**. This information for the Lincoln location
 hybrids was taken from the sheet 'Combined Dataset' in the file 'Summary
 of Lincoln Hybrid HIPS 2022 Data.xlsx'. For Scottsbluff hybrids, this
 data was taken from the sheet 'Hybrid_height data' from the file
-'Corn_data_Scottsbluff-2022_rk_11.11.2022' and converted from inches. This information for the North Platte location was taken from the sheets 'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file '2022_Schnable_HIPS_data_v4.xlsx' and converted from meters. It was not collected at the Missouri Valley, Crawfordsville, or Ames locations. Plots 5244, 5283, 5141 in Lincoln were dropped as they appeared to be an order of magnitude too low. 
+'Corn_data_Scottsbluff-2022_rk_11.11.2022' and converted from inches.
+This information for the North Platte location was taken from the sheets
+'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file
+'2022_Schnable_HIPS_data_v4.xlsx' and converted from meters. Plots 5244,
+5283, 5141 in Lincoln were dropped as they appeared to be an order of
+magnitude too low. This information for Missouri Valley was taken from
+the file 'Plant_data_MO_Valley_2022.xlsx'. The data was collected going
+through the field by range and row, so these are correct, but in this
+file the replicate numbers were inverted, so the replicate numbers and
+genotypes for a plot at a given range was taken from the yield data for
+Missouri Valley. This information for Ames was taken from the file
+'Plant_data_Ames_2022.xlsx.' This information for Crawfodsville was
+taken from the file 'Plant_data_Crawfordsville.xlsx'.
 
 ### Flag Leaf Height
 
@@ -215,7 +247,11 @@ abbreviated as **'flagLeafHt'**. This information for the Lincoln
 location hybrids was taken from the sheet 'Combined Dataset' in the file
 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. For Scottsbluff hybrids
 , this data was taken from the sheet 'Hybrid_height data' from the file
-'Corn_data_Scottsbluff-2022_rk_11.11.2022' and converted from inches. This data was not collected in North Platte, Missouri Valley, Crawfordsville, and Ames locations. 
+'Corn_data_Scottsbluff-2022_rk_11.11.2022' and converted from inches.
+This data was not collected in North Platte, Missouri Valley,
+Crawfordsville, and Ames locations. Plot 1172 at Scottsbluff was dropped
+due to having a value 60 cm (\~1.9 feet) greater than all other
+observations.
 
 ### Plant Height
 
@@ -228,16 +264,20 @@ as missing data prior to calculation. It is abbreviated as
 taken from the sheet 'Combined Dataset' in the file 'Summary of Lincoln
 Hybrid HIPS 2022 Data.xlsx'. For Scottsbluff hybrids, this data was
 taken from the sheet 'Hybrid_height data' from the file
-'Corn_data_Scottsbluff-2022_rk_11.11.2022' and converted from inches. This information for the North Platte location was taken from the sheets 'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file '2022_Schnable_HIPS_data_v4.xlsx' and converted from meters. It was not collected at the Missouri Valley, Crawfordsville, or Ames locations.
-
-### Recorder of Leaf Dimension and Height Data
-
-This is the person who recorded the leaf dimension and height data (leaf
-lengths, leaf widths, ear heights, flag leaf heights, and plant heights)
-for the plot. It is abbreviated as **'leafDimHtCollector'**. This
-information for the Lincoln location hybrids was taken from the sheet
-'Combined Dataset' in the file 'Summary of Lincoln Hybrid HIPS 2022
-Data.xlsx'. This data was not recorded at the Scottsbluff location.
+'Corn_data_Scottsbluff-2022_rk_11.11.2022' and converted from inches.
+This information for the North Platte location was taken from the sheets
+'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file
+'2022_Schnable_HIPS_data_v4.xlsx' and converted from meters. This
+information for Missouri Valley was taken from the file
+'Plant_data_MO_Valley_2022.xlsx'. The data was collected going through
+the field by range and row, so these are correct, but in this file the
+replicate numbers were inverted, so the replicate numbers and genotypes
+for a plot at a given range was taken from the yield data for Missouri
+Valley. This information for Ames was taken from the file
+'Plant_data_Ames_2022.xlsx.' This information for Crawfordsville was
+taken from the file 'Plant_data_Crawfordsville.xlsx'. Plot 1172 at the
+Scottsbluff location was dropped due to having a value more than 114
+centimeters (roughly 3.7 feet) greater than all other observations.
 
 ### Date of Recording Leaf Dim and Height Data
 
@@ -255,16 +295,33 @@ abbreviated as **'harvestDate'**. Inbred plots were not harvested by the
 combine. This information for the Lincoln location was taken from the
 sheet 'Combined Dataset' in the file 'Summary of Lincoln Hybrid HIPS
 2022 Data.xlsx'. For the Scottsbluff location, this information was
-taken from the file 'Dipak Corn22_HM.xlsx'.
+taken from the file 'Dipak Corn22_HM.xlsx'. For the Missouri Valley,
+Ames, and Crawfordsville locations, this data was taken from the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Weight (lbs)
 
-This is the weight, in pounds, of the grain harvested from the inner two rows of the plot by
-the combine. It is abbreviated as **'combineYield'**. Inbred plots were
-not harvested by the combine. This information for the Lincoln location
-was taken from the sheet 'Combined Dataset' in the file 'Summary of
-Lincoln Hybrid HIPS 2022 Data.xlsx'. For the Scottsbluff location, this
-information was taken from the file 'Dipak Corn22_HM.xlsx'. This information for the North Platte location was taken from the sheets 'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file '2022_Schnable_HIPS_data_v4.xlsx.' This information for the Missouri Valley, Crawfordsville, and Ames locations was taken from the sheet 'RawData (4-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. All observations with any of the following values in combineNotes were dropped: "Left row ran over", "Right row gone", "Run over", "Clog", "Animal damage", "Animal damage, not enough grain for accurate moisture", "One row", "Same as last", "11/9/2022, 11:45:04 AM, Tare Warning, Test Weight: 5.75", "Plot lost to belt issue". Plot 250 in North Platte1 was also dropped, as it had a weight approximately twice all other values and appeared that 4 rows, instead of two, were potentially harvested. 
+This is the weight, in pounds, of the grain harvested from the inner two
+rows of the plot by the combine. It is abbreviated as
+**'combineYield'**. Inbred plots were not harvested by the combine. This
+information for the Lincoln location was taken from the sheet 'Combined
+Dataset' in the file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'.
+For the Scottsbluff location, this information was taken from the file
+'Dipak Corn22_HM.xlsx'. This information for the North Platte location
+was taken from the sheets 'Full Data', 'Reduced Irr Data', and 'No Irr
+Data' in the file '2022_Schnable_HIPS_data_v4.xlsx.' This information
+for the Missouri Valley, Crawfordsville, and Ames locations was taken
+from the sheet 'RawData (4-Row)' in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. All observations with any of the
+following values in combineNotes were dropped: "Left row ran over",
+"Right row gone", "Run over", "Clog", "Animal damage", "Animal damage,
+not enough grain for accurate moisture", "One row", "Same as last",
+"11/9/2022, 11:45:04 AM, Tare Warning, Test Weight: 5.75", "Plot lost to
+belt issue". Plot 250 in North Platte1 was also dropped, as it had a
+weight approximately twice all other values and appeared that 4 rows,
+instead of two, were potentially harvested. For the Missouri Valley,
+Ames, and Crawfordsville locations, this data was taken from the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Moisture (%)
 
@@ -274,7 +331,23 @@ abbreviated as **'combineMoisture'**. Inbred plots were not harvested by
 the combine. This information for the Lincoln location was taken from
 the sheet 'Combined Dataset' in the file 'Summary of Lincoln Hybrid HIPS
 2022 Data.xlsx'. For the Scottsbluff location, this information was
-taken from the file 'Dipak Corn22_HM.xlsx'. This information for the North Platte location was taken from the sheets 'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file '2022_Schnable_HIPS_data_v4.xlsx.' This information for the Missouri Valley, Crawfordsville, and Ames locations was taken from the sheet 'RawData (4-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. All observations equal to zero or with any of the following values in combineNotes were dropped: "Left row ran over", "Right row gone", "Run over", "Clog", "Animal damage", "Animal damage, not enough grain for accurate moisture", "One row", "Same as last", "11/9/2022, 11:45:04 AM, Tare Warning, Test Weight: 5.75", "Plot lost to belt issue", "Water stress, not enough grain for accurate moisture", "Not enough grain for accurate moisture". Plot 250 in North Platte1 was also dropped, as it had a weight approximately twice all other values and appeared that 4 rows, instead of two, were potentially harvested. 
+taken from the file 'Dipak Corn22_HM.xlsx'. This information for the
+North Platte location was taken from the sheets 'Full Data', 'Reduced
+Irr Data', and 'No Irr Data' in the file
+'2022_Schnable_HIPS_data_v4.xlsx.' This information for the Missouri
+Valley, Crawfordsville, and Ames locations was taken from the sheet
+'RawData (4-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. All
+observations equal to zero or with any of the following values in
+combineNotes were dropped: "Left row ran over", "Right row gone", "Run
+over", "Clog", "Animal damage", "Animal damage, not enough grain for
+accurate moisture", "One row", "Same as last", "11/9/2022, 11:45:04 AM,
+Tare Warning, Test Weight: 5.75", "Plot lost to belt issue", "Water
+stress, not enough grain for accurate moisture", "Not enough grain for
+accurate moisture". Plot 250 in North Platte1 was also dropped, as it
+had a weight approximately twice all other values and appeared that 4
+rows, instead of two, were potentially harvested. For the Missouri
+Valley, Ames, and Crawfordsville locations, this data was taken from the
+file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Test Weight (lbs)
 
@@ -284,7 +357,22 @@ combine. It is abbreviated as **'combineTestWt'**. Inbred plots were not
 harvested by the combine. This information for the Lincoln location was
 taken from the sheet 'Combined Dataset' in the file 'Summary of Lincoln
 Hybrid HIPS 2022 Data.xlsx'. For the Scottsbluff location, this
-information was taken from the file 'Dipak Corn22_HM.xlsx'. This information for the North Platte location was taken from the sheets 'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file '2022_Schnable_HIPS_data_v4.xlsx.' This information for the Missouri Valley, Crawfordsville, and Ames locations was taken from the sheet 'RawData (4-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. All observations equal to zero or with any of the following values in combineNotes were dropped: "Left row ran over", "Right row gone", "Run over", "Clog", "Animal damage", "Animal damage, not enough grain for accurate moisture", "One row", "Same as last", "11/9/2022, 11:45:04 AM, Tare Warning, Test Weight: 5.75", "Plot lost to belt issue". Plot 250 in North Platte1 was also dropped, as it had a weight approximately twice all other values and appeared that 4 rows, instead of two, were potentially harvested. 
+information was taken from the file 'Dipak Corn22_HM.xlsx'. This
+information for the North Platte location was taken from the sheets
+'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file
+'2022_Schnable_HIPS_data_v4.xlsx.' This information for the Missouri
+Valley, Crawfordsville, and Ames locations was taken from the sheet
+'RawData (4-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. All
+observations equal to zero or with any of the following values in
+combineNotes were dropped: "Left row ran over", "Right row gone", "Run
+over", "Clog", "Animal damage", "Animal damage, not enough grain for
+accurate moisture", "One row", "Same as last", "11/9/2022, 11:45:04 AM,
+Tare Warning, Test Weight: 5.75", "Plot lost to belt issue". Plot 250 in
+North Platte1 was also dropped, as it had a weight approximately twice
+all other values and appeared that 4 rows, instead of two, were
+potentially harvested. For the Missouri Valley, Ames, and Crawfordsville
+locations, this data was taken from the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Harvest Sequence
 
@@ -293,7 +381,9 @@ abbreviated as **'harvestSeq'**. Inbred plots were not harvested by the
 combine. This information for the Lincoln location was taken from the
 sheet 'Combined Dataset' in the file 'Summary of Lincoln Hybrid HIPS
 2022 Data.xlsx'. For the Scottsbluff location, this information was
-taken from the file 'Dipak Corn22_HM.xlsx'.
+taken from the file 'Dipak Corn22_HM.xlsx'. This information was not
+collected at the North Platte, Missouri Valley, Ames, and Crawfordsville
+locations.
 
 ### combineNotes
 
@@ -301,97 +391,165 @@ These are any notes recorded by the combine operator during harvest. It
 is abbreviated as **'combineNotes'**. Inbred plots were not harvested by
 the combine. For the Scottsbluff location, this information was taken
 from the file 'Dipak Corn22_HM.xlsx'. This information was not recorded
-at the Lincoln location.
+at the Lincoln location. This information for the North Platte locations
+was taken from the file '2022_Schnable_HIPS_data_v4.xlsx'. This
+information for the Missouri Valley, Ames, and Crawfordsville locations
+was taken from the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
-### EarLength
+### Shelled Cob Length
 
 This is the mean length of the cob after shelling (i.e. with the kernels
-removed) of one ear from the plot. It is abbreviated as **'earLen'**.
-This information for hybrids and Missouri Valley inbreds was taken from
-the file 'plotleveleardata_v1.5.csv'. Plot 426 in North Platte1 was dropped as all underlying observations were an order of magnitude larger than all other observations. 
+removed) of one ear from the plot. It is abbreviated as
+**'shelledCobLen'**. This information for hybrids and Missouri Valley
+inbreds was taken from the file 'plotleveleardata_v2.csv'. Plot 426 in
+North Platte1 was dropped as all underlying observations were an order
+of magnitude larger than all other observations. This information for
+the Ames and Crawfordsville locations was taken from the files in the
+folder '5 Cob Traits Station' and converted from millimeters to
+centimeters. For these two locations, when the ear had severe bending, a
+string was used to measure the length and this is denoted in the notes
+field.
+
+### Ear Length
+
+This is the mean length of the ear prior to shelling (i.e. with the
+kernels on the ear) of one ear from the plot. It is abbreviated as
+**'earLen'**. This information for the Ames and Crawfordsville locations
+was taken from the files in the folder '3 Ear Traits Station' and
+converted from millimeters to centimeters. For these two locations, when
+the ear had severe bending, a string was used to measure the length and
+this is denoted in the notes field. This data was not collected at the
+North Platte, Scottsbluff, Lincoln, and Missouri Valley locations.
 
 ### EarFillLength
 
 This is the mean length filled with kernels on one ear from the plot in
 centimeters prior to shelling (i.e. with the kernels attached to the
-cob). It is abbreviated as **'earFillLen1'**. This information for
+cob). It is abbreviated as **'earFillLen'**. This information for
 hybrids and Missouri Valley inbreds was taken from the file
-'plotleveleardata_v1.5.xlsx'. Plot 426 in North Platte1 was dropped as all underlying observations were an order of magnitude larger than all other observations, and the mean for plot 879 in North Platte2 was calculated from 3 (rather than 4) ears due to the observation for the fourth ear being an order of magnitude larger than all other observations. 
+'plotleveleardata_v2.csv'. Plot 426 in North Platte1 was dropped as all
+underlying observations were an order of magnitude larger than all other
+observations, and the mean for plots 879 and 837 in North Platte2 was
+calculated from 3 (rather than 4) ears due to the observation for the
+fourth ear being an order of magnitude larger than all other
+observations. This data was not collected for the Ames and
+Crawfordsville locations.
 
 ### EarWidth
 
 This is the mean width of one ear from the plot in centimeters prior to
 shelling (i.e. with the kernels attached to the cob). This corresponds
 to the ear with an ear number of 1 from the original dataset. It is
-abbreviated as **'earWidth1'**. This information for hybrids and
-Missouri Valley inbreds was taken from the file
-'plotleveleardata_v1.5.xlsx'. Plot 426 in North Platte1 was dropped as all underlying observations were an order of magnitude larger than all other observations.
+abbreviated as **'earWidth'**. This information for hybrids and Missouri
+Valley inbreds was taken from the file 'plotleveleardata_v2.csv'. Plot
+426 in North Platte1 was dropped as all underlying observations were an
+order of magnitude larger than all other observations. Plot 6129 at
+Lincoln and plot 1585236 were calculated using 3 rather than 4 ears as
+the remaining observation was an order of magnitude larger than the
+other observations. This information for the Ames and Crawfordsville
+locations were taken from the files in the folder '3 Ear Traits Station'
+and converted from millimeters to centimeters.
 
 ### ShelledCobWidth
 
 This is the mean width of one cob from the plot in centimeters after
 shelling (i.e. with the kernels removed from the cob). It is abbreviated
 **'shelledCobWidth'**. This information for hybrids and Missouri Valley
-inbreds was taken from the file 'plotleveleardata_v1.5.xlsx'. Plot 426 in North Platte1 was dropped as all underlying observations were an order of magnitude larger than all other observations.
+inbreds was taken from the file 'plotleveleardata_v2.csv'. Plot 426 in
+North Platte1 was dropped as all underlying observations were an order
+of magnitude larger than all other observations. Observations where
+shelledCobWidth was greater than earWidth were dropped. This information
+for the Ames and Crawfordsville locations was taken from the files in
+the folder '5 Cob Traits Station' and converted from millimeters to
+centimeters.
 
 ### ShelledCobWt
 
 This is the mean weight of the cob in grams of one ear from the plot
 after to shelling (i.e. with the kernels detached from the cob). It is
-abbreviated as **'cobWt1'**. This information for hybrids and Missouri
-Valley inbreds was taken from the file 'plotleveleardata_v1.5.xlsx'.
+abbreviated as **'shelledCobWt'**. Plot 1226 at North Platte was
+calculated using 3 rather than 4 ears as the remaining observation was
+an order of magnitude larger than all other observations. This
+information for hybrids and Missouri Valley inbreds was taken from the
+file 'plotleveleardata_v2.csv'. This information for the Ames and
+Crawfordsville locations was taken from the files in the folder '5 Cob
+Traits Station'.
 
 ### KernelsPerEar
 
 This is the mean number of kernels per ear from the plot. It is
 abbreviated as **'kernelsPerEar'**. This information for hybrids and
 Missouri Valley inbreds was taken from the file
-'plotleveleardata_v1.5.csv'. <!-- Does this include loose kernels? No-->
+'plotleveleardata_v2.csv'. Plot 1381 at North Platte was calculated
+using 3 ears rather than 4 as the remaining observation was an order of
+magnitude larger than the other observations. This information for the
+Ames and Crawfordsville locations was taken from the files in the folder
+'6 Seed Traits Station'. <!-- Does this include loose kernels? No-->
 
 ### Kernel Mass
 
-This is the mean mass of kernels in grams, per ear. This is calculated
-as the difference between the ear weight and shelled cob weight. It is
-abbreviated as **'kernelMass'**. This information for hybrids and
-Missouri Valley inbreds was taken from the file
-'plotleveleardata_v1.5.csv'.
+This is the mean mass of kernels in grams, per ear. For the North
+Platte, Scottsbluff, Lincoln, and Missouri Valley locations, this is
+calculated as the difference between the ear weight and shelled cob
+weight. It is abbreviated as **'kernelMass'**. This information for
+hybrids and Missouri Valley inbreds was taken from the file
+'plotleveleardata_v2.csv'. Plot 256 at Missouri Valley and plot 664 at
+North Platte were calculated using 3 ears rather than 4 as the remaining
+observation was an order of magnitude larger than the other
+observations. This information for the Ames and Crawfordsville locations
+was taken from the files in the folder '6 Seed Traits Station'. In these
+two locations, the measured seed weight was used. In the cases that
+significant spillage was denoted, the difference between the ear weight
+and the shelled cob weight was used. Some ears' kernels were re-weighed
+due to an off-balance scale. In this case, the re-weighing values
+replaced the original values.
 
 ### KernelColor
 
 This is the color of the kernels from the plot. It is abbreviated as
 **'kernelColor'**. This information for hybrids and Missouri Valley
-inbreds was taken from the file 'plotleveleardata_v1.5.csv'.
+inbreds was taken from the file 'plotleveleardata_v2.csv'. This data was
+not collected for the Ames and Crawfordsville locations.
 
 ### Kernels per Row
 
-This is the mean number of kernels in each kernel row. It is abbreviated as **'kernelsPerRow'**. This information for hybrids and Missouri Valley inbreds was taken from the file 'plotleveleardata_v2.csv'.
+This is the mean number of kernels in each kernel row. It is abbreviated
+as **'kernelsPerRow'**. This information for hybrids and Missouri Valley
+inbreds was taken from the file 'plotleveleardata_v2.csv'. This
+information was not collected for the Ames and Crawfordsville locations.
+Plot 4209 at Lincoln was calculated using 3 ears rather than 4 as the
+remaining observation was an order of magnitude larger than the others.
 
 ### Kernel Rows
 
-This is the mean number of kernel rows. It is abbreviated as **'kernelRows'**. This information for hybrids and Missouri Valley inbreds was taken from the file 'plotleveleardata_v2.csv'.
+This is the mean number of kernel rows. It is abbreviated as
+**'kernelRows'**. This information for hybrids and Missouri Valley
+inbreds was taken from the file 'plotleveleardata_v2.csv'. This
+information for the Ames and Crawfordsville locations was taken from the
+files in the folder '2 KRN And Ear Documentation'. Plot 367 at North
+Platte was calculated using 3 ears rather than 4 as the remaining
+observation was an order of magnitude larger than all others.
 
 ### KernelStriping
 
 This is whether or not the kernels from the plot exhibited striping. It
 is abbreviated as **'kernelStriping'**. This information for hybrids and
 Missouri Valley inbreds was taken from the file
-'plotleveleardata_v1.5.csv'.
+'plotleveleardata_v2.csv'. This information was not collected for the
+Ames and Crawfordsville locations.
 
 ### HundredKernelWeight
 
 This is the mean weight of one hundred kernels from one ear from the
 plot in grams after to shelling (i.e. with the kernels detached from the
-cob). It is abbreviated as **'hundredKernelWt1'**. This information for
+cob). It is abbreviated as **'hundredKernelWt'**. This information for
 hybrids, and Missouri Valley inbreds was taken from the file
-'plotleveleardata_v1.5.csv'.
-
-### PercentMoistureEarPhenotyping
-
-This is the mean moisture of the kernels from the plot measured at the
-time of ear phenotyping. It is abbreviated as
-**'pctMoistureEarPhenotyping'**. This information for hybrids and
-Missouri Valley inbreds was taken from the file
-'plotleveleardata_v1.5.csv'.
+'plotleveleardata_v2.csv'. For the Ames and Crawfordsville locations,
+this was calculated as the mean kernel mass divided by the mean number
+of kernels per ear multiplied by one hundred. Plots 5122 and 5245 at
+Lincoln, and 835, 838, 1169, and 1211 at North Platte were calculated
+using 3 ears rather than 4, as the remaining observation was an order of
+magnitude larger than the others.
 
 ### MoistureCorrectedStarch
 
@@ -402,7 +560,8 @@ plot were used in all other locations. In the case any NIR measurement
 for a replicate was less than zero, this entire replicate was dropped
 prior to computing the median. It is abbreviated as
 **'moistureCorrectedStarch'**. This information for hybrids was taken
-from the file 'HybridHIPS_plotlevelNIR_v2.xlsx'.
+from the file 'HybridHIPS_plotlevelNIR_v2.xlsx'. This information was
+not collected for the Ames and Crawfordsville locations.
 
 ### MoistureCorrectedProtein
 
@@ -413,7 +572,8 @@ plot were used in all other locations. In the case any NIR measurement
 for a replicate was less than zero, this entire replicate was dropped
 prior to computing the median. It is abbreviated as
 **'moistureCorrectedProtein'**. This information for hybrids was taken
-from the file 'HybridHIPS_plotlevelNIR_v2.xlsx'.
+from the file 'HybridHIPS_plotlevelNIR_v2.xlsx'. This information was
+not collected for the Ames and Crawfordsville locations.
 
 ### MoistureCorrectedOil
 
@@ -424,7 +584,8 @@ in all other locations. In the case any NIR measurement for a replicate
 was less than zero, this entire replicate was dropped prior to computing
 the median. It is abbreviated as **'moistureCorrectedOil'**. This
 information for hybrids was taken from the file
-'HybridHIPS_plotlevelNIR_v2.xlsx'.
+'HybridHIPS_plotlevelNIR_v2.xlsx'. This information was not collected
+for the Ames and Crawfordsville locations.
 
 ### MoistureCorrectedFiber
 
@@ -435,7 +596,8 @@ plot were used in all other locations. In the case any NIR measurement
 for a replicate was less than zero, this entire replicate was dropped
 prior to computing the median. It is abbreviated as
 **'moistureCorrectedFiber'**. This information for hybrids was taken
-from the file 'HybridHIPS_plotlevelNIR_v2.xlsx'.
+from the file 'HybridHIPS_plotlevelNIR_v2.xlsx'. This information was
+not collected for the Ames and Crawfordsville locations.
 
 ### MoistureCorrectedAsh
 
@@ -446,21 +608,22 @@ in all other locations. In the case any NIR measurement for a replicate
 was less than zero, this entire replicate was dropped prior to computing
 the median. It is abbreviated as **'moistureCorrectedAsh'**. This
 information for hybrids was taken from the file
-'HybridHIPS_plotlevelNIR_v2.xlsx'.
+'HybridHIPS_plotlevelNIR_v2.xlsx'. This information was not collected
+for the Ames and Crawfordsville locations.
 
 ### Plot Latitude
 
 This is the latitude of the plot. It is abbreviated as **'latitude'**.
-This information for Missouri Valley, Crawfordsville, and Ames was taken from the sheets 'RawData
-(4-Row)' and 'RawData (2-Row)' for hybrids and inbreds, respectively, in
-the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
+This information for Missouri Valley, Crawfordsville, and Ames was taken
+from the sheets 'RawData (4-Row)' and 'RawData (2-Row)' for hybrids and
+inbreds, respectively, in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Plot Longitude
 
 This is the longitude of the plot. It is abbreviated as **'longitude'**.
-This information for Missouri Valley, Crawfordsville, and Ames was taken from the sheets 'RawData
-(4-Row)' and 'RawData (2-Row)' for hybrids and inbreds, respectively, in
-the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
+This information for Missouri Valley, Crawfordsville, and Ames was taken
+from the sheets 'RawData (4-Row)' and 'RawData (2-Row)' for hybrids and
+inbreds, respectively, in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
 
 ### Yield per Acre
 
@@ -474,9 +637,9 @@ calculation assumes a 30" row spacing.
 This is the number of standing plants in two rows. In the case of
 hybrids, this is the middle two rows of the four-row plot, and in the
 case of inbreds, both rows of the two-row plot. It is abbreviated as
-**'totalStandCt'**. This information ('Stand') for Missouri Valley, Crawfordsville, and Ames was
-taken from the sheets 'RawData (4-Row)' and 'RawData (2-Row)' for
-hybrids and inbreds, respectively, in the file
+**'totalStandCt'**. This information ('Stand') for Missouri Valley,
+Crawfordsville, and Ames was taken from the sheets 'RawData (4-Row)' and
+'RawData (2-Row)' for hybrids and inbreds, respectively, in the file
 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. This information for North Platte
 was taken from the sheets 'No Irr Data', 'Reduced Irr Data', and 'Full
 Data' in the file '2022_Schnable_HIPS_data_v4.xlsx' as the sum of the
@@ -495,22 +658,24 @@ abbreviated as **'plantDensity'**.
 This is the percent of plants that lodged due to insufficient roots in
 the middle two rows of the plot for hybrids and in the whole plot for
 inbreds. It is abbreviated as **'pctRootLodge'**. This information for
-Missouri Valley, Crawfordsville, and Ames was taken from the sheets 'RawData (4-Row)' and 'RawData
-(2-Row)' for hybrids and inbreds, respectively, in the file
-'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. This information for North Platte
-was taken from the sheets 'No Irr Data', 'Reduced Irr Data', and 'Full
-Data' in the file '2022_Schnable_HIPS_data_v4.xlsx'.
+Missouri Valley, Crawfordsville, and Ames was taken from the sheets
+'RawData (4-Row)' and 'RawData (2-Row)' for hybrids and inbreds,
+respectively, in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. This
+information for North Platte was taken from the sheets 'No Irr Data',
+'Reduced Irr Data', and 'Full Data' in the file
+'2022_Schnable_HIPS_data_v4.xlsx'.
 
 ### Percent Shoot Lodge
 
 This is the percent of plants that lodged due to stalk breakage in the
 middle two rows of the plot for hybrids and in the whole plot for
 inbreds. It is abbreviated as **'pctStalkLodge'**. This information for
-Missouri Valley, Crawfordsville, and Ames was taken from the sheets 'RawData (4-Row)' and 'RawData
-(2-Row)' for hybrids and inbreds, respectively, in the file
-'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. This information for North Platte
-was taken from the sheets 'No Irr Data', 'Reduced Irr Data', and 'Full
-Data' in the file '2022_Schnable_HIPS_data_v4.xlsx'.
+Missouri Valley, Crawfordsville, and Ames was taken from the sheets
+'RawData (4-Row)' and 'RawData (2-Row)' for hybrids and inbreds,
+respectively, in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. This
+information for North Platte was taken from the sheets 'No Irr Data',
+'Reduced Irr Data', and 'Full Data' in the file
+'2022_Schnable_HIPS_data_v4.xlsx'.
 
 ### Planting Date
 
@@ -543,13 +708,47 @@ information was taken from the sheet 'RawData (2-Row)' in the file
 This is the planted length of the plot in feet. It is abbreviated as
 **'plotLen'**. This information for North Platte was taken from the
 sheets 'No Irr Data', 'Reduced Irr Data', and 'Full Data' in the file
-'2022_Schnable_HIPS_data_v4.xlsx'.
+'2022_Schnable_HIPS_data_v4.xlsx'. This information for the Lincoln
+location was taken from personal communications with Jon Turkus. This
+information for Missouri Vallley, Scottsbluff, Ames, and Crawfordsville
+was taken from personal communications with Lisa Coffey.
 
 ### Days to Anthesis
-This is the number of days between the planting date and anthesisDate. It is abbreviated as **'daysToAnthesis'**.
+
+This is the number of days between the planting date and anthesisDate.
+It is abbreviated as **'daysToAnthesis'**.
 
 ### Days to Silking
-This is the number of days between the planting date and silkingDate. It is abbreviated as **'daysToSilk'**.
+
+This is the number of days between the planting date and silkingDate. It
+is abbreviated as **'daysToSilk'**. Plots 1397 and 1346 at Scottsbluff
+were visual outliers in scatterplots and were dropped.
+
+### Moisture Corrected Kernel Mass
+
+This is the moisture adjusted kernel mass in grams, calculated as the
+kernel mass divided by the quantity 1 - pctMoistureNIR. For the Ames and
+Crawfordsville locations, the percent moisture was not measured during
+ear phenotyping, so the mean of pctMoistureNIR of the other locations
+was used as the moisture percent. It is abbreviated as
+**'moistureCorrectedKernelMass"**.
+
+### Moisture Corrected Hundred Kernel Weight
+
+This is the moisture adjusted hundred kernel weight in grams, calculated
+as the hundred kernel weight divided by the quantity 1 - pctMoistureNIR.
+For the Ames and Crawfordsville locations, the percent moisture was not
+measured during ear phenotyping, so the mean of pctMoistureNIR of the
+other locations was used as the moisture percent. It is abbreviated as
+**'moistureCorrectedHundredKernelWt"**.
+
+### NIR Percent Moisture
+
+This is the percent moisture measured by NIR. For the Lincoln, Missouri
+Valley, North Platte, and Scottsbluff locations, this information was
+taken from the file 'HybridHIPS_plotlevelNIR_v2.5.csv'. This information
+was not collected for the Ames and Crawfordsville locations. It is
+abbreviated as **'pctMoistureNIR'**.
 
 # Location Notes
 
@@ -656,6 +855,11 @@ the full irrigation field, the yellow rectangle is the approximate
 location of the partial irrigation field, and the red rectangle is the
 approximate location of the dryland field.
 
+The irrigation amounts and timing for the full and partial fields is as
+follows:
+
+![](images/Screenshot from 2023-07-25 16-30-18.png)
+
 ## Scottsbluff
 
 The field was irrigated for one hour from 4:00 p.m. to 5:00 p.m. every
@@ -693,16 +897,31 @@ Based on yield data and grain protein content, it was determined that
 the labels in the QR codes for the high and low nitrogen treatments were
 reversed. The QR codes in the data reflect the content of the original
 QR codes, and the nitrogen treatment variable reflects the actual level
-of nitrogen the plot received. The plots were 25 foot (22.5 feet planted), 4-row plots and
-the middle two rows were harvested.
+of nitrogen the plot received. The plots were 25 foot (22.5 feet
+planted), 4-row plots and the middle two rows were harvested.
 
 ![](images/Screen%20Shot%202023-06-01%20at%2011.13.30.png)
+
 ## Crawfordsville
-These fields were planted on May 11, 2022 and harvested on October 7, 2022. Both the inbred and hybrid fields had 3 nitrogen treatments (High, Medium, and Low). The field coordinates were 41.199066, -91.486991. The nitrogen treatments were applied on June 2, 2022 using 32% UAN.
+
+These fields were planted on May 11, 2022 and harvested on October 7,
+2022. Both the inbred and hybrid fields had 3 nitrogen treatments (High,
+Medium, and Low). The field coordinates were 41.199066, -91.486991. The
+nitrogen treatments were applied on June 2, 2022 using 32% UAN.
 
 ## Ames
-These fields were planted on May 23, 2022 and harvested on October 16, 2022. Both the inbred and hybrid fields had 3 nitrogen treatments (High, Medium, and Low). The field coordinates were 42.012376, -93.737301. The nitrogen treatments were applied on May 21, 2022 using urea. 
-<!-- This description assumes fieldbook used is CF2223.E1	Ames (Bruner E1) because the planting date matches the planting date given in the Basic Info tab; check with Lisa on this-->
+
+These fields were planted on May 23, 2022 and harvested on October 16,
+2022. Both the inbred and hybrid fields had 3 nitrogen treatments (High,
+Medium, and Low). The High and Medium nitrogen treatments for both
+hybrids and inbreds were located in the B1 field. The Low nitrogen
+treatments for both hybrids and inbreds were located in the E1 field.
+
+### B1
+This field was planted on May 22, 2022. Nitrogen was applied using urea and 32% UAN on May 17, 2022, and June 1, 2022. The field coordinates were 42.015354, -93.732519.
+
+### E1
+This field was planted on May 23, 2022. Nitrogen was applied using urea on May 21, 2022. The field coordinates were 42.012376, -93.737301. 
 
 # Additional Data Available
 
@@ -1462,3 +1681,36 @@ hybrids and inbreds, respectively, in the file
 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. This information for North Platte
 was taken from the sheets 'No Irr Data', 'Reduced Irr Data', and 'Full
 Data' in the file '2022_Schnable_HIPS_data_v4.xlsx'.
+
+### PercentMoistureEarPhenotyping
+
+This is the mean moisture of the kernels from the plot measured at the
+time of ear phenotyping. It is abbreviated as
+**'pctMoistureEarPhenotyping'**. This information for hybrids and
+Missouri Valley inbreds was taken from the file
+'plotleveleardata_v1.5.csv'.
+
+### MF Collector
+
+This is the person who collected the male flowering date for this plot.
+It is abbreviated as **'anthesisCollector'**. This information for the
+Lincoln location hybrids was taken from the sheet 'Combined Dataset' in
+the file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This data was
+not recorded at the Scottsbluff location.
+
+### FF Collector
+
+This is the person who collected the female flowering date for this
+plot. It is abbreviated as **'silkingCollector'**. This information for
+the Lincoln location was taken from the sheet 'Combined Dataset' in the
+file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This data was not
+recorded at the Scottsbluff location.
+
+### Recorder of Leaf Dimension and Height Data
+
+This is the person who recorded the leaf dimension and height data (leaf
+lengths, leaf widths, ear heights, flag leaf heights, and plant heights)
+for the plot. It is abbreviated as **'leafDimHtCollector'**. This
+information for the Lincoln location hybrids was taken from the sheet
+'Combined Dataset' in the file 'Summary of Lincoln Hybrid HIPS 2022
+Data.xlsx'. This data was not recorded at the Scottsbluff location.
