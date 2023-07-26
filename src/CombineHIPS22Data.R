@@ -1266,10 +1266,10 @@ fixGenos <- function(data, givenKey)
 
 hips1.5genos_fix <- c("HOEGEMEYER 7089 AMX", "SYNGENTA NK0760-311", "PIONEER P0589 AMX", "SYNGENTA NK0760-31", "SYNGENTA NK0760-3", "HOEGEMEYER 7089 A", 
                       "HOEGEMEYER 7089 AM", "PIONEER P0589 AM", "HOEGEMEYER 7089", "SYNGENTA NK0760-", "HOEGEMEYER 8065R", "PIONEER 1311 AMX",
-                      "COMMERCIAL HYBRID 5", "COMMERCIAL HYBRID 4", "COMMERCIAL HYBRID 3", "COMMERCIAL HYBRID 2", "COMMERCIAL HYBRID 1", "")
+                      "COMMERCIAL HYBRID 5", "COMMERCIAL HYBRID 4", "COMMERCIAL HYBRID 3", "COMMERCIAL HYBRID 2", "COMMERCIAL HYBRID 1", "", "MO17 FILLER")
 hips1.5genos_correct <- c("HOEGEMEYER 7089 AMXT", 'SYNGENTA NK0760-3111', "PIONEER P0589 AMXT", rep('SYNGENTA NK0760-3111', 2), rep("HOEGEMEYER 7089 AMXT", 2), 
                           "PIONEER P0589 AMXT", "HOEGEMEYER 7089 AMXT", 'SYNGENTA NK0760-3111', "HOEGEMEYER 8065RR", "PIONEER 1311 AMXT", 
-                          'SYNGENTA NK0760-3111', 'HOEGEMEYER 7089 AMXT', 'HOEGEMEYER 8065RR', 'PIONEER P0589 AMXT', 'PIONEER 1311 AMXT', NA)
+                          'SYNGENTA NK0760-3111', 'HOEGEMEYER 7089 AMXT', 'HOEGEMEYER 8065RR', 'PIONEER P0589 AMXT', 'PIONEER 1311 AMXT', NA, 'MO17')
 hips1.5_genoFixKey <- tibble(orig = hips1.5genos_fix, correct = hips1.5genos_correct)
 # nir <- fixGenos(nir, which(colnames(nir) == "genotype"), genotype_fix_key)
 # 
@@ -1804,15 +1804,16 @@ colnames(mv_inb) <- c('exp', 'check', 'genotype', 'notes', 'plot', 'latitude', '
 # Move check to notes and drop
 # And add metadata
 mv_inb <- mv_inb %>%
-  filter(is.na(notes) & exp=='ISU.IA.MOValley') %>%
+  filter(exp=='ISU.IA.MOValley') %>%
   rowwise() %>%
-  mutate(notes = case_when(check=='Y' ~ 'Check', .default = notes),
+  mutate(check = case_when(!is.na(check) ~ 'Check'),
          genotype = str_to_upper(genotype),
          loc = 'Missouri Valley',
          field = 'Inbred HIPS',
          irrigation = 'Dryland',
          population = 'Inbred') %>%
-  select(!(c(exp, check)))
+  unite('notes', c(notes, check), sep = ';', na.rm = TRUE) %>%
+  select(!(c(exp)))
 # Merge into hips_v2
 hips_v2 <- full_join(hips_v2, mv_inb, join_by(loc, range, row, genotype, plot, rep), keep = FALSE, suffix = c('', '.mv_inb'))
 # Deal with duplicate columns
@@ -2837,7 +2838,8 @@ hips_v3 <- hips_v3 %>%
                                                       .default = moistureCorrectedHundredKernelWt),
          hundredKernelWt = case_when(loc %in% c('Ames', 'Crawfordsville') & !is.na(kernelMass) & !is.na(kernelsPerEar) ~ kernelMass/kernelsPerEar*100),
          earWidth = case_when(loc=='Ames' & plot==1585236 ~ mean(4.292, 4.328, 4.461), .default = earWidth),
-         genotype = case_when(str_detect(genotype, 'SOLAR') ~ NA, .default = genotype))
+         genotype = case_when(str_detect(genotype, 'SOLAR') ~ NA, .default = genotype)) %>%
+  fixGenos(hips1.5_genoFixKey)
 # Export v3, there will still be some data cleaning to do here
 write.table(hips_v3, file = 'outData/HIPS_2022_V3.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 
