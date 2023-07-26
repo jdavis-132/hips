@@ -3,6 +3,7 @@ library(car)
 library(SpATS)
 library(tidyverse)
 library(viridis)
+library(FW)
 # Read in data and change NP so all NP fields have the same loc but different fields --> range/row are unique within a field
 hybrids <- read.table('outData/HIPS_2022_V3.tsv', header = TRUE, sep = '\t') %>%
   filter(population == 'Hybrid') %>%
@@ -35,7 +36,7 @@ mapResponse <- function(data, trait)
 }
 
 response_vars <- c('earHt', 'flagLeafHt', 'plantHt', 'combineMoisture', 'combineTestWt', 
-                   'earLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'kernelsPerEar',
+                   'earLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'shelledCobLen', 'kernelsPerEar',
                    'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
                    'yieldPerAc', 'daysToAnthesis', 'daysToSilk', 
                    'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass', 'moistureCorrectedHundredKernelWt', 'pctMoistureNIR')
@@ -67,7 +68,7 @@ for (i in response_vars)
   outliers[[i]] <- idOutliers(hybrids, i)
 }
 # Cast nLvl, genotype, and irrigation as factors
-hybrids <- mutate(hybrids, across(c(nLvl, genotype, irrigation, loc), as.factor))
+#hybrids <- mutate(hybrids, across(c(nLvl, genotype, irrigation, loc), as.factor))
 
 # # Function to do variance partitioning for each location for a given response variable
 # partitionVariance <- function(data, response)
@@ -263,58 +264,61 @@ vp.plot
 # Is there shrinkage toward the mean of a treatment ?
 for(i in 1:length(response_vars))
 {
-  sp.correction.plot <- ggplot(hybrids, (aes(.data[[response_vars[i]]], .data[[spatiallyCorrectedResponseVars[i]]], color = nLvl))) +
+  sp.correction.plot <- ggplot(hybrids.vp, (aes(.data[[response_vars[i]]], .data[[spatiallyCorrectedResponseVars[i]]], color = nLvl))) +
     geom_point() +
     geom_abline(slope = 1) +
     facet_wrap(vars(loc)) 
   print(sp.correction.plot)
 }
 
-# Calculate genotypic BLUES of the spatially corrected vals within an nLvl in each loc
-getSpBLUES <- function(data, response)
+# plasticity.df <- hybrids.vp %>%
+#   group_by(loc, genotype, nLvl) %>%
+#   summarise(earHt = mean(earHt.sp, na.rm = TRUE),
+#             flagLeafHt = mean(flagLeafHt.sp, na.rm = TRUE),
+#             plantHt = mean(plantHt.sp, na.rm = TRUE),
+#             combineMoisture = mean(combineMoisture.sp, na.rm = TRUE),
+#             combineTestWt = mean(combineTestWt.sp, na.rm = TRUE), 
+#             earLen = mean(earLen.sp, na.rm = TRUE),
+#             earFillLen = mean(earFillLen.sp, na.rm = TRUE), 
+#             earWidth = mean(earWidth.sp, na.rm = TRUE), 
+#             shelledCobWidth = mean(shelledCobWidth.sp, na.rm = TRUE),
+#             shelledCobWt = mean(shelledCobWt.sp, na.rm = TRUE),
+#             shelledCobLen = mean(shelledCobLen.sp, na.rm = TRUE), 
+#             kernelsPerEar = mean(kernelsPerEar.sp, na.rm = TRUE),
+#             moistureCorrectedStarch = mean(moistureCorrectedStarch.sp, na.rm = TRUE), 
+#             moistureCorrectedProtein = mean(moistureCorrectedProtein.sp, na.rm = TRUE),
+#             moistureCorrectedOil = mean(moistureCorrectedOil.sp, na.rm = TRUE),
+#             moistureCorrectedFiber = mean(moistureCorrectedFiber.sp, na.rm = TRUE),
+#             moistureCorrectedAsh = mean(moistureCorrectedAsh.sp, na.rm = TRUE),
+#             yieldPerAc = mean(yieldPerAc.sp, na.rm = TRUE),
+#             daysToAnthesis = mean(daysToAnthesis.sp, na.rm = TRUE),
+#             daysToSilk = mean(daysToSilk.sp, na.rm = TRUE),
+#             kernelsPerRow = mean(kernelsPerRow.sp, na.rm = TRUE),
+#             kernelRows = mean(kernelRows.sp, na.rm = TRUE), 
+#             moistureCorrectedKernelMass = mean(moistureCorrectedKernelMass.sp, na.rm = TRUE),
+#             moistureCorrectedHundredKernelWt = mean(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE), 
+#             pctMoistureNIR = mean(pctMoistureNIR.sp, na.rm = TRUE))
+
+getNitrogenPlasticityByLoc <- function(data, response)
 {
-  # Declare empty df and levels of locs
-  df.blues <- tibble(loc = NULL, genotype = NULL, '{response}':= NULL, nLvl = NULL)
-  locs <-  c('Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Ames', 'Crawfordsville')
-  # Loop over locations
-  for(currLoc in locs)
+  locs <- c('Ames', 'Crawfordsville', 'Lincoln', 'North Platte1', 'North Platte2', 'North Platte3', 'Scottsbluff')
+  response.df <- tibble(loc = NULL, genotype = NULL, '{response}':= NULL,)
+  for (currLoc in locs)
   {
-    loc.df <- filter(data, loc==currLoc & !is.na(row) & !is.na(range) & !is.na(.data[[response]] & !is.na(nLvl)))
-    if(length(loc.df$plot)==0)
-    {
-      print(paste0('No data for ', response, ' at ', currLoc))
-      next
-    }
-    nLvls <- unique(loc.df$nLvl)
-    
-    # Loop over nitrogen treatments
-    for(currTrt in nLvls)
-    {
-      if(is.na(currTrt)|currTrt=='Border')
-      {
-        next
-      }
-      loc.n.df <- filter(loc.df, nLvl==currTrt)
-      print(currLoc)
-      print(currTrt)
-      lm_formula <- as.formula(paste(response, "~ genotype"))
-      model <- lm(lm_formula, data = loc.n.df, na.action = na.omit)
-      # Extract BLUES and rescale to original scale
-      blues <- coef(model) %>%
-        as_tibble(rownames = 'genotype') %>%
-        mutate(genotype = str_remove(genotype, 'genotype'))
-      intercept <- filter(blues, genotype=='(Intercept)')
-      intercept <- intercept$value
-      blues <- filter(blues, genotype!='(Intercept)') %>%
-        rowwise() %>%
-        mutate('{response}':= value + intercept, ) %>%
-        select(!value)
-      # Bind to df
-      df.blues <- bind_rows(df.blues, blues) %>%
-        mutate(plot = as.numeric(plot))
-    }
+    loc.df <- filter(data, !is.na(genotype) & loc==currLoc & nLvl!='Border' & !is.na(nLvl))
+    fw <- FW(y = loc.df[[response]], VAR = loc.df$genotype, ENV = loc.df$nLvl, saveAt = paste0('analysis/gibbs-samples-', response, '-', currLoc), 
+             nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
+    pl <- fw$b %>%
+      as_tibble(rownames = genotype) %>%
+      mutate(loc = currLoc, '{response}':= Init1) %>%
+      select(!Init1)
+    response.df <- bind_rows(response.df, pl)
   }
-  print(length(df.sp$plot))
-  # Return df
-  return(df.blues)
+  return(response.df)
+}
+
+plasticiy.df <- tibble(loc = NULL, genotype = NULL)
+for(i in spatiallyCorrectedResponseVars)
+{
+  plasticity.df <- full_join(plasticity.df, getNitrogenPlasticityByLoc(hybrids.vp, i), join_by(genotype, loc), suffix = c('', ''), keep = FALSE)
 }
