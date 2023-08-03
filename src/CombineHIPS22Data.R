@@ -18,7 +18,7 @@ orig_colnames <- colnames(linc22combined)
 # Rename columns so we can work with them in R --> range and row may look inverted here but they're not! they were inverted in the combined dataset sheet
 colnames(linc22combined) <- c('qr', 'plot', 'loc', 'field', 'nLvl', 'irrigation', 'rep', 'row', 'range', 'genotype', 'anthesisDate', 'anthesisCollector', 
                               'silkingDate', 'silkingCollector', 'notes', 'leafLen1', 'leafWidth1', 'leafLen2', 'leafWidth2', 'earHt1', 'flagLeafHt1', 
-                              'plantHt1', 'earHt2', 'flagLeafHt2', 'plantHt2', 'leafDimHtCollector', 'leafDimHtDate', 'harvestDate', 'combineYield', 
+                              'tasselTipHt1', 'earHt2', 'flagLeafHt2', 'tasselTipHt2', 'leafDimHtCollector', 'leafDimHtDate', 'harvestDate', 'combineYield',
                               'combineMoisture', 'combineTestWt', 'harvestSeq')
 # Convert to tibble so we can use tidyverse and add a population column
 linc22combined <- as_tibble(linc22combined) %>%
@@ -45,10 +45,10 @@ unique(linc22combined$leafLen2) # 'Stunded', 'Stunting', 'No female', 'Stunted'
 unique(linc22combined$leafWidth2) # 'Stunded', 'Stunting', 'No female', 'Stunted'
 unique(linc22combined$earHt1) # 'Stunded', 'Stunting', 'No female', 'Stunted'
 unique(linc22combined$flagLeafHt1) # 'Stunded', 'Stunting', 'No female', 'Stunted'
-unique(linc22combined$plantHt1) # 'Stunded', 'Stunting', 'No female', 'Stunted'
+unique(linc22combined$tasselTipHt1) # 'Stunded', 'Stunting', 'No female', 'Stunted'
 unique(linc22combined$earHt2) # 'Stunded', 'Stunting', 'No female', 'Stunted'
 unique(linc22combined$flagLeafHt2) # 'Stunded', 'Stunting', 'No female', 'Stunted', need to look at val of 1900
-unique(linc22combined$plantHt2) # 'Stunded', 'Stunting', 'No female', 'Stunted'
+unique(linc22combined$tasselTipHt2) # 'Stunded', 'Stunting', 'No female', 'Stunted'
 unique(linc22combined$leafDimHtCollector) # 'Lina and Isabel' --> 'Isabel/Lina', #'AIND' --> 'AI/ND'
 unique(linc22combined$harvestDate)
 unique(linc22combined$combineYield)
@@ -75,20 +75,20 @@ linc22combined <- rowwise(linc22combined) %>%
                                       leafWidth2 %in% stunting|
                                       earHt1 %in% stunting|
                                       flagLeafHt1 %in% stunting|
-                                      plantHt1 %in% stunting|
+                                      tasselTipHt1 %in% stunting|
                                       earHt2 %in% stunting|
                                       flagLeafHt2 %in% stunting|
-                                      plantHt2 %in% stunting ~ 'Stunting', 
+                                      tasselTipHt2 %in% stunting ~ 'Stunting', 
                                     leafLen1 %in% noFemale|
                                       leafWidth1 %in% noFemale|
                                       leafLen2 %in% noFemale|
                                       leafWidth2 %in% noFemale|
                                       earHt1 %in% noFemale|
                                       flagLeafHt1 %in% noFemale|
-                                      plantHt1 %in% noFemale|
+                                      tasselTipHt1 %in% noFemale|
                                       earHt2 %in% noFemale|
                                       flagLeafHt2 %in% noFemale|
-                                      plantHt2 %in% noFemale ~ 'No female'),
+                                      tasselTipHt2 %in% noFemale ~ 'No female'),
          leafLen1 = case_when(leafLen1 %in% stunting | leafLen1 %in% noFemale ~ NA, .default = leafLen1) %>%
            as.numeric(),
          leafWidth1 = case_when(leafWidth1 %in% stunting | leafWidth1 %in% noFemale ~ NA, .default = leafWidth1) %>%
@@ -101,13 +101,13 @@ linc22combined <- rowwise(linc22combined) %>%
            as.numeric(),
          flagLeafHt1 = case_when(flagLeafHt2 %in% stunting | flagLeafHt1 %in% noFemale ~ NA, .default = flagLeafHt1) %>%
            as.numeric(),
-         plantHt1 = case_when(plantHt1 %in% stunting | plantHt1 %in% noFemale ~ NA, .default = plantHt1) %>%
+         tasselTipHt1 = case_when(tasselTipHt1 %in% stunting | tasselTipHt1 %in% noFemale ~ NA, .default = tasselTipHt1) %>%
            as.numeric(),
          earHt2 = case_when(earHt2 %in% stunting | earHt2 %in% noFemale ~ NA, .default = earHt2) %>%
            as.numeric(),
          flagLeafHt2 = case_when(flagLeafHt2 %in% stunting | flagLeafHt2 %in% noFemale ~ NA, .default = flagLeafHt2) %>%
            as.numeric(),
-         plantHt2 = case_when(plantHt2 %in% stunting | plantHt2 %in% noFemale ~ NA, .default = plantHt2) %>% as.numeric(),
+         tasselTipHt2 = case_when(tasselTipHt2 %in% stunting | tasselTipHt2 %in% noFemale ~ NA, .default = tasselTipHt2) %>% as.numeric(),
          leafDimHtCollector = str_replace(leafDimHtCollector, 'Lina and Isabel', 'Isabel/Lina') %>%
            str_replace('AIND', 'AI/ND'))
 # # Read in ear phenotypic data
@@ -1351,7 +1351,7 @@ hips1.5_genoFixKey <- tibble(orig = hips1.5genos_fix, correct = hips1.5genos_cor
 #          silkingDate = max(silkingDate, silkingDate.sb, na.rm = TRUE),
 #          earHt1 = max(earHt1, earHt1.sb, na.rm = TRUE),
 #          flagLeafHt1 = max(flagLeafHt1, flagLeafHt1.sb, na.rm = TRUE), 
-#          plantHt1 = max(plantHt1, plantHt1.sb, na.rm = TRUE)) %>%
+#          tasselTipHt1 = max(tasselTipHt1, tasselTipHt1.sb, na.rm = TRUE)) %>%
 #   select(!ends_with('.sb'))
 # # Replace commas in notes fields with a semicolon so we don't get frameshift errors
 # hips <- hips %>%
@@ -1553,7 +1553,7 @@ unique(linc22combined$leafDimHtNotes)
 # Probably best to drop the stunted plants and those with no ear because there's something wrong with this plant
 l_field <- linc22combined %>%
   ungroup() %>%
-  mutate(across(leafLen1:plantHt2, ~case_when(!is.na(leafDimHtNotes) ~ NA, .default = .)))
+  mutate(across(leafLen1:tasselTipHt2, ~case_when(!is.na(leafDimHtNotes) ~ NA, .default = .)))
 l_field <- fixGenos(l_field, hips1.5_genoFixKey)
 # Now calculate the mean of leaf dim and ht measurements --> with only 2 measurements, this is the same as the median
 # And drop the individual measurements
@@ -1563,7 +1563,7 @@ l_field <- l_field %>%
          leafWidth = mean(leafWidth1, leafWidth2, na.rm = TRUE),
          earHt = mean(earHt1, earHt2, na.rm = TRUE),
          flagLeafHt = mean(flagLeafHt1, flagLeafHt2, na.rm = TRUE),
-         plantHt = mean(plantHt1, plantHt2, na.rm = TRUE)) %>%
+         tasselTipHt = mean(tasselTipHt1, tasselTipHt2, na.rm = TRUE)) %>%
   select(!(ends_with('1')|ends_with('2')))
 # Now combine it with the nir and ear data
 nir_ear_lnkf <- full_join(nir_ear, l_field, join_by(loc, plot, genotype, range, row), suffix = c('', '.lnk'), keep = FALSE)
@@ -1622,7 +1622,7 @@ sb_h_ht <- sb_h_ht[, 2:5]
 # Save the original column names
 orig_colnames_sbhht <- colnames(sb_h_ht)
 # Change the column names so they match the ones we use for programming in Lincoln data
-colnames(sb_h_ht) <- c('plot', 'earHt', 'flagLeafHt', 'plantHt')
+colnames(sb_h_ht) <- c('plot', 'earHt', 'flagLeafHt', 'tasselTipHt')
 # Fix the formatting in plot column, add some metadata, and convert the measurements in inches to centimeters so they are consistent with Lincoln measurements
 sb_h_ht <- sb_h_ht %>%
   as_tibble() %>%
@@ -1636,7 +1636,7 @@ sb_h_ht <- sb_h_ht %>%
          population = 'Hybrid', 
          earHt = cm(earHt),
          flagLeafHt = cm(flagLeafHt),
-         plantHt = cm(plantHt))
+         tasselTipHt = cm(tasselTipHt))
 # Join the sb combine and flowering time datasets
 sb <- full_join(sb_combine, sb_h_ft, keep = FALSE)
 # Filter out observations in sb and sb_h_ht datasets with a NA in the plot column
@@ -1662,7 +1662,7 @@ hips_v1.5 <- hips_v1.5 %>%
          silkingDate = max(silkingDate, silkingDate.sb, na.rm = TRUE),
          earHt = max(earHt, earHt.sb, na.rm = TRUE),
          flagLeafHt = max(flagLeafHt, flagLeafHt.sb, na.rm = TRUE),
-         plantHt = max(plantHt, plantHt.sb, na.rm = TRUE)) %>%
+         tasselTipHt = max(tasselTipHt, tasselTipHt.sb, na.rm = TRUE)) %>%
   select(!ends_with('.sb'))
 # Replace -Inf with NA
 hips_v1.5 <- hips_v1.5 %>%
@@ -1695,11 +1695,11 @@ hips_v1.5_noleafdim <- hips_v1.5 %>%
   select(c(loc:leafDimHtNotes, earHt:combineNotes)) %>%
   relocate(c(qr, loc, plot, field, nLvl, irrigation, rep, row, range, genotype, population)) %>%
   relocate(c(anthesisDate, anthesisCollector, silkingDate, silkingCollector, notes, leafDimHtNotes, leafDimHtCollector, leafDimHtDate, earHt, 
-             flagLeafHt, plantHt), 
+             flagLeafHt, tasselTipHt), 
            .after = c(qr, loc, plot, field, nLvl, irrigation, rep, row, range, genotype, population)) %>%
   relocate(c(harvestDate, combineYield, combineMoisture, combineTestWt, harvestSeq, combineNotes), 
            .after = c(anthesisDate, anthesisCollector, silkingDate, silkingCollector, notes, leafDimHtNotes, leafDimHtCollector, leafDimHtDate, earHt, 
-                      flagLeafHt, plantHt)) %>%
+                      flagLeafHt, tasselTipHt)) %>%
   relocate(c((starts_with('ear') & !earHt), starts_with('shelled'), starts_with('kernel'), hundredKernelWt, pctMoistureEarPhenotyping), 
            .after = c(harvestDate, combineYield, combineMoisture, combineTestWt, harvestSeq, combineNotes)) %>%
   relocate(starts_with('moisture'), 
@@ -1830,7 +1830,7 @@ hips_v2 <- hips_v2 %>%
 hips_v2 <- select(hips_v2, !ends_with('.mv_inb') & !starts_with('exp'))
 
 # Read in North Platte1 data
-np1_colnames <- c('plot', 'genotype', 'genotypeNote', 'standCt1', 'standCt2', 'silkingDate', 'anthesisDate', 'plantHt', 'earHt', 'stalkLodgeNum', 'earDropNum', 
+np1_colnames <- c('plot', 'genotype', 'genotypeNote', 'standCt1', 'standCt2', 'silkingDate', 'anthesisDate', 'flagLeafHt', 'earHt', 'stalkLodgeNum', 'earDropNum', 
                   'rootLodgeNum', 'harvestDate', 'harvestTime', 'range', 'row', 'combineYield', 'combineMoisture', 'combineTestWt', 'plotLen', 'adjYield', 'combineNotes', 
                   'notes_LC', 'notes_HL', 'solarPanel', 'tattooSensor', 'nitrateSensor', 'soilMoistureSensor', 'waterPotentialSensor', 'commercialWaterPotentialSensor')
 
@@ -1866,7 +1866,7 @@ np <- bind_rows(np1, np2, np3)
 np <- np %>%
   rowwise() %>%
   mutate(genotype = str_to_upper(genotype),
-         plantHt = plantHt*100,
+         flagLeafHt = flagLeafHt*100,
          earHt = earHt*100,
          field = 'Hybrid HIPS',
          population = 'Hybrid',
@@ -1920,7 +1920,7 @@ hips_v2.1 <- hips_v2.1 %>%
   mutate(totalStandCt = max(totalStandCt, totalStandCt.np, na.rm = TRUE),
          silkingDate = max(silkingDate, silkingDate.np, na.rm = TRUE),
          anthesisDate = max(anthesisDate, anthesisDate.np, na.rm = TRUE),
-         plantHt = max(plantHt, plantHt.np, na.rm = TRUE),
+         flagLeafHt = max(flagLeafHt, flagLeafHt.np, na.rm = TRUE),
          earHt = max(earHt, earHt.np, na.rm = TRUE),
          stalkLodgeNum = max(stalkLodgeNum, stalkLodgeNum.np, na.rm = TRUE),
          rootLodgeNum = max(rootLodgeNum, rootLodgeNum.np, na.rm = TRUE),
@@ -2061,7 +2061,7 @@ hips_v2.4 <- hips_v2.4 %>%
 # So some of the code below looks like a bug but isn't
 mv.plantData.hyb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx', 
                                sheet = '4211', 
-                               col_names = c('row', 'range', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+                               col_names = c('row', 'range', 'flagLeafHt', 'earHt', 'rep', 'plot', 'genotype'),
                                col_types = c('skip', 'skip', 'numeric', 'numeric', 'skip', 'skip', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
                                skip = 1)
 mv.plantData.hyb <- mv.plantData.hyb %>%
@@ -2075,7 +2075,7 @@ mv.plantData.hyb <- mv.plantData.hyb %>%
          nLvl = 'Medium',
          irrigation = 'Dryland',
          population = 'Hybrid',
-         plantHt = case_when(plantHt=='n/a - solar' ~ NA, .default = plantHt),
+         flagLeafHt = case_when(flagLeafHt=='n/a - solar' ~ NA, .default = flagLeafHt),
          earHt = case_when(earHt=='n/a - solar' ~ NA, .default = earHt),
          rep = case_when(rep==1 ~ 2,
                          rep==2 ~ 1)) %>%
@@ -2083,12 +2083,12 @@ mv.plantData.hyb <- mv.plantData.hyb %>%
 # Repeat for the inbreds
 mv.plantData.inb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx',
                                sheet = '2211',
-                               col_names = c('row', 'range', 'notes', 'plantHt', 'earHt', 'genotype'),
+                               col_names = c('row', 'range', 'notes', 'flagLeafHt', 'earHt', 'genotype'),
                                col_types = c('skip', 'numeric', 'numeric', 'skip', 'skip', 'text', 'numeric', 'numeric', 'text', 'skip'),
                                skip = 1)
 mv.plantData.inb <- mv.plantData.inb %>%
   rowwise() %>%
-  mutate(plantHt = case_when(plantHt=='n/a' ~ NA, .default = plantHt),
+  mutate(flagLeafHt = case_when(flagLeafHt=='n/a' ~ NA, .default = flagLeafHt),
          earHt = case_when(earHt=='n/a' ~ NA, .default = earHt),
          genotype = str_to_upper(genotype),
          loc = 'Missouri Valley',
@@ -2103,7 +2103,7 @@ hips_v2.5 <- full_join(hips_v2.4, mv.plantData, join_by(loc, plot, population, r
 # Drop genotype.mv: Due to the rep switch, this genotype info is flipped between reps
 hips_v2.5 <- hips_v2.5 %>%
   rowwise() %>%
-  mutate(plantHt = max(plantHt, plantHt.mv, na.rm = TRUE),
+  mutate(flagLeafHt = max(flagLeafHt, flagLeafHt.mv, na.rm = TRUE),
          earHt = max(earHt, earHt.mv, na.rm = TRUE),
          field = max(field, field.mv, na.rm = TRUE),
          nLvl = max(nLvl, nLvl.mv, na.rm = TRUE),
@@ -2111,7 +2111,7 @@ hips_v2.5 <- hips_v2.5 %>%
          notes = str_c(notes, notes.mv, sep = ';'),
          moistureCorrectedKernelMass = kernelMass/(1 - pctMoistureNIR),
          moistureCorrectedHundredKernelWt = hundredKernelWt/(1 - pctMoistureNIR)) %>%
-  mutate(plantHt = case_when(loc=='Scottsbluff' & plot==1172 ~ NA, .default = plantHt),
+  mutate(tasselTipHt = case_when(loc=='Scottsbluff' & plot==1172 ~ NA, .default = tasselTipHt),
          shelledCobWidth = case_when(shelledCobWidth > earWidth ~ NA, .default = shelledCobWidth)) %>%
   select(!contains('.mv')) %>%
   ungroup() %>%
@@ -2363,7 +2363,7 @@ ac.ears <- ac.ears %>%
 # Keep unique ids for Ames, Crawfordsville as qrs so we can bring in ear data processed at ISU
 ames_hyb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
                         sheet = '4231',
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+                        col_names = c('range', 'row', 'qr', 'notes', 'flagLeafHt', 'earHt', 'rep', 'plot', 'genotype'),
                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'numeric', 'numeric', 'skip', 'numeric', 'numeric', 'skip', 'text'),
                         skip = 1) %>%
   rowwise() %>%
@@ -2379,7 +2379,7 @@ ames_hyb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
 
 ames_hyb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
                         sheet = '4232',
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+                        col_names = c('range', 'row', 'qr', 'notes', 'flagLeafHt', 'earHt', 'rep', 'plot', 'genotype'),
                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'numeric', 'numeric', 'skip', 'numeric', 'numeric', 'skip', 'text'),
                         skip = 1) %>%
   rowwise() %>%
@@ -2395,7 +2395,7 @@ ames_hyb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
 
 ames_hyb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
                         sheet = '4233',
-                        col_names = c('range', 'row', 'qr', 'plantHt', 'earHt','rep', 'plot', 'genotype'),
+                        col_names = c('range', 'row', 'qr', 'flagLeafHt', 'earHt','rep', 'plot', 'genotype'),
                         col_types = c('numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'skip', 'numeric', 'numeric', 'skip', 'text'),
                         skip = 1) %>%
   rowwise() %>%
@@ -2411,7 +2411,7 @@ ames_hyb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
 
 ames_inb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
                         sheet = '2231',
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'notes2', 'genotype'),
+                        col_names = c('range', 'row', 'qr', 'notes', 'flagLeafHt', 'earHt', 'notes2', 'genotype'),
                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
                         skip = 1) %>%
   rowwise() %>%
@@ -2423,14 +2423,14 @@ ames_inb1 <- read_excel('data/Plant_data_Ames_2022.xlsx',
          field = 'B1',
          irrigation = 'Dryland',
          population = 'Inbred',
-         plantHt = case_when(plantHt=='n/a' ~ NA, .default = plantHt),
+         flagLeafHt = case_when(flagLeafHt=='n/a' ~ NA, .default = flagLeafHt),
          earHt = case_when(earHt=='n/a' ~ NA, .default = earHt), 
          plot = str_split_i(qr, '-', 3)) %>%
   select(!notes2)
 
 ames_inb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
                         sheet = '2232',
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'notes2', 'genotype'),
+                        col_names = c('range', 'row', 'qr', 'notes', 'flagLeafHt', 'earHt', 'notes2', 'genotype'),
                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'text', 'numeric', 'text', 'text', 'skip'),
                         skip = 1) %>%
   rowwise() %>%
@@ -2444,20 +2444,20 @@ ames_inb2 <- read_excel('data/Plant_data_Ames_2022.xlsx',
          population = 'Inbred',
          earHt = case_when(earHt=='n/a' ~ NA, .default = earHt),
          plot = str_split_i(qr, '-', 3)) %>%
-  mutate(notes = case_when(plantHt=='break' ~ str_c(notes, plantHt, sep = ';'), .default = notes),
-         plantHt = case_when(plantHt %in% c('break', 'n/a') ~ NA, .default = plantHt) %>%
+  mutate(notes = case_when(flagLeafHt=='break' ~ str_c(notes, flagLeafHt, sep = ';'), .default = notes),
+         flagLeafHt = case_when(flagLeafHt %in% c('break', 'n/a') ~ NA, .default = flagLeafHt) %>%
            as.numeric()) %>%
   select(!notes2)
 
 ames_inb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
                         sheet = '2233',
-                        col_names = c('range', 'row', 'qr', 'notes', 'plantHt', 'earHt', 'notes2', 'genotype'),
+                        col_names = c('range', 'row', 'qr', 'notes', 'flagLeafHt', 'earHt', 'notes2', 'genotype'),
                         col_types = c('numeric', 'numeric', 'skip', 'text', 'text', 'text', 'numeric', 'text', 'text', 'skip'),
                         skip = 1) %>%
   rowwise() %>%
   mutate(qr = str_to_upper(qr),
-         notes = case_when(plantHt=='break' ~ str_c(notes, notes2, plantHt), .default = str_c(notes, notes2)),
-         plantHt = case_when(plantHt %in% c('break', 'n/a') ~ NA, .default = plantHt) %>%
+         notes = case_when(flagLeafHt=='break' ~ str_c(notes, notes2, flagLeafHt), .default = str_c(notes, notes2)),
+         flagLeafHt = case_when(flagLeafHt %in% c('break', 'n/a') ~ NA, .default = flagLeafHt) %>%
            as.numeric(),
          earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
          genotype = str_to_upper(genotype),
@@ -2471,7 +2471,7 @@ ames_inb3 <- read_excel('data/Plant_data_Ames_2022.xlsx',
 
 c_hyb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
                      sheet = '4351 (east)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+                     col_names = c('row', 'range', 'qr', 'flagLeafHt', 'earHt', 'rep', 'plot', 'genotype'),
                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
                      skip = 1) %>%
   rowwise() %>%
@@ -2487,7 +2487,7 @@ c_hyb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
 
 c_hyb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
                      sheet = '4352 (west)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+                     col_names = c('row', 'range', 'qr', 'flagLeafHt', 'earHt', 'rep', 'plot', 'genotype'),
                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
                      skip = 1) %>%
   rowwise() %>%
@@ -2503,7 +2503,7 @@ c_hyb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
 
 c_hyb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
                      sheet = '4353 (south)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'rep', 'plot', 'genotype'),
+                     col_names = c('row', 'range', 'qr', 'flagLeafHt', 'earHt', 'rep', 'plot', 'genotype'),
                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
                      skip = 1) %>%
   rowwise() %>%
@@ -2519,12 +2519,12 @@ c_hyb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
 
 c_inb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
                      sheet = '2351 (east)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'notes', 'genotype'),
+                     col_names = c('row', 'range', 'qr', 'flagLeafHt', 'earHt', 'notes', 'genotype'),
                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
                      skip = 1) %>%
   rowwise() %>%
   mutate(qr = str_to_upper(qr),
-         plantHt = case_when(str_detect(plantHt, 'n/a') ~ NA, .default = plantHt),
+         flagLeafHt = case_when(str_detect(flagLeafHt, 'n/a') ~ NA, .default = flagLeafHt),
          earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
          genotype = str_to_upper(genotype),
          loc = 'Crawfordsville',
@@ -2536,12 +2536,12 @@ c_inb1 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
 
 c_inb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
                      sheet = '2352 (west)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'notes', 'genotype'),
+                     col_names = c('row', 'range', 'qr', 'flagLeafHt', 'earHt', 'notes', 'genotype'),
                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
                      skip = 1) %>%
   rowwise() %>%
   mutate(qr = str_to_upper(qr),
-         plantHt = case_when(str_detect(plantHt, 'n/a') ~ NA, .default = plantHt),
+         flagLeafHt = case_when(str_detect(flagLeafHt, 'n/a') ~ NA, .default = flagLeafHt),
          earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
          genotype = str_to_upper(genotype),
          loc = 'Crawfordsville',
@@ -2553,12 +2553,12 @@ c_inb2 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
 
 c_inb3 <- read_excel('data/Plant_data_Crawfordsville_2022.xlsx',
                      sheet = '2353 (south)',
-                     col_names = c('row', 'range', 'qr', 'plantHt', 'earHt', 'notes', 'genotype'),
+                     col_names = c('row', 'range', 'qr', 'flagLeafHt', 'earHt', 'notes', 'genotype'),
                      col_types = c('skip', 'numeric', 'numeric', 'skip', 'text', 'numeric', 'numeric', 'text', 'text', 'skip'),
                      skip = 1) %>%
   rowwise() %>%
   mutate(qr = str_to_upper(qr),
-         plantHt = case_when(str_detect(plantHt, 'filler') ~ NA, .default = plantHt),
+         flagLeafHt = case_when(str_detect(flagLeafHt, 'filler') ~ NA, .default = flagLeafHt),
          earHt = case_when(str_detect(earHt, 'n/a') ~ NA, .default = earHt),
          genotype = str_to_upper(genotype),
          loc = 'Crawfordsville',
@@ -2841,8 +2841,20 @@ hips_v3 <- hips_v3 %>%
          genotype = case_when(str_detect(genotype, 'SOLAR') ~ NA, .default = genotype)) %>%
   fixGenos(hips1.5_genoFixKey)
 # Export v3, there will still be some data cleaning to do here
-write.table(hips_v3, file = 'outData/HIPS_2022_V3.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+#write.table(hips_v3, file = 'outData/HIPS_2022_V3.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 
+hips_v3.1 <- hips_v3 %>%
+  select(!contains('hist'))
+hips_v3.1 <- hips_v3.1 %>%
+  rowwise() %>%
+  mutate(lbsNPerAc = case_when(nLvl=='High' & loc %in% c('Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Crawfordsville') ~ 225,
+                               nLvl=='High' & loc=='Ames' ~ 250,
+                               nLvl=='Medium' & loc %in% c('Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Crawfordsville', 'Ames') ~ 150,
+                               nLvl=='Medium' & loc=='Missouri Valley' ~ 175,
+                               nLvl=='Low' ~ 75),
+         irrigation = case_when(irrigation=='Dryland' ~ 'Non-Irrigated', .default = irrigation), 
+         ASI = daysToSilk - daysToAnthesis)
+write.table(hips_v3.1, file = 'outData/HIPS_2022_V3.1.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 # Sweetcorn: average kernel mass is off (also, calculate this for other locs & calc hundredKernelWt --> add var T/F for sweetcorn (56 plots between Ames & Crawfordsville)
 # --- we did not note sweetcorn at UNL, but fairly heritable, so we need to calc heritability for this and decide if we list TRUE for those lines in other locs
 ###  broad sense heritability of sweetcorn = 0.54
