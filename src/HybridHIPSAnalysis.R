@@ -731,3 +731,26 @@ for (i in 1:length(response_vars))
           legend.background = element_rect(color = 'black'))
   print(p)
 }
+
+unl_phenos <- c('earLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'shelledCobLen', 'kernelsPerEar',
+                'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
+                'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass', 'moistureCorrectedHundredKernelWt')
+rm_phenos <- c('earHt', 'flagLeafHt', 'tasselTipHt', 'daysToAnthesis', 'daysToSilk', 'ASI')
+dp_phenos <- c('combineMoisture', 'combineTestWt','yieldPerAc')
+# Look at scottsbluff
+sb <- filter(hybrids.vp, loc=='Scottsbluff' & genotype!='BORDER') %>%
+  pivot_longer(c(contains('.sp'), response_vars), names_to = 'var', values_to = 'val') %>%
+  mutate(nLvl = factor(nLvl, levels = c('Low', 'Medium', 'High')),
+         source = case_when(var %in% c(unl_phenos, paste0(unl_phenos, '.sp')) ~ 'Chidu/Lina',
+                            var %in% c(rm_phenos, paste0(rm_phenos, '.sp')) ~ 'Ramesh',
+                            var %in% c(dp_phenos, paste0(dp_phenos, '.sp')) ~ 'Dipak'))
+
+plot.raw <- filter(sb, !str_detect(var, '.sp')) %>%
+  group_by(genotype, var, nLvl) %>%
+  summarise(val = mean(val)) %>%
+  ggplot(aes(nLvl, val)) + 
+  geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
+  geom_line(color = 'darkgrey') +
+  facet_wrap(vars(var)) +
+  labs(title = 'Mean of Raw Phenotype Values', x = 'Nitrogen Level')
+plot.raw
