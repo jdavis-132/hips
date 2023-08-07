@@ -2867,28 +2867,37 @@ write.table(hips_v3.1, file = 'outData/HIPS_2022_V3.1.tsv', quote = FALSE, sep =
 # Seed missing on both sides - ear width is off? --> check pct of data affected: 103 plots between Crawfordsville & Ames, maybe this measurement isn't off: this is how it is 
 
 
-# Time to wrangle the weather data to a daily level so we can calculate GDUs
-# First, a function to calculate GDUs for a single day
-getGDUs <- function(minTemp, maxTemp)
+# Time to wrangle the weather data to a daily level so we can calculate GDDs
+# First, a function to calculate GDDs for a single day in fahrenheit
+getGDDs <- function(minTemp, maxTemp)
 {
-  cropMinTemp <- 10
-  cropMaxTemp <- 30
+  cropMinTemp <- 50
+  cropMaxTemp <- 86
   min <- minTemp
   max <- maxTemp
   
   # Reassign min and max if they are outside the bounds of the crop's min and max temps for growth
-  if(minTemp < cropMinTemp)
+  if(min <= cropMinTemp)
   {
     min <- cropMinTemp
   }
   
-  if(maxTemp > cropMaxTemp)
+  if(max <= cropMinTemp)
+  {
+    max <- cropMinTemp
+  }
+  
+  if(max >= cropMaxTemp)
   {
     max <- cropMaxTemp
   }
   
-  gdu <- ((min + max)/2) - cropMinTemp
-  return(gdu)
+  if(min >= cropMaxTemp)
+  {
+    min <- cropMaxTemp
+  }
+  GDD <- (min + max)/2 - cropMinTemp
+  return(GDD)
 }
 ## No data for Crawfordsville from HIPS 2022 field so use the data from the nearby G2F station as suggested by Lisa
 ## This has already been imputed using NASA; doi:10.25739/3d3g-pe51
@@ -2900,9 +2909,11 @@ weather.cf <- weather.cf %>%
   mutate(Date_key = as.POSIXct(Date_key), 
          date = as.POSIXct(paste0(Year, '-', Month, '-', Day), format = '%F')) %>%
   group_by(date) %>%
-  summarise(maxTemp = max(Temperature..C., na.rm = TRUE),
-            minTemp = min(Temperature..C., na.rm = TRUE),
-            GDU = getGDUs(minTemp = minTemp, maxTemp = maxTemp), 
+  summarise(maxTemp = max(Temperature..C., na.rm = TRUE) %>%
+              celsius.to.fahrenheit(),
+            minTemp = min(Temperature..C., na.rm = TRUE) %>%
+              celsius.to.fahrenheit(),
+            GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp), 
             loc = 'Crawfordsville')
 season.cf <- seq(as.POSIXct('2022-05-11', format = '%F'), as.POSIXct('2022-10-07', format = '%F'), 'days')
 days.cf <- unique(weather.cf$date)
@@ -2916,11 +2927,9 @@ weather.ames <- weather.ames %>%
            str_split_i(' ', 1) %>%
            as.POSIXct(format = '%F')) %>%
   group_by(date) %>%
-  summarise(maxTemp = max(`2022 HIPS Ames: H: Temperature`, na.rm = TRUE) %>%
-              fahrenheit.to.celsius(),
-            minTemp = min(`2022 HIPS Ames: H: Temperature`, na.rm = TRUE) %>%
-              fahrenheit.to.celsius(),
-            GDU = getGDUs(minTemp = minTemp, maxTemp = maxTemp), 
+  summarise(maxTemp = max(`2022 HIPS Ames: H: Temperature`, na.rm = TRUE),
+            minTemp = min(`2022 HIPS Ames: H: Temperature`, na.rm = TRUE),
+            GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp), 
             loc = 'Ames')
 season.ames <- seq(as.POSIXct('2022-05-23', format = '%F'), as.POSIXct('2022-10-16', format = '%F'), 'days') %>%
   as.character()
@@ -2935,9 +2944,11 @@ ames.daymet <- ames.daymet$data %>%
   mutate(date = as.POSIXct(str_c(year, yday, sep = '-'), format = '%Y-%j') %>%
            format(format = '%F') %>%
            as.character(), 
-         minTemp = tmin..deg.c.,
-         maxTemp = tmax..deg.c.,
-         GDU = getGDUs(minTemp = minTemp, maxTemp = maxTemp),
+         minTemp = tmin..deg.c. %>%
+           celsius.to.fahrenheit(),
+         maxTemp = tmax..deg.c. %>%
+           celsius.to.fahrenheit(),
+         GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
          loc = 'Ames') %>%
   filter(date %in% impute.ames) %>%
   mutate(date = as.POSIXct(date, format = '%F'))
@@ -2950,11 +2961,9 @@ weather.mv <- weather.mv %>%
            str_split_i(' ', 1) %>%
            as.POSIXct(format = '%F')) %>%
   group_by(date) %>%
-  summarise(minTemp = min(`2022 MO Valley: H: Temperature`, na.rm = TRUE) %>%
-              fahrenheit.to.celsius(),
-            maxTemp = max(`2022 MO Valley: H: Temperature`, na.rm = TRUE) %>%
-              fahrenheit.to.celsius(),
-            GDU = getGDUs(minTemp = minTemp, maxTemp = maxTemp),
+  summarise(minTemp = min(`2022 MO Valley: H: Temperature`, na.rm = TRUE),
+            maxTemp = max(`2022 MO Valley: H: Temperature`, na.rm = TRUE),
+            GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
             loc = 'Missouri Valley')
 season.mv <- seq(as.POSIXct('2022-04-29', format = '%F'), as.POSIXct('2022-10-11', format = '%F'), 'days') %>%
   as.character()
@@ -2969,9 +2978,11 @@ mv.daymet <- mv.daymet$data %>%
   mutate(date = as.POSIXct(str_c(year, yday, sep = '-'), format = '%Y-%j') %>%
            format(format = '%F') %>%
            as.character(), 
-         minTemp = tmin..deg.c.,
-         maxTemp = tmax..deg.c.,
-         GDU = getGDUs(minTemp = minTemp, maxTemp = maxTemp),
+         minTemp = tmin..deg.c. %>%
+           celsius.to.fahrenheit(),
+         maxTemp = tmax..deg.c. %>%
+           celsius.to.fahrenheit(),
+         GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
          loc = 'Missouri Valley') %>%
   filter(date %in% impute.mv) %>%
   mutate(date = as.POSIXct(date, format = '%F'))
@@ -2979,22 +2990,36 @@ weather.mv <- bind_rows(weather.mv, mv.daymet)
 
 weather.lnk <- read_excel('data/weather/HIPS_Lincoln_2022.xlsx', sheet = 'Sheet1', skip = 2)
 weather.lnk <- weather.lnk %>%  rowwise() %>%
-  mutate(date = as.character(Timestamp) %>%
+  mutate(date = as.character(`...2`) %>%
            str_split_i(' ', 1) %>%
            as.POSIXct(format = '%F')) %>%
   group_by(date) %>%
-  summarise(minTemp = min(TMP, na.rm = TRUE) %>%
-              fahrenheit.to.celsius(),
-            maxTemp = max(TMP, na.rm = TRUE) %>%
-              fahrenheit.to.celsius(),
-            GDU = getGDUs(minTemp = minTemp, maxTemp = maxTemp),
+  summarise(minTemp = min(TMP, na.rm = TRUE),
+            maxTemp = max(TMP, na.rm = TRUE),
+            GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
             loc = 'Lincoln')
-season.lnk <- seq(as.POSIXct('2022-05-22', format = '%F'), as.POSIXct('20222-10-10', format = '%F'), 'days') %>%
+season.lnk <- seq(as.POSIXct('2022-05-22', format = '%F'), as.POSIXct('2022-10-10', format = '%F'), 'days') %>%
   as.character()
 days.lnk <- weather.lnk$date %>%
   as.character()
 impute.lnk <- setdiff(season.lnk, days.lnk)
-  
+lnk.lat <- mean(40.852386, 40.852014, 40.852417, 40.851978)  
+lnk.lon <- mean(-96.613961, -96.616817, -96.616811, -96.613969)
+lnk.daymet <- download_daymet(site = 'Lincoln', lat = lnk.lat, lon = lnk.lon, start = 2022, end = 2022)
+lnk.daymet <- lnk.daymet$data %>%
+  rowwise() %>%
+  mutate(date = as.POSIXct(str_c(year, yday, sep = '-'), format = '%Y-%j') %>%
+           format(format = '%F') %>%
+           as.character(), 
+         minTemp = tmin..deg.c. %>%
+           celsius.to.fahrenheit(),
+         maxTemp = tmax..deg.c. %>%
+           celsius.to.fahrenheit(),
+         GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
+         loc = 'Lincoln') %>%
+  filter(date %in% impute.lnk) %>%
+  mutate(date = as.POSIXct(date, format = '%F'))
+weather.lnk <- bind_rows(weather.lnk, lnk.daymet)
 
 weather.np1 <- read_excel('data/weather/HIPS_North_Platte_Full_Irrigation_2022.xlsx', sheet = 'Weather Data', skip = 1)
 weather.np1 <- weather.np1 %>%
@@ -3003,4 +3028,155 @@ weather.np1 <- weather.np1 %>%
            str_split_i(' ', 1) %>%
            as.POSIXct(format = '%F')) %>%
   group_by(date) %>%
-  summarise(minTemp = )
+  summarise(minTemp = min(`2022 North Platte - Full Irrigation: H: Temperature`, na.rm = TRUE),
+            maxTemp = max(`2022 North Platte - Full Irrigation: H: Temperature`, na.rm = TRUE), 
+            GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
+            loc = 'North Platte1')
+season.np1 <- seq(as.POSIXct('2022-05-17', format = '%F'), as.POSIXct('2022-11-01', format = '%F'), 'days') %>%
+  as.character()
+days.np1 <- weather.np1$date %>%
+  as.character()
+impute.np1 <- setdiff(season.np1, days.np1)
+np.lat <- c(41.084583)
+np.lon <- (-100.780911)
+np.daymet <- download_daymet(site = 'North Platte1', lat = np.lat, lon = np.lon, start = 2022, end = 2022)
+np1.daymet <- np.daymet$data %>%
+  rowwise() %>%
+  mutate(date = as.POSIXct(str_c(year, yday, sep = '-'), format = '%Y-%j') %>%
+           format(format = '%F') %>%
+           as.character(), 
+         minTemp = tmin..deg.c. %>%
+           celsius.to.fahrenheit(),
+         maxTemp = tmax..deg.c. %>%
+           celsius.to.fahrenheit(),
+         GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
+         loc = 'North Platte1') %>%
+  filter(date %in% impute.np1) %>%
+  mutate(date = as.POSIXct(date, format = '%F'))
+weather.np1 <- bind_rows(weather.np1, np1.daymet)
+
+weather.np2 <- read_excel('data/weather/HIPS_North_Platte_Reduced_Irrigation_2022.xlsx', sheet = 'Weather Data', skip = 1)
+weather.np2 <- weather.np2 %>%
+  rowwise() %>%
+  mutate(date = as.character(Timestamp) %>%
+           str_split_i(' ', 1) %>%
+           as.POSIXct(format = '%F')) %>%
+  group_by(date) %>%
+  summarise(minTemp = min(`2022 North Platte - Reduced Irr: H: Temperature`, na.rm = TRUE),
+            maxTemp = max(`2022 North Platte - Reduced Irr: H: Temperature`, na.rm = TRUE), 
+            GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
+            loc = 'North Platte2')
+season.np2 <- seq(as.POSIXct('2022-05-17', format = '%F'), as.POSIXct('2022-10-28', format = '%F'), 'days') %>%
+  as.character()
+days.np2 <- weather.np2$date %>%
+  as.character()
+impute.np2 <- setdiff(season.np2, days.np2)
+np2.daymet <- np.daymet$data %>%
+  rowwise() %>%
+  mutate(date = as.POSIXct(str_c(year, yday, sep = '-'), format = '%Y-%j') %>%
+           format(format = '%F') %>%
+           as.character(), 
+         minTemp = tmin..deg.c. %>%
+           celsius.to.fahrenheit(),
+         maxTemp = tmax..deg.c. %>%
+           celsius.to.fahrenheit(),
+         GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
+         loc = 'North Platte2') %>%
+  filter(date %in% impute.np2) %>%
+  mutate(date = as.POSIXct(date, format = '%F'))
+weather.np2 <- bind_rows(weather.np2, np2.daymet)
+
+weather.np3 <- read_excel('data/weather/HIPS_North_Platte_No_Irrigation_2022.xlsx', sheet = 'Weather Data', skip = 1)
+weather.np3 <- weather.np3 %>%
+  rowwise() %>%
+  mutate(date = as.character(Timestamp) %>%
+           str_split_i(' ', 1) %>%
+           as.POSIXct(format = '%F')) %>%
+  group_by(date) %>%
+  summarise(minTemp = min(`2022 North Platte - Non-Irrigated: H: Temperature`, na.rm = TRUE),
+            maxTemp = max(`2022 North Platte - Non-Irrigated: H: Temperature`, na.rm = TRUE), 
+            GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
+            loc = 'North Platte3')
+season.np3 <- seq(as.POSIXct('2022-05-18', format = '%F'), as.POSIXct('2022-10-24', format = '%F'), 'days') %>%
+  as.character()
+days.np3 <- weather.np3$date %>%
+  as.character()
+impute.np3 <- setdiff(season.np3, days.np3)
+np3.daymet <- np.daymet$data %>%
+  rowwise() %>%
+  mutate(date = as.POSIXct(str_c(year, yday, sep = '-'), format = '%Y-%j') %>%
+           format(format = '%F') %>%
+           as.character(), 
+         minTemp = tmin..deg.c. %>%
+           celsius.to.fahrenheit(),
+         maxTemp = tmax..deg.c. %>%
+           celsius.to.fahrenheit(),
+         GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
+         loc = 'North Platte3') %>%
+  filter(date %in% impute.np3) %>%
+  mutate(date = as.POSIXct(date, format = '%F'))
+weather.np3 <- bind_rows(weather.np3, np3.daymet)
+
+weather.sb <- read_excel('data/weather/HIPS_Scottsbluff_2022.xlsx', sheet = 'Weather Data', skip = 1)
+weather.sb <- weather.sb %>%
+  filter(`2022 HIPS Scottsbluff: H: Temperature` < 120) %>%
+  rowwise() %>%
+  mutate(date = as.character(Timestamp) %>%
+           str_split_i(' ', 1) %>%
+           as.POSIXct(format = '%F')) %>%
+  group_by(date) %>%
+  summarise(minTemp = min(`2022 HIPS Scottsbluff: H: Temperature`, na.rm = TRUE),
+            maxTemp = max(`2022 HIPS Scottsbluff: H: Temperature`, na.rm = TRUE), 
+            GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
+            loc = 'Scottsbluff')
+season.sb <- seq(as.POSIXct('2022-05-19', format = '%F'), as.POSIXct('2022-11-11', format = '%F'), 'days') %>%
+  as.character() %>%
+  str_split_i(' ', 1)
+days.sb <- weather.sb$date %>%
+  as.character()
+impute.sb <- setdiff(season.sb, days.sb)
+sb.lat <- mean(41.933593, 41.950014)
+sb.lon <- mean(-103.700056, -103.700046)
+sb.daymet <- download_daymet(lat = sb.lat, lon = sb.lon, start = 2022, end = 2022)
+sb.daymet <- sb.daymet$data %>%
+  rowwise() %>%
+  mutate(date = as.POSIXct(str_c(year, yday, sep = '-'), format = '%Y-%j') %>%
+           format(format = '%F') %>%
+           as.character(), 
+         minTemp = tmin..deg.c. %>%
+           celsius.to.fahrenheit(),
+         maxTemp = tmax..deg.c. %>%
+           celsius.to.fahrenheit(),
+         GDD = getGDDs(minTemp = minTemp, maxTemp = maxTemp),
+         loc = 'Scottsbluff') %>%
+  filter(date %in% impute.sb) %>%
+  mutate(date = as.POSIXct(date, format = '%F'))
+weather.sb <- bind_rows(weather.sb, sb.daymet)
+
+weather.daily <- bind_rows(weather.cf, weather.ames, weather.mv, weather.lnk, weather.np1, weather.np2, weather.np3, weather.sb) %>%
+  filter(!is.na(date)) %>%
+  select(c(date, minTemp, maxTemp, GDD, loc))
+
+# Function to calculate GDDs between 2 dates
+getCumulativeGDDs <- function(start, end, weather, location)
+{
+  if(is.na(start) | is.na(end))
+  {
+    return(NA)
+  }
+  weather.df <- filter(weather, loc==location & date %in% seq(min(start, end), max(start, end), 'days'))
+  cumulativeGDDs <- sum(weather.df$GDD)
+  return(cumulativeGDDs)
+}
+
+hips_v3.2 <- hips_v3.1 %>%
+  rowwise() %>%
+  mutate(field = case_when(loc=='North Platte1' ~ 'Full Irrigation',
+                           loc=='North Platte2' ~ 'Partial Irrigation',
+                           loc=='North Platte3' ~ 'Non-Irrigated',
+                           .default = field),
+         GDDToAnthesis = getCumulativeGDDs(plantDate, anthesisDate, weather.daily, loc),
+         GDDToSilking = getCumulativeGDDs(plantDate, silkingDate, weather.daily, loc),
+         ASI.GDD = abs(GDDToSilking - GDDToAnthesis))
+# Export v3.2
+write.table(hips_v3.2, 'outData/HIPS_2022_V3.2.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
