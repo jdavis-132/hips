@@ -913,7 +913,11 @@ parseScottsbluffQR <- function(data)
                             .default = plot)) %>%
     mutate(genotype = case_when(population=='Hybrid' ~ sb.index$genotype[match(plot, sb.index$plot)], 
                                 population=='Hybrid' & row %in% c(26, 17, 7) & range %in% 23:27 ~ NA,
-                                .default = genotype)) %>%
+                                .default = genotype),
+           nLvl = case_when(population=='Hybrid' & plot %in% 1021:1025 ~ 'Low',
+                            population=='Hybrid' & plot %in% 1191:1195 ~ 'Medium',
+                            population=='Hybrid' & plot %in% 1361:1365 ~ 'High',
+                            .default = nLvl)) %>%
     filter(!is.na(genotype) & !is.na(plot))
   
   return(data_parsed)
@@ -3255,7 +3259,9 @@ hips_v3.2 <- hips_v3.2 %>%
          ASI.GDD = case_when(ASI.GDD > 450 ~ NA, .default = ASI.GDD),
          ASI = case_when(ASI > 20 ~ NA, .default = ASI),
          kernelRows = case_when(loc=='North Platte2' & plot==866 ~ mean(18, 16, 16), 
-                                .default = kernelRows))
+                                .default = kernelRows)) %>%
+  select(!block) %>%
+  unite('notes', c(notes, combineNotes, leafDimHtNotes), sep = ';', remove = TRUE, na.rm = TRUE)
 # Export v3.2
 write.table(hips_v3.2, 'outData/HIPS_2022_V3.2.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 

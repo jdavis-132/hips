@@ -813,16 +813,16 @@ rm_phenos <- c('earHt', 'flagLeafHt', 'tasselTipHt', 'GDDToAnthesis', 'GDDToSilk
 dp_phenos <- c('combineMoisture', 'combineTestWt','combineYield')
 response_vars.sb <- response_vars[c(1:5, 7:25)]
 # Look at scottsbluff
-sb <- filter(hybrids.vp, loc=='Scottsbluff' & genotype!='BORDER') %>%
+sb <- filter(hybrids, loc=='Scottsbluff' & genotype!='BORDER') %>%
   select(!contains('earLen')) %>%
-  pivot_longer(c(contains('.sp'), response_vars.sb), names_to = 'var', values_to = 'val') %>%
+  pivot_longer(all_of(response_vars.sb), names_to = 'var', values_to = 'val') %>%
   mutate(nLvl = factor(nLvl, levels = c('Low', 'Medium', 'High')),
          source = case_when(var %in% c(unl_phenos, paste0(unl_phenos, '.sp')) ~ 'Chidu/Lina',
                             var %in% c(rm_phenos, paste0(rm_phenos, '.sp')) ~ 'Ramesh',
                             var %in% c(dp_phenos, paste0(dp_phenos, '.sp')) ~ 'Dipak')) %>%
   select(genotype, var, nLvl, source, val)
 
-plot.raw <- filter(sb, !str_detect(var, '.sp')) %>%
+plot.raw <- sb %>%
   group_by(genotype, var, nLvl, source) %>%
   summarise(val = mean(val)) %>%
   ggplot(aes(nLvl, val)) + 
