@@ -19,7 +19,7 @@ linc22combined <- read_excel("data/Summary of Lincoln Hybrid HIPS 2022 Data.xlsx
 orig_colnames <- colnames(linc22combined)
 # Rename columns so we can work with them in R --> range and row may look inverted here but they're not! they were inverted in the combined dataset sheet
 colnames(linc22combined) <- c('qr', 'plot', 'loc', 'field', 'nLvl', 'irrigation', 'rep', 'row', 'range', 'genotype', 'anthesisDate', 'anthesisCollector', 
-                              'silkingDate', 'silkingCollector', 'notes', 'leafLen1', 'leafWidth1', 'leafLen2', 'leafWidth2', 'earHt1', 'flagLeafHt1', 
+                              'silkDate', 'SilkCollector', 'notes', 'leafLen1', 'leafWidth1', 'leafLen2', 'leafWidth2', 'earHt1', 'flagLeafHt1', 
                               'tasselTipHt1', 'earHt2', 'flagLeafHt2', 'tasselTipHt2', 'leafDimHtCollector', 'leafDimHtDate', 'harvestDate', 'combineYield',
                               'combineMoisture', 'combineTestWt', 'harvestSeq')
 # Convert to tibble so we can use tidyverse and add a population column
@@ -38,8 +38,8 @@ unique(linc22combined$row)
 unique(linc22combined$genotype) # capitalize
 unique(linc22combined$anthesisDate)
 unique(linc22combined$anthesisCollector) # 'LIna', 'kyle', '?'
-unique(linc22combined$silkingDate)
-unique(linc22combined$silkingCollector) # '?', 'kyle', 'N/A'
+unique(linc22combined$silkDate)
+unique(linc22combined$SilkCollector) # '?', 'kyle', 'N/A'
 unique(linc22combined$notes)
 unique(linc22combined$leafLen1) # 'Stunting', 'No female'
 unique(linc22combined$leafWidth1) # 'Stunted', 'Stunded', 'Stunting', 'No female'
@@ -67,7 +67,7 @@ linc22combined <- rowwise(linc22combined) %>%
            str_replace('kyle', 'Kyle') %>%
            na_if('N/A') %>%
            na_if('?'),
-         silkingCollector = str_replace(silkingCollector, 'kyle', 'Kyle') %>%
+         SilkCollector = str_replace(SilkCollector, 'kyle', 'Kyle') %>%
            str_replace('kyle', 'Kyle') %>%
            na_if('N/A') %>%
            na_if('?'),
@@ -264,6 +264,7 @@ parseNorthPlatteQR <- function(data)
 
 # Function to parse MV qrs
 ## Plot is the UR_plot (unreplicated) plot number
+# 08/09/2023: Parsing of QRs changed to account for the switching of reps 1 and 2 in the QRs -- the rep portion of this function is not a bug
 parseMissouriValleyQR <- function(data)
 {
   df <- data
@@ -291,10 +292,10 @@ parseMissouriValleyQR <- function(data)
                        str_detect(qr, 'INBRED') ~ 'Inbred'),
            irrigation = 'Dryland', 
            nLvl = 'Medium') %>%
-    mutate(plot = case_when(population=='Hybrid' & rep==1 & plot<10 ~ as.numeric(str_c('10', plot)),
-                            population=='Hybrid' & rep==1 & plot>=10 ~ as.numeric(str_c('1', plot)),
-                            population=='Hybrid' & rep==2 & plot<10 ~ as.numeric(str_c('20', plot)),
-                            population=='Hybrid' & rep==2 & plot>=10 ~ as.numeric(str_c('2', plot)),
+    mutate(rep = case_when(rep==1 ~ 2,
+                           rep==2 ~ 1),
+      plot = case_when(population=='Hybrid' & rep==1 ~ (plot + 100),
+                            population=='Hybrid' & rep==2 ~ (plot + 200),
                             population=='Inbred' & rep==1 ~ (plot + 100),
                             population=='Inbred' & rep==2 ~ (plot + 200)))
   return(data_parsed)
@@ -827,7 +828,19 @@ parseLincolnQR <- function(data)
 # unique(e_np3$genotype) 
 
 # Parse sb qrs
-# Function to parse sb qrs, accounts for the swapped labels and filters out border plots
+# Function to parse sb qrs, accounts for the swapped nitrogen labels and filters out border plots
+## 08/09/2023: Edited to account for change in planting start
+## Based on correlations between replicates of genotypes, the field was planted starting in the SW corner and plot 1001 was located in the SW corner.
+## However, the row bands for harvest were assigned to the field according to the field maps thus they were arranged as if the planting had started in the SE corner and plot 1001 was in the SE field corner
+## The combine, height, and flowering time measurements appear to have their plot numbers assigned as they were planted (i.e. 1001 is in SW corner). 
+## It does not appear that arrangement of border rows or the inbreds were shifted
+sb.index <- read_excel('data/Scottsbluff Hybrid HIPS - Summary.xlsx', sheet = 'Index (Original)')
+sb.index <- sb.index[, c(1, 5, 7)]
+colnames(sb.index) <- c('plot', 'genotype', 'seedFillNote')
+sb.index <- sb.index %>%
+  group_by(plot, genotype) %>%
+  summarise(seedFillNote = max(seedFillNote, na.rm = TRUE))
+ 
 parseScottsbluffQR <- function(data)
 {
   df <- data
@@ -856,7 +869,52 @@ parseScottsbluffQR <- function(data)
            genotype = str_split_i(qr, '[$]', 7) %>%
              case_when(str_detect(., 'FILL') ~ 'BORDER', .default = .),
            population = case_when(str_detect(qr, 'HYBRID') ~ 'Hybrid',
-                                  str_detect(qr, 'INBRED') ~ 'Inbred'))
+                                  str_detect(qr, 'INBRED') ~ 'Inbred')) %>%
+    mutate(plot = case_when(population=='Hybrid' & !c(plot %in% c(1021:1025)) & row==26 ~ plot + 490,
+                            population=='Hybrid' & row==25 ~ plot + 440,
+                            population=='Hybrid' & row==24 ~ plot + 390,
+                            population=='Hybrid' & row==23 ~ plot + 340,
+                            population=='Hybrid' & row==22 ~ plot + 290,
+                            population=='Hybrid' & row==21 ~ plot + 240,
+                            population=='Hybrid' & row==20 ~ plot + 190,
+                            population=='Hybrid' & !c(plot %in% c(1191:1195)) & row==17 ~ plot + 150,
+                            population=='Hybrid' & row==16 ~ plot + 100,
+                            population=='Hybrid' & row==15 ~ plot + 50,
+                            population=='Hybrid' & row==14 ~ plot,
+                            population=='Hybrid' & row==13 ~ plot - 50,
+                            population=='Hybrid' & row==12 ~ plot - 100,
+                            population=='Hybrid' & row==11 ~ plot - 150,
+                            population=='Hybrid' & !c(plot %in% c(1361:1365)) & row==7 ~ plot - 190,
+                            population=='Hybrid' & row==6 ~ plot - 240,
+                            population=='Hybrid' & row==5 ~ plot - 290,
+                            population=='Hybrid' & row==4 ~ plot - 340,
+                            population=='Hybrid' & row==3 ~ plot - 390,
+                            population=='Hybrid' & row==2 ~ plot - 440,
+                            population=='Hybrid' & row==1 ~ plot - 490,
+                            .default = plot)) %>%
+    mutate(plot = case_when(population=='Hybrid' & row==1 & range==23 ~ 1021,
+                            population=='Hybrid' & row==1 & range==24 ~ 1022,
+                            population=='Hybrid' & row==1 & range==25 ~ 1023,
+                            population=='Hybrid' & row==1 & range==26 ~ 1024,
+                            population=='Hybrid' & row==1 & range==27 ~ 1025,
+                            population=='Hybrid' & row==20 & range==23 ~ 1361,
+                            population=='Hybrid' & row==20 & range==24 ~ 1362,
+                            population=='Hybrid' & row==20 & range==25 ~ 1363, 
+                            population=='Hybrid' & row==20 & range==26 ~ 1364,
+                            population=='Hybrid' & row==20 & range==27 ~ 1365,
+                            population=='Hybrid' & row==11 & range==23 ~ 1191,
+                            population=='Hybrid' & row==11 & range==24 ~ 1192,
+                            population=='Hybrid' & row==11 & range==25 ~ 1193,
+                            population=='Hybrid' & row==11 & range==26 ~ 1194,
+                            population=='Hybrid' & row==11 & range==27 ~ 1195,
+                            population=='Hybrid' & row==26 & range %in% 23:27 ~ NA,
+                            population=='Hybrid' & row==17 & range %in% 23:27 ~ NA,
+                            population=='Hybrid' & row==7 & range %in% 23:27 ~ NA,
+                            .default = plot)) %>%
+    mutate(genotype = case_when(population=='Hybrid' ~ sb.index$genotype[match(plot, sb.index$plot)], 
+                                population=='Hybrid' & row %in% c(26, 17, 7) & range %in% 23:27 ~ NA,
+                                .default = genotype)) %>%
+    filter(!is.na(genotype) & !is.na(plot))
   
   return(data_parsed)
 }
@@ -1123,7 +1181,7 @@ parseScottsbluffQR <- function(data)
 # # Save original column names
 # orig_colnames_sbhft <- colnames(sb_h_ft)
 # # Change the column names so they match the ones we use for programming in Lincoln data
-# colnames(sb_h_ft) <- c('plot', 'anthesisDate', 'silkingDate')
+# colnames(sb_h_ft) <- c('plot', 'anthesisDate', 'silkDate')
 # # Fix the formatting in plot column and add some metadata
 # sb_h_ft <- sb_h_ft %>%
 #   as_tibble() %>%
@@ -1350,7 +1408,7 @@ hips1.5_genoFixKey <- tibble(orig = hips1.5genos_fix, correct = hips1.5genos_cor
 #          irrigation = max(irrigation, irrigation.sb, na.rm = TRUE),
 #          population = max(population, population.sb, na.rm = TRUE), 
 #          anthesisDate = max(anthesisDate, anthesisDate.sb, na.rm = TRUE),
-#          silkingDate = max(silkingDate, silkingDate.sb, na.rm = TRUE),
+#          silkDate = max(silkDate, silkDate.sb, na.rm = TRUE),
 #          earHt1 = max(earHt1, earHt1.sb, na.rm = TRUE),
 #          flagLeafHt1 = max(flagLeafHt1, flagLeafHt1.sb, na.rm = TRUE), 
 #          tasselTipHt1 = max(tasselTipHt1, tasselTipHt1.sb, na.rm = TRUE)) %>%
@@ -1373,8 +1431,8 @@ hips1.5_genoFixKey <- tibble(orig = hips1.5genos_fix, correct = hips1.5genos_cor
 # Read in new nir file
 nir_v2 <- read_csv("data/HybridHIPS_plotlevelNIR_v2.5.csv", 
                    col_names = c('qr', 'loc', 'nLvl', 'irrigation', 'rep', 'row', 'range', 'plot', 'genotype',
-                                 'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh',
-                                 'pctMoistureNIR'),
+                                 'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 
+                                 'moistureCorrectedAsh', 'pctMoistureNIR'),
                    col_types = c(rep('c', 4), rep('i', 4), 'c', rep('d', 7)))
 # Change column names
 # orig_colnames_nirv2 <- colnames(nir_v2)
@@ -1604,7 +1662,7 @@ sb_h_ft <- sb_h_ft[, 2:4]
 # Save original column names
 orig_colnames_sbhft <- colnames(sb_h_ft)
 # Change the column names so they match the ones we use for programming in Lincoln data
-colnames(sb_h_ft) <- c('plot', 'anthesisDate', 'silkingDate')
+colnames(sb_h_ft) <- c('plot', 'anthesisDate', 'silkDate')
 # Fix the formatting in plot column and add some metadata
 sb_h_ft <- sb_h_ft %>%
   as_tibble() %>%
@@ -1661,7 +1719,7 @@ hips_v1.5 <- hips_v1.5 %>%
          irrigation = max(irrigation, irrigation.sb, na.rm = TRUE),
          population = max(population, population.sb, na.rm = TRUE),
          anthesisDate = max(anthesisDate, anthesisDate.sb, na.rm = TRUE),
-         silkingDate = max(silkingDate, silkingDate.sb, na.rm = TRUE),
+         silkDate = max(silkDate, silkDate.sb, na.rm = TRUE),
          earHt = max(earHt, earHt.sb, na.rm = TRUE),
          flagLeafHt = max(flagLeafHt, flagLeafHt.sb, na.rm = TRUE),
          tasselTipHt = max(tasselTipHt, tasselTipHt.sb, na.rm = TRUE)) %>%
@@ -1683,24 +1741,18 @@ unique(hips_v1.5$genotype)
 
 hips_v1.5 <- hips_v1.5 %>%
   rowwise() %>%
-  mutate(nLvl = case_when(loc=='Scottsbluff' & plot==1436 ~ 'Low',
-                          .default = nLvl),
-         row = case_when(loc=='Scottsbluff' & plot==1436 ~ 4,
-                         .default = row),
-         range = case_when(loc=='Scottsbluff' & plot==1436 ~ 23,
-                           .default = range),
-         genotype = case_when(loc=='Missouri Valley' & rep==2 & (plot %in% c(53, 46, 50, 51, 59)) ~ 'DKC107-33GENVT2PRIB',
+  mutate(genotype = case_when(loc=='Missouri Valley' & (plot %in% c(153, 146, 150, 151, 159)) ~ 'DKC107-33GENVT2PRIB',
                               loc=='North Platte3' & plot==1426 ~ 'PHK76 x LH198',
                               .default = genotype))
 # Drop the leaf dimension data since it only exists for lincoln and arrange columns in logical order
 hips_v1.5_noleafdim <- hips_v1.5 %>% 
   select(c(loc:leafDimHtNotes, earHt:combineNotes)) %>%
   relocate(c(qr, loc, plot, field, nLvl, irrigation, rep, row, range, genotype, population)) %>%
-  relocate(c(anthesisDate, anthesisCollector, silkingDate, silkingCollector, notes, leafDimHtNotes, leafDimHtCollector, leafDimHtDate, earHt, 
+  relocate(c(anthesisDate, anthesisCollector, silkDate, SilkCollector, notes, leafDimHtNotes, leafDimHtCollector, leafDimHtDate, earHt, 
              flagLeafHt, tasselTipHt), 
            .after = c(qr, loc, plot, field, nLvl, irrigation, rep, row, range, genotype, population)) %>%
   relocate(c(harvestDate, combineYield, combineMoisture, combineTestWt, harvestSeq, combineNotes), 
-           .after = c(anthesisDate, anthesisCollector, silkingDate, silkingCollector, notes, leafDimHtNotes, leafDimHtCollector, leafDimHtDate, earHt, 
+           .after = c(anthesisDate, anthesisCollector, silkDate, SilkCollector, notes, leafDimHtNotes, leafDimHtCollector, leafDimHtDate, earHt, 
                       flagLeafHt, tasselTipHt)) %>%
   relocate(c((starts_with('ear') & !earHt), starts_with('shelled'), starts_with('kernel'), hundredKernelWt, pctMoistureEarPhenotyping), 
            .after = c(harvestDate, combineYield, combineMoisture, combineTestWt, harvestSeq, combineNotes)) %>%
@@ -1770,7 +1822,7 @@ mv_hyb <- mv_hyb %>%
   mutate(notes = case_when(soilMoistureSensor=='x' ~ str_c(notes, 'Soil Moisture Sensor', sep = ';'), .default =  notes)) %>%
   select(!(c(plotDiscarded, check, solarPanel, tattooSensor, nitrateSensor, soilMoistureSensor)))
 # Now join the data with the nir, ear, lnk, and sb data
-hips_v2 <- full_join(hips_v1.5_noleafdim, mv_hyb, join_by(loc, plot, genotype), keep = FALSE, suffix = c('', '.mv_hyb'))
+hips_v2 <- full_join(hips_v1.5_noleafdim, mv_hyb, join_by(loc, range, row, population), keep = FALSE, suffix = c('', '.mv_hyb'))
 # Deal with duplicate columns
 hips_v2 <- hips_v2 %>%
   rowwise() %>%
@@ -1782,8 +1834,7 @@ hips_v2 <- hips_v2 %>%
          notes = str_c(notes, notes.mv_hyb, sep = ';'),
          field = max(field, field.mv_hyb, na.rm = TRUE),
          nLvl = max(nLvl, nLvl.mv_hyb, na.rm = TRUE),
-         irrigation = max(irrigation, irrigation.mv_hyb, na.rm = TRUE),
-         population = max(population, population.mv_hyb, na.rm = TRUE)) %>%
+         irrigation = max(irrigation, irrigation.mv_hyb, na.rm = TRUE)) %>%
   select(!ends_with('.mv_hyb'))
 hips_v2 <- select(hips_v2, !exp)
 # Read in Missouri Valley inbred data
@@ -1817,7 +1868,7 @@ mv_inb <- mv_inb %>%
   unite('notes', c(notes, check), sep = ';', na.rm = TRUE) %>%
   select(!(c(exp)))
 # Merge into hips_v2
-hips_v2 <- full_join(hips_v2, mv_inb, join_by(loc, range, row, genotype, plot, rep), keep = FALSE, suffix = c('', '.mv_inb'))
+hips_v2 <- full_join(hips_v2, mv_inb, join_by(loc, range, row, population), keep = FALSE, suffix = c('', '.mv_inb'))
 # Deal with duplicate columns
 hips_v2 <- hips_v2 %>%
   rowwise() %>%
@@ -1832,7 +1883,7 @@ hips_v2 <- hips_v2 %>%
 hips_v2 <- select(hips_v2, !ends_with('.mv_inb') & !starts_with('exp'))
 
 # Read in North Platte1 data
-np1_colnames <- c('plot', 'genotype', 'genotypeNote', 'standCt1', 'standCt2', 'silkingDate', 'anthesisDate', 'flagLeafHt', 'earHt', 'stalkLodgeNum', 'earDropNum', 
+np1_colnames <- c('plot', 'genotype', 'genotypeNote', 'standCt1', 'standCt2', 'silkDate', 'anthesisDate', 'flagLeafHt', 'earHt', 'stalkLodgeNum', 'earDropNum', 
                   'rootLodgeNum', 'harvestDate', 'harvestTime', 'range', 'row', 'combineYield', 'combineMoisture', 'combineTestWt', 'plotLen', 'adjYield', 'combineNotes', 
                   'notes_LC', 'notes_HL', 'solarPanel', 'tattooSensor', 'nitrateSensor', 'soilMoistureSensor', 'waterPotentialSensor', 'commercialWaterPotentialSensor')
 
@@ -1920,7 +1971,7 @@ hips_v2.1 <- full_join(hips_v2, np, join_by(loc, plot, range, row, genotype), ke
 # Deal with duplicate cols
 hips_v2.1 <- hips_v2.1 %>%
   mutate(totalStandCt = max(totalStandCt, totalStandCt.np, na.rm = TRUE),
-         silkingDate = max(silkingDate, silkingDate.np, na.rm = TRUE),
+         silkDate = max(silkDate, silkDate.np, na.rm = TRUE),
          anthesisDate = max(anthesisDate, anthesisDate.np, na.rm = TRUE),
          flagLeafHt = max(flagLeafHt, flagLeafHt.np, na.rm = TRUE),
          earHt = max(earHt, earHt.np, na.rm = TRUE),
@@ -2043,7 +2094,7 @@ hips_v2.3 <- hips_v2.2 %>%
 hips_v2.3 <- hips_v2.3 %>%
   rowwise() %>%
   mutate(daysToAnthesis = as.integer(difftime(as.Date(anthesisDate), as.Date(plantDate), units = 'days')),
-         daysToSilk = as.integer(difftime(as.Date(silkingDate), as.Date(plantDate), units = 'days')))
+         daysToSilk = as.integer(difftime(as.Date(silkDate), as.Date(plantDate), units = 'days')))
 # Export 2.3 as tsv
 #write.table(hips_v2.3, file = 'HIPS_2022_V2.3.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 # Remove an egregious outliers
@@ -2061,6 +2112,7 @@ hips_v2.4 <- hips_v2.4 %>%
 # JD: the reps in the file for hybrids seem to be flipped. 
 # According to the readme, the data was taken in-field according to the range/row coordinates, so these are the most reliable for matching data
 # So some of the code below looks like a bug but isn't
+# JD 08/14/2023: The reps listed in this file are correct. Changed code to reflect this.
 mv.plantData.hyb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx', 
                                sheet = '4211', 
                                col_names = c('row', 'range', 'flagLeafHt', 'earHt', 'rep', 'plot', 'genotype'),
@@ -2068,8 +2120,8 @@ mv.plantData.hyb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx',
                                skip = 1)
 mv.plantData.hyb <- mv.plantData.hyb %>%
   rowwise() %>%
-  mutate(plot = case_when(rep==1 ~ plot + 200,
-                          rep==2 ~ plot + 100,
+  mutate(plot = case_when(rep==1 ~ plot + 100,
+                          rep==2 ~ plot + 200,
                           .default = plot),
          genotype = str_to_upper(genotype),
          loc = 'Missouri Valley',
@@ -2078,9 +2130,7 @@ mv.plantData.hyb <- mv.plantData.hyb %>%
          irrigation = 'Dryland',
          population = 'Hybrid',
          flagLeafHt = case_when(flagLeafHt=='n/a - solar' ~ NA, .default = flagLeafHt),
-         earHt = case_when(earHt=='n/a - solar' ~ NA, .default = earHt),
-         rep = case_when(rep==1 ~ 2,
-                         rep==2 ~ 1)) %>%
+         earHt = case_when(earHt=='n/a - solar' ~ NA, .default = earHt)) %>%
   fixGenos(hips1.5_genoFixKey)
 # Repeat for the inbreds
 mv.plantData.inb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx',
@@ -2112,8 +2162,9 @@ hips_v2.5 <- hips_v2.5 %>%
          irrigation = max(irrigation, irrigation.mv, na.rm = TRUE),
          notes = str_c(notes, notes.mv, sep = ';'),
          moistureCorrectedKernelMass = kernelMass/(1 - pctMoistureNIR),
-         moistureCorrectedHundredKernelWt = hundredKernelWt/(1 - pctMoistureNIR)) %>%
-  mutate(tasselTipHt = case_when(loc=='Scottsbluff' & plot==1172 ~ NA, .default = tasselTipHt),
+         moistureCorrectedHundredKernelWt = hundredKernelWt/(1 - pctMoistureNIR),
+         genotype = case_when(loc=='Missouri Valley' ~ genotype.mv, .default = genotype)) %>%
+  mutate(tasselTipHt = case_when(loc=='Scottsbluff' & plot==1322 ~ NA, .default = tasselTipHt),
          shelledCobWidth = case_when(shelledCobWidth > earWidth ~ NA, .default = shelledCobWidth)) %>%
   select(!contains('.mv')) %>%
   ungroup() %>%
@@ -2139,7 +2190,7 @@ hips_v2.5 <- hips_v2.5 %>%
                                      .default = hundredKernelWt),
          kernelRows = case_when(loc=='North Platte1' & plot==367 ~ mean(14, 18, 14), .default = kernelRows),
          kernelsPerRow = case_when(loc=='Lincoln' & plot==4209 ~ mean(26, 28, 22), .default = kernelsPerRow),
-         daysToSilk = case_when((loc=='North Platte3' & plot==1397)|(loc=='Scottsbluff' & plot==1346) ~ NA, 
+         daysToSilk = case_when((loc=='North Platte3' & plot==1397)|(loc=='Scottsbluff' & plot==1156) ~ NA, 
                                 .default = daysToSilk),
          shelledCobWt = case_when(loc=='North Platte3' & plot==1226 ~ mean(15.5, 18, 19), .default = shelledCobWt),
          earWidth = case_when(loc=='Lincoln' & plot==6129 ~ mean(rep(3.5, 3)), .default = earWidth),
@@ -2148,10 +2199,10 @@ hips_v2.5 <- hips_v2.5 %>%
          moistureCorrectedKernelMass = case_when(loc=='Missouri Valley' & plot==256 ~ mean(232.86 - 22.57, 168.35 - 18.65, 139.89 - 14.55)/(1 - pctMoistureNIR), 
                                                  loc=='North Platte2' & plot==664 ~ mean(91.33 - 17.5, 170.48 - 22.56, 236.75 - 24.17)/(1 - pctMoistureNIR),
                                                  .default = moistureCorrectedKernelMass),
-         kernelMass = case_when(loc=='Missouri Valley' & plot==256 ~ mean(232.86 - 22.57, 168.35 - 18.65, 139.89 - 14.55), 
+         kernelMass = case_when(loc=='Missouri Valley' & plot==156 ~ mean(232.86 - 22.57, 168.35 - 18.65, 139.89 - 14.55), 
                                 loc=='North Platte2' & plot==664 ~ mean(91.33 - 17.5, 170.48 - 22.56, 236.75 - 24.17),
                                 .default = kernelMass),
-         flagLeafHt = case_when(loc=='Scottsbluff' & plot==1172 ~ NA, .default = flagLeafHt))
+         flagLeafHt = case_when(loc=='Scottsbluff' & plot==1322 ~ NA, .default = flagLeafHt))
 # Export v2.5
 write.table(hips_v2.5, 'outData/HIPS_2022_V2.5.tsv', sep = '\t', row.names = FALSE, col.names = TRUE)
 
@@ -3176,7 +3227,37 @@ hips_v3.2 <- hips_v3.1 %>%
                            loc=='North Platte3' ~ 'Non-Irrigated',
                            .default = field),
          GDDToAnthesis = getCumulativeGDDs(plantDate, anthesisDate, weather.daily, loc),
-         GDDToSilking = getCumulativeGDDs(plantDate, silkingDate, weather.daily, loc),
-         ASI.GDD = abs(GDDToSilking - GDDToAnthesis))
+         GDDToSilk = getCumulativeGDDs(plantDate, silkDate, weather.daily, loc),
+         ASI.GDD = abs(GDDToSilk - GDDToAnthesis),
+         exp = case_when(loc=='Ames' & population=='Inbred' & nLvl=='High' ~ 'LC_2231',
+                         loc=='Ames' & population=='Inbred' & nLvl=='Medium' ~ 'LC_2232',
+                         loc=='Ames' & population=='Hybrid' & nLvl=='High' ~ 'LC_4231',
+                         loc=='Ames' & population=='Hybrid' & nLvl=='Medium' ~ 'LC_4232',
+                         loc=='Ames' & population=='Inbred' & nLvl=='Low' ~ 'LC_2233',
+                         loc=='Ames' & population=='Hybrid' & nLvl=='Low' ~ 'LC_4233',
+                         loc=='Crawfordsville' & population=='Hybrid' & nLvl=='Medium' ~ 'LC_4353',
+                         loc=='Crawfordsville' & population=='Inbred' & nLvl=='Medium' ~ 'LC_2353',
+                         loc=='Crawfordsville' & population=='Hybrid' & nLvl=='Low' ~ 'LC_4352',
+                         loc=='Crawfordsville' & population=='Hybrid' & nLvl=='High' ~ 'LC_4351',
+                         loc=='Crawfordsville' & population=='Inbred' & nLvl=='High' ~ 'LC_2351',
+                         loc=='Crawfordsville' & population=='Inbred' & nLvl=='Low' ~ 'LC_2352', 
+                         loc=='Missouri Valley' & population=='Hybrid' ~ 'LC_4211',
+                         loc=='Missouri Valley' & population=='Inbred' ~ 'LC_2211'))
+
+# Remove outliers or adjust when 1 obs is throwing off the mean
+hips_v3.2 <- hips_v3.2 %>%
+  rowwise() %>%
+  mutate(earHt = case_when(earHt < 35 ~ NA, .default = earHt),
+         flagLeafHt = case_when(flagLeafHt < 50 ~ NA, .default = flagLeafHt),
+         moistureCorrectedKernelMass = case_when(moistureCorrectedKernelMass > 450 ~ NA, .default = moistureCorrectedKernelMass),
+         GDDToAnthesis = case_when(GDDToAnthesis < 900 ~ NA, .default = GDDToAnthesis),
+         GDDToSilk = case_when(GDDToSilk > 1900 ~ NA, .default = GDDToSilk),
+         ASI.GDD = case_when(ASI.GDD > 450 ~ NA, .default = ASI.GDD),
+         ASI = case_when(ASI > 20 ~ NA, .default = ASI),
+         kernelRows = case_when(loc=='North Platte2' & plot==866 ~ mean(18, 16, 16), 
+                                .default = kernelRows))
 # Export v3.2
 write.table(hips_v3.2, 'outData/HIPS_2022_V3.2.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+
+
+

@@ -5,11 +5,10 @@ library(tidyverse)
 library(viridis)
 library(scales)
 library(FW)
-library(reshape2)
-library(corrplot)
 # Read in data and change NP so all NP fields have the same loc but different fields --> range/row are unique within a field
-hips <- read.table('outData/HIPS_2022_V3.1.tsv', header = TRUE, sep = '\t')
-hybrids <-  filter(hips, population == 'Hybrid') %>%
+hips <- read.table('outData/HIPS_2022_V3.2.tsv', header = TRUE, sep = '\t')
+hybrids <-  hips %>% 
+  filter(population=='Hybrid') %>%
   mutate(field = case_when(loc=='North Platte1' ~ 'Full Irrigation',
                            loc=='North Platte2' ~ 'Partial Irrigation',
                            loc=='North Platte3' ~ 'Dryland',
@@ -41,8 +40,8 @@ mapResponse <- function(data, trait)
 response_vars <- c('earHt', 'flagLeafHt', 'tasselTipHt', 'combineMoisture', 'combineTestWt', 
                    'earLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'shelledCobLen', 'kernelsPerEar',
                    'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
-                   'yieldPerAc', 'daysToAnthesis', 'daysToSilk', 
-                   'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass', 'moistureCorrectedHundredKernelWt', 'ASI')
+                   'yieldPerAc', 'GDDToAnthesis', 'GDDToSilk', 'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass',
+                   'moistureCorrectedHundredKernelWt', 'ASI.GDD', 'daysToAnthesis', 'daysToSilk', 'ASI')
 mapResponse(hybrids, 'kernelMass')
 for(i in response_vars)
 {
@@ -70,6 +69,81 @@ for (i in response_vars)
 {
   outliers[[i]] <- idOutliers(hybrids, i)
 }
+
+# Histograms
+for(i in response_vars)
+{
+  p <- ggplot(hybrids, aes(.data[[i]])) +
+    geom_histogram()
+  print(p)
+}
+
+plotRepCorr <- function(data, treatmentVar, genotype, phenotypes, facet)
+{
+  df.wide <- data %>%
+    group_by(.data[[genotype]], .data[[treatmentVar]], .data[[facet]]) %>%
+    mutate(rep = 1:n()) %>%
+    ungroup() %>%
+    pivot_longer(all_of(phenotypes), names_to = 'var', values_to = 'val') %>%
+    select(c(all_of(genotype), all_of(treatmentVar), all_of(facet), rep, var, val)) %>%
+    pivot_wider(id_cols = c(.data[[genotype]], .data[[treatmentVar]], .data[[facet]]), names_from = c(var, rep), values_from = val, names_sep = '.')
+  
+  for(i in phenotypes)
+  {
+    rep1 <- paste0(i, '.1')
+    rep2 <- paste0(i, '.2')
+    print(i)
+    
+    p <- ggplot(df.wide, aes(.data[[rep1]], .data[[rep2]], color = .data[[treatmentVar]])) + 
+      geom_point() + 
+      facet_wrap(vars(all_of(.data[[facet]])))
+    print(p)
+  }
+  return(df.wide)
+}
+
+hybrids.wide <- plotRepCorr(hybrids, 'nLvl', 'genotype', response_vars, 'loc')
+
+# Correlation plot for 2 vars
+plotVarCorr <- function(data, x, y)
+{
+  x.str <- deparse(substitute(x))
+  y.str <- deparse(substitute(y))
+  p <- ggplot({{data}}, aes({{x}}, {{y}}, color = loc)) + 
+    geom_point() +
+    labs(subtitle = str_c('R = ', cor(data[[x.str]], data[[y.str]], use = 'complete.obs')))
+  print(p)
+}
+
+plotVarCorr(hybrids, yieldPerAc, moistureCorrectedKernelMass)
+plotVarCorr(hybrids, ASI, ASI.GDD)
+plotVarCorr(hybrids, daysToSilk, GDDToSilk)
+plotVarCorr(hybrids, daysToAnthesis, GDDToAnthesis)
+plotVarCorr(hybrids, GDDToAnthesis, GDDToSilk)
+plotVarCorr(hybrids, kernelRows, yieldPerAc)
+plotVarCorr(hybrids, kernelRows, moistureCorrectedKernelMass)
+plotVarCorr(hybrids, kernelRows, kernelsPerRow)
+plotVarCorr(hybrids, kernelRows, earWidth)
+plotVarCorr(hybrids, kernelRows, shelledCobWidth)
+plotVarCorr(hybrids, kernelRows, kernelsPerEar)
+plotVarCorr(hybrids, kernelsPerRow, earFillLen)
+plotVarCorr(hybrids, kernelsPerRow, shelledCobLen)
+plotVarCorr(hybrids, kernelsPerRow, kernelsPerEar)
+plotVarCorr(hybrids, kernelsPerEar, yieldPerAc)
+plotVarCorr(hybrids, kernelsPerEar, moistureCorrectedKernelMass)
+plotVarCorr(hybrids, kernelsPerEar, moistureCorrectedHundredKernelWt)
+plotVarCorr(hybrids, moistureCorrectedStarch, yieldPerAc)
+plotVarCorr(hybrids, shelledCobWt, yieldPerAc)
+plotVarCorr(hybrids, shelledCobWt, shelledCobWidth)
+plotVarCorr(hybrids, shelledCobWt, shelledCobLen)
+plotVarCorr(hybrids, shelledCobWidth, earWidth)
+plotVarCorr(hybrids, shelledCobLen, earFillLen)
+plotVarCorr(hybrids, shelledCobLen, kernelsPerEar)
+plotVarCorr(hybrids, moistureCorrectedHundredKernelWt, combineTestWt)
+plotVarCorr(hybrids, combineMoisture, combineTestWt)
+plotVarCorr(hybrids, tasselTipHt, flagLeafHt)
+plotVarCorr(hybrids, tasselTipHt, earHt)
+plotVarCorr(hybrids, flagLeafHt, earHt)
 # Cast nLvl, genotype, and irrigation as factors
 #hybrids <- mutate(hybrids, across(c(nLvl, genotype, irrigation, loc), as.factor))
 
@@ -330,13 +404,13 @@ for(i in spatiallyCorrectedResponseVars[2:25])
               moistureCorrectedFiber.mu = mean(moistureCorrectedFiber.sp, na.rm = TRUE),
               moistureCorrectedAsh.mu = mean(moistureCorrectedAsh.sp, na.rm = TRUE),
               yieldPerAc.mu = mean(yieldPerAc.sp, na.rm = TRUE),
-              daysToAnthesis.mu = mean(daysToAnthesis.sp, na.rm = TRUE),
-              daysToSilk.mu = mean(daysToSilk.sp, na.rm = TRUE),
+              GDDToAnthesis.mu = mean(GDDToAnthesis.sp, na.rm = TRUE),
+              GDDToSilk.mu = mean(GDDToSilk.sp, na.rm = TRUE),
               kernelsPerRow.mu = mean(kernelsPerRow.sp, na.rm = TRUE),
               kernelRows.mu = mean(kernelRows.sp, na.rm = TRUE),
               moistureCorrectedKernelMass.mu = mean(moistureCorrectedKernelMass.sp, na.rm = TRUE),
               moistureCorrectedHundredKernelWt.mu = mean(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-              ASI.mu = mean(ASI.sp, na.rm = TRUE),
+              ASI.GDD.mu = mean(ASI.GDD.sp, na.rm = TRUE),
               earHt.max = max(earHt.sp, na.rm = TRUE),
               flagLeafHt.max = max(flagLeafHt.sp, na.rm = TRUE),
               tasselTipHt.max = max(tasselTipHt.sp, na.rm = TRUE),
@@ -355,13 +429,13 @@ for(i in spatiallyCorrectedResponseVars[2:25])
               moistureCorrectedFiber.max = max(moistureCorrectedFiber.sp, na.rm = TRUE),
               moistureCorrectedAsh.max = max(moistureCorrectedAsh.sp, na.rm = TRUE),
               yieldPerAc.max = max(yieldPerAc.sp, na.rm = TRUE),
-              daysToAnthesis.max = max(daysToAnthesis.sp, na.rm = TRUE),
-              daysToSilk.max = max(daysToSilk.sp, na.rm = TRUE),
+              GDDToAnthesis.max = max(GDDToAnthesis.sp, na.rm = TRUE),
+              GDDToSilk.max = max(GDDToSilk.sp, na.rm = TRUE),
               kernelsPerRow.max = max(kernelsPerRow.sp, na.rm = TRUE),
               kernelRows.max = max(kernelRows.sp, na.rm = TRUE),
               moistureCorrectedKernelMass.max = max(moistureCorrectedKernelMass.sp, na.rm = TRUE),
               moistureCorrectedHundredKernelWt.max = max(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-              ASI.max = max(ASI.sp, na.rm = TRUE))
+              ASI.GDD.max = max(ASI.GDD.sp, na.rm = TRUE))
   summary.df <- full_join(summary.df, plasticity.df, join_by(genotype, loc), keep = FALSE, suffix = c('', ''))
   summary.df <- filter(summary.df, loc!='Missouri Valley')
   summary.df <- summary.df %>%
@@ -384,13 +458,13 @@ for(i in spatiallyCorrectedResponseVars[2:25])
            moistureCorrectedFiber.pl = moistureCorrectedFiber.sp + moistureCorrectedFiber.mu,
            moistureCorrectedAsh.pl = moistureCorrectedAsh.sp + moistureCorrectedAsh.mu,
            yieldPerAc.pl = yieldPerAc.sp + yieldPerAc.mu,
-           daysToAnthesis.pl = daysToAnthesis.sp + daysToAnthesis.mu,
-           daysToSilk.pl = daysToSilk.sp + daysToSilk.mu,
+           GDDToAnthesis.pl = GDDToAnthesis.sp + GDDToAnthesis.mu,
+           GDDToSilk.pl = GDDToSilk.sp + GDDToSilk.mu,
            kernelsPerRow.pl = kernelsPerRow.sp + kernelsPerRow.mu,
            kernelRows.pl = kernelRows.sp + kernelRows.mu,
            moistureCorrectedKernelMass.pl = moistureCorrectedKernelMass.sp + moistureCorrectedKernelMass.mu,
            moistureCorrectedHundredKernelWt.pl = moistureCorrectedHundredKernelWt.sp + moistureCorrectedHundredKernelWt.mu,
-           ASI.pl = ASI.sp + ASI.mu)
+           ASI.GDD.pl = ASI.GDD.sp + ASI.GDD.mu)
   # Export summary.df so we don't have to re-run FW regression
   write.table(summary.df, 'analysis/genotypeSummaryByLoc.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
   
@@ -562,7 +636,7 @@ locTrt.df <- locTrt.df %>%
                                             'Ames.Low', 'Ames.Medium', 'Ames.High','Crawfordsville.Low', 'Crawfordsville.Medium', 'Crawfordsville.High')))
 
 # Define 'pretty' labels for response vars
-response_labels <- c('Ear Height (cm)', 'Flag Leaf Height (cm)', 'Tassel Tip Height (cm)', 'Harvest Moisture (%)', 'Test Weight (lbs/bushel)', 'Ear Length (cm)', 'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Shelled Cob Weight (g)', 'Shelled Cob Length (cm)', 'Kernels Per Ear', 'Moisture Corrected Starch (%)', 'Moisture Corrected Protein (%)', 'Moisture Corrected Oil (%)', 'Moisture Corrected Fiber (%)', 'Moisture Corrected Ash (%)', 'Yield (Bushels/Acre)', 'Days to Anthesis', 'Days to Silking', 'Kernels Per Row', 'Kernel Rows', 'Moisture Corrected Kernel Mass (g)', 'Moisture Corrected Hundred Kernel Weight (g)', 'ASI (Days)')
+response_labels <- c('Ear Height (cm)', 'Flag Leaf Height (cm)', 'Tassel Tip Height (cm)', 'Harvest Moisture (%)', 'Test Weight (lbs/bushel)', 'Ear Length (cm)', 'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Shelled Cob Weight (g)', 'Shelled Cob Length (cm)', 'Kernels Per Ear', 'Moisture Corrected Starch (%)', 'Moisture Corrected Protein (%)', 'Moisture Corrected Oil (%)', 'Moisture Corrected Fiber (%)', 'Moisture Corrected Ash (%)', 'Yield (Bushels/Acre)', 'GDD to Anthesis', 'GDD to Silk', 'Kernels Per Row', 'Kernel Rows', 'Moisture Corrected Kernel Mass (g)', 'Moisture Corrected Hundred Kernel Weight (g)', 'ASI (GDD)', 'Days to Anthesis', 'Days to Silk', 'ASI (Days)')
 
 for(i in 1:length(spatiallyCorrectedResponseVars))
 {
@@ -581,14 +655,14 @@ for(i in 1:length(spatiallyCorrectedResponseVars))
     mutate(relPlasticity = case_when(genotype %in% high.plasticity.genos ~ 'High', 
                                      genotype %in% low.plasticity.genos ~ 'Low',
                                      .default = 'Medium'))
-  # orderedLocTrts <- df.plot %>%
-  #   group_by(locTrt) %>%
-  #   summarise(traitMean = mean(.data[[spatiallyCorrectedResponseVars[i]]])) %>%
-  #   arrange(traitMean)
-  # orderedLocTrts <- orderedLocTrts$locTrt
-  # 
-  # df.plot <- df.plot %>%
-  #   mutate(locTrt = factor(locTrt, levels = orderedLocTrts))
+  orderedLocTrts <- df.plot %>%
+    group_by(locTrt) %>%
+    summarise(traitMean = mean(.data[[spatiallyCorrectedResponseVars[i]]])) %>%
+    arrange(traitMean)
+  orderedLocTrts <- orderedLocTrts$locTrt
+
+  df.plot <- df.plot %>%
+    mutate(locTrt = factor(locTrt, levels = orderedLocTrts))
     
   p <- ggplot(df.plot, aes(x = locTrt, y = .data[[spatiallyCorrectedResponseVars[i]]], group = locTrt)) +
     geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill = '#00BFC4', na.rm = TRUE) +
@@ -640,13 +714,13 @@ summary.allenv <- hybrids.vp %>%
             moistureCorrectedFiber.mu = mean(moistureCorrectedFiber.sp, na.rm = TRUE),
             moistureCorrectedAsh.mu = mean(moistureCorrectedAsh.sp, na.rm = TRUE),
             yieldPerAc.mu = mean(yieldPerAc.sp, na.rm = TRUE),
-            daysToAnthesis.mu = mean(daysToAnthesis.sp, na.rm = TRUE),
-            daysToSilk.mu = mean(daysToSilk.sp, na.rm = TRUE),
+            GDDToAnthesis.mu = mean(GDDToAnthesis.sp, na.rm = TRUE),
+            GDDToSilk.mu = mean(GDDToSilk.sp, na.rm = TRUE),
             kernelsPerRow.mu = mean(kernelsPerRow.sp, na.rm = TRUE),
             kernelRows.mu = mean(kernelRows.sp, na.rm = TRUE),
             moistureCorrectedKernelMass.mu = mean(moistureCorrectedKernelMass.sp, na.rm = TRUE),
             moistureCorrectedHundredKernelWt.mu = mean(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-            ASI.mu = mean(ASI.sp, na.rm = TRUE),
+            ASI.GDD.mu = mean(ASI.GDD.sp, na.rm = TRUE),
             earHt.max = max(earHt.sp, na.rm = TRUE),
             flagLeafHt.max = max(flagLeafHt.sp, na.rm = TRUE),
             tasselTipHt.max = max(tasselTipHt.sp, na.rm = TRUE),
@@ -665,13 +739,13 @@ summary.allenv <- hybrids.vp %>%
             moistureCorrectedFiber.max = max(moistureCorrectedFiber.sp, na.rm = TRUE),
             moistureCorrectedAsh.max = max(moistureCorrectedAsh.sp, na.rm = TRUE),
             yieldPerAc.max = max(yieldPerAc.sp, na.rm = TRUE),
-            daysToAnthesis.max = max(daysToAnthesis.sp, na.rm = TRUE),
-            daysToSilk.max = max(daysToSilk.sp, na.rm = TRUE),
+            GDDToAnthesis.max = max(GDDToAnthesis.sp, na.rm = TRUE),
+            GDDToSilk.max = max(GDDToSilk.sp, na.rm = TRUE),
             kernelsPerRow.max = max(kernelsPerRow.sp, na.rm = TRUE),
             kernelRows.max = max(kernelRows.sp, na.rm = TRUE),
             moistureCorrectedKernelMass.max = max(moistureCorrectedKernelMass.sp, na.rm = TRUE),
             moistureCorrectedHundredKernelWt.max = max(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-            ASI.max = max(ASI.sp, na.rm = TRUE),
+            ASI.GDD.max = max(ASI.GDD.sp, na.rm = TRUE),
             earHt.min = min(earHt.sp, na.rm = TRUE),
             flagLeafHt.min = min(flagLeafHt.sp, na.rm = TRUE),
             tasselTipHt.min = min(tasselTipHt.sp, na.rm = TRUE),
@@ -690,13 +764,13 @@ summary.allenv <- hybrids.vp %>%
             moistureCorrectedFiber.min = min(moistureCorrectedFiber.sp, na.rm = TRUE),
             moistureCorrectedAsh.min = min(moistureCorrectedAsh.sp, na.rm = TRUE),
             yieldPerAc.min = min(yieldPerAc.sp, na.rm = TRUE),
-            daysToAnthesis.min = min(daysToAnthesis.sp, na.rm = TRUE),
-            daysToSilk.min = min(daysToSilk.sp, na.rm = TRUE),
+            GDDToAnthesis.min = min(GDDToAnthesis.sp, na.rm = TRUE),
+            GDDToSilk.min = min(GDDToSilk.sp, na.rm = TRUE),
             kernelsPerRow.min = min(kernelsPerRow.sp, na.rm = TRUE),
             kernelRows.min = min(kernelRows.sp, na.rm = TRUE),
             moistureCorrectedKernelMass.min = min(moistureCorrectedKernelMass.sp, na.rm = TRUE),
             moistureCorrectedHundredKernelWt.min = min(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-            ASI.min = min(ASI.sp, na.rm = TRUE)) %>%
+            ASI.GDD.min = min(ASI.GDD.sp, na.rm = TRUE)) %>%
   filter(!is.na(genotype) & genotype!='BORDER') %>%
   full_join(pl.allenv, join_by(genotype), suffix = c('', ''), keep = FALSE) %>%
   mutate(across(where(is.numeric), ~na_if(., -Inf)))
@@ -732,25 +806,471 @@ for (i in 1:length(response_vars))
   print(p)
 }
 
-unl_phenos <- c('earLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'shelledCobLen', 'kernelsPerEar',
+unl_phenos <- c('earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'shelledCobLen', 'kernelsPerEar',
                 'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
                 'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass', 'moistureCorrectedHundredKernelWt')
-rm_phenos <- c('earHt', 'flagLeafHt', 'tasselTipHt', 'daysToAnthesis', 'daysToSilk', 'ASI')
-dp_phenos <- c('combineMoisture', 'combineTestWt','yieldPerAc')
+rm_phenos <- c('earHt', 'flagLeafHt', 'tasselTipHt', 'GDDToAnthesis', 'GDDToSilk', 'ASI.GDD')
+dp_phenos <- c('combineMoisture', 'combineTestWt','combineYield')
+response_vars.sb <- response_vars[c(1:5, 7:25)]
 # Look at scottsbluff
 sb <- filter(hybrids.vp, loc=='Scottsbluff' & genotype!='BORDER') %>%
-  pivot_longer(c(contains('.sp'), response_vars), names_to = 'var', values_to = 'val') %>%
+  select(!contains('earLen')) %>%
+  pivot_longer(c(contains('.sp'), response_vars.sb), names_to = 'var', values_to = 'val') %>%
   mutate(nLvl = factor(nLvl, levels = c('Low', 'Medium', 'High')),
          source = case_when(var %in% c(unl_phenos, paste0(unl_phenos, '.sp')) ~ 'Chidu/Lina',
                             var %in% c(rm_phenos, paste0(rm_phenos, '.sp')) ~ 'Ramesh',
-                            var %in% c(dp_phenos, paste0(dp_phenos, '.sp')) ~ 'Dipak'))
+                            var %in% c(dp_phenos, paste0(dp_phenos, '.sp')) ~ 'Dipak')) %>%
+  select(genotype, var, nLvl, source, val)
 
 plot.raw <- filter(sb, !str_detect(var, '.sp')) %>%
-  group_by(genotype, var, nLvl) %>%
+  group_by(genotype, var, nLvl, source) %>%
   summarise(val = mean(val)) %>%
   ggplot(aes(nLvl, val)) + 
   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
   geom_line(color = 'darkgrey') +
-  facet_wrap(vars(var)) +
+  facet_wrap(vars(var), scales = 'free_y') +
   labs(title = 'Mean of Raw Phenotype Values', x = 'Nitrogen Level')
 plot.raw
+
+plot.sp <- filter(sb, str_detect(var, '.sp')) %>%
+  group_by(genotype, var, nLvl, source) %>%
+  summarise(val = mean(val)) %>%
+  ggplot(aes(nLvl, val)) + 
+  geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
+  geom_line(color = 'darkgrey') +
+  facet_wrap(vars(var), scales = 'free_y') +
+  labs(title = 'Mean of Spatially-Corrected Phenotype Values', x = 'Nitrogen Level')
+plot.sp
+
+# Check correlations of genotypic reps within a treatment 
+## Pivot
+hybrids.wide <- hybrids.vp %>%
+  filter(nLvl!='Border' & !is.na(genotype)) %>%
+  group_by(genotype, nLvl, loc) %>%
+  mutate(rep = 1:n()) %>%
+  ungroup() %>%
+  pivot_longer(any_of('combineMoisture'), names_to = 'var', values_to = 'val') %>%
+  select(loc, genotype, rep, nLvl, val, var) %>%
+  pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+## Get plots of r1 & r2
+for (i in response_vars)
+{
+  rep1 <- paste0(i, '.1')
+  rep2 <- paste0(i, '.2')
+  
+  p <- ggplot(hybrids.wide, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) + 
+    geom_point() + 
+    facet_wrap(vars(loc))
+  print(p)
+}
+# For Scottsbluff only:
+for (i in 'combineMoisture')
+{
+  rep1 <- paste0(i, '.1')
+  rep2 <- paste0(i, '.2')
+  
+  p <- hybrids.wide %>%
+    filter(loc=='North Platte1') %>%
+    ggplot(aes(.data[[rep1]], .data[[rep2]], color = nLvl)) + 
+    geom_point() + 
+    facet_wrap(vars(nLvl)) + 
+    labs(subtitle = paste0('R = ', cor(np1.hips[[rep1]], np1.hips[[rep2]], use = 'complete.obs')))
+  print(p)
+}
+np1.hips <- filter(hybrids.wide, loc=='North Platte1')
+sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
+
+# # Test theory that the row numbers inc W to E in Scottsbluff
+# sb <- hybrids %>%
+#   filter(loc=='Scottsbluff') %>%
+#   select(!c(contains('combine'), contains('harvest'), contains('Ht'), contains('GDD'), 
+#             contains('anthesis'), contains('silk'), contains('ASI'), contains('.sp')))
+# sb.combine2 <- sb_combine %>%
+#   rowwise() %>%
+#   mutate(row = case_when(row %in% 8:14 ~ row + 3,
+#                          row > 14 ~ row + 5, 
+#                          .default = row),
+#          range = range + 2)
+# 
+# sb.data2 <- full_join(sb.combine2, sb_h_ft, join_by(plot, loc, field, irrigation, population), 
+#                       suffix = c('', ''), keep = FALSE)
+# sb.data2 <- full_join(sb.data2, sb_h_ht, join_by(plot, loc, field, irrigation, population), 
+#                       suffix = c('', ''), keep = FALSE)
+# sb.test <- full_join(sb, sb.data2, join_by(range, row, loc, field, irrigation, population))
+# sb.test <- sb.test %>%
+#   filter(!is.na(genotype) & genotype!='BORDER') %>%
+#   rowwise() %>%
+#   mutate(plot = plot.x)
+# sb.repcorr <- sb.test %>%
+#   filter(nLvl!='Border') %>%
+#   group_by(genotype, nLvl, loc) %>%
+#   mutate(rep = 1:n()) %>%
+#   ungroup() %>%
+#   pivot_longer(c(earFillLen, earWidth, shelledCobLen, shelledCobWidth, shelledCobWt, kernelsPerEar, kernelMass, 
+#                  kernelsPerRow, kernelRows, hundredKernelWt, moistureCorrectedStarch, moistureCorrectedProtein, moistureCorrectedOil, moistureCorrectedFiber,
+#                  moistureCorrectedAsh, pctMoistureNIR, moistureCorrectedKernelMass, moistureCorrectedHundredKernelWt, combineYield, combineMoisture, 
+#                  combineTestWt, earHt, flagLeafHt, tasselTipHt), 
+#                names_to = 'var', values_to = 'val') %>%
+#   select(loc, genotype, rep, nLvl, val, var) %>%
+#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+# sb.test_phenos <- c('earFillLen', 'earWidth', 'shelledCobLen', 'shelledCobWidth', 'shelledCobWt', 'kernelsPerEar', 'kernelMass', 
+#                     'kernelsPerRow', 'kernelRows', 'hundredKernelWt', 'moistureCorrectedStarch', 'moistureCorrectedProtein', 
+#                     'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 'pctMoistureNIR', 'moistureCorrectedKernelMass',
+#                     'moistureCorrectedHundredKernelWt', 'combineYield', 'combineMoisture', 
+#                     'combineTestWt', 'earHt', 'flagLeafHt', 'tasselTipHt')
+# for(i in sb.test_phenos)
+# {
+#   rep1 <- paste0(i, '.1')
+#   rep2 <- paste0(i, '.2')
+#   p <- ggplot(sb.repcorr, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#     geom_point() +
+#     facet_wrap(vars(nLvl)) +
+#     labs(title = 'Scottsbluff Corrected')
+#   print(p)
+# }
+# 
+# # check the qrs for sb have the correct genotype
+# sb.index <- read_excel('data/Scottsbluff Hybrid HIPS - Summary.xlsx', sheet = 'Index (Original)')
+# sb.index <- sb.index[, c(1, 5, 7)]
+# colnames(sb.index) <- c('plot', 'genotype', 'seedFillNote')
+# sb.index <- sb.index %>%
+#   group_by(plot, genotype) %>%
+#   summarise(seedFillNote = max(seedFillNote, na.rm = TRUE))
+# sb.index <- full_join(sb.index, sb, join_by(plot), keep = FALSE, suffix = c('.index', '.qr')) %>%
+#   select(c(plot, genotype.qr, genotype.index)) %>%
+#   filter(genotype.qr!='BORDER')
+# sb.index <- sb.index %>% 
+#   mutate(genotype.index = str_to_upper(genotype.index),
+#          match = case_when(genotype.index==genotype.qr ~ TRUE, 
+#                            .default = FALSE)) 
+# # the qrs match the index we have from lisa
+# # check if the field was planted starting in the SW corner but labeled from the SE corner
+# # then reassign qrs to pair plot numbers correctly (and thus genotypes correctly)
+# sb.sw <- sb #%>%
+#   filter(!c(plot %in% c(1021:1025, 1191:1195, 1361:1365))) %>%
+#   rowwise() %>%
+#   mutate(plot = case_when(row==26 ~ plot + 490,
+#                           row==25 ~ plot + 440,
+#                           row==24 ~ plot + 390,
+#                           row==23 ~ plot + 340,
+#                           row==22 ~ plot + 290,
+#                           row==21 ~ plot + 240,
+#                           row==20 ~ plot + 190,
+#                           row==17 ~ plot + 150,
+#                           row==16 ~ plot + 100,
+#                           row==15 ~ plot + 50,
+#                           row==14 ~ plot,
+#                           row==13 ~ plot - 50,
+#                           row==12 ~ plot - 100,
+#                           row==11 ~ plot - 150,
+#                           row==7 ~ plot - 190,
+#                           row==6 ~ plot - 240,
+#                           row==5 ~ plot - 290,
+#                           row==4 ~ plot - 340,
+#                           row==3 ~ plot - 390,
+#                           row==2 ~ plot - 440,
+#                           row==1 ~ plot - 490)) %>%
+#   filter(!is.na(plot)) %>%
+#   select(!c(genotype, qr))
+# sb.qrs <- sb %>%
+#   select(qr, genotype, plot) %>% 
+#   filter(!is.na(plot))
+# sb.sw <- full_join(sb.sw, sb.qrs, join_by(plot), keep = FALSE, suffix = c('', '')) 
+# 
+# sb.sw.repcorr <- sb.sw %>%
+#   group_by(genotype, nLvl, loc) %>%
+#   mutate(rep = 1:n()) %>%
+#   ungroup() %>%
+#   pivot_longer(any_of(unl_phenos), 
+#                names_to = 'var', values_to = 'val') %>%
+#   select(loc, genotype, rep, nLvl, val, var) %>%
+#   filter(!is.na(val)) %>%
+#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+# for(i in unl_phenos[1:length(unl_phenos)])
+# {
+#   rep1 <- paste0(i, '.1')
+#   print(i)
+#   rep2 <- paste0(i, '.2')
+#   
+#   p <- ggplot(sb.sw.repcorr, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#     geom_point() + 
+#     facet_wrap(vars(nLvl)) +
+#     labs(title = 'Scottsbluff SW Plant Start')
+#   print(p)
+#   
+#   print(cor(sb.sw.repcorr[[rep1]], sb.sw.repcorr[[rep2]], use = 'complete.obs'))
+# }
+# 
+# # Check correlation of traits collected at UNL for sites other than SB + MV
+# corr.df <- filter(hybrids.wide, loc!='Scottsbluff' & loc!='Missouri Valley')
+# 
+# for(i in unl_phenos)
+# {
+#   print(i)
+#   rep1 <- paste0(i, '.1')
+#   rep2 <- paste0(i, '.2')
+#   print(cor(corr.df[[rep1]], corr.df[[rep2]], use = 'complete.obs'))
+# }
+# 
+# np1.df <- filter(hybrids.wide, loc=='North Platte1')
+# 
+# for(i in unl_phenos)
+# {
+#   print(i)
+#   rep1 <- paste0(i, '.1')
+#   rep2 <- paste0(i, '.2')
+#   print(cor(sb.repcorr[[rep1]], sb.repcorr[[rep2]], use = 'complete.obs'))
+# }
+# 
+# sb.combine <- sb_combine %>%
+#   rowwise() %>%
+#   mutate(plot = case_when(population=='Hybrid' & !c(plot %in% c(1021:1025)) & row==26 ~ plot + 490,
+#          population=='Hybrid' & row==25 ~ plot + 440,
+#          population=='Hybrid' & row==24 ~ plot + 390,
+#          population=='Hybrid' & row==23 ~ plot + 340,
+#          population=='Hybrid' & row==22 ~ plot + 290,
+#          population=='Hybrid' & row==21 ~ plot + 240,
+#          population=='Hybrid' & row==20 ~ plot + 190,
+#          population=='Hybrid' & !c(plot %in% c(1191:1195)) & row==17 ~ plot + 150,
+#          population=='Hybrid' & row==16 ~ plot + 100,
+#          population=='Hybrid' & row==15 ~ plot + 50,
+#          population=='Hybrid' & row==14 ~ plot,
+#          population=='Hybrid' & row==13 ~ plot - 50,
+#          population=='Hybrid' & row==12 ~ plot - 100,
+#          population=='Hybrid' & row==11 ~ plot - 150,
+#          population=='Hybrid' & !c(plot %in% c(1361:1365)) & row==7 ~ plot - 190,
+#          population=='Hybrid' & row==6 ~ plot - 240,
+#          population=='Hybrid' & row==5 ~ plot - 290,
+#          population=='Hybrid' & row==4 ~ plot - 340,
+#          population=='Hybrid' & row==3 ~ plot - 390,
+#          population=='Hybrid' & row==2 ~ plot - 440,
+#          population=='Hybrid' & row==1 ~ plot - 490,
+#          .default = plot)) %>%
+#   mutate(plot = case_when(population=='Hybrid' & row==1 & range==23 ~ 1021,
+#                           population=='Hybrid' & row==1 & range==24 ~ 1022,
+#                           population=='Hybrid' & row==1 & range==25 ~ 1023,
+#                           population=='Hybrid' & row==1 & range==26 ~ 1024,
+#                           population=='Hybrid' & row==1 & range==27 ~ 1025,
+#                           population=='Hybrid' & row==20 & range==23 ~ 1361,
+#                           population=='Hybrid' & row==20 & range==24 ~ 1362,
+#                           population=='Hybrid' & row==20 & range==25 ~ 1363, 
+#                           population=='Hybrid' & row==20 & range==26 ~ 1364,
+#                           population=='Hybrid' & row==20 & range==27 ~ 1365,
+#                           population=='Hybrid' & row==11 & range==23 ~ 1191,
+#                           population=='Hybrid' & row==11 & range==24 ~ 1192,
+#                           population=='Hybrid' & row==11 & range==25 ~ 1193,
+#                           population=='Hybrid' & row==11 & range==26 ~ 1194,
+#                           population=='Hybrid' & row==11 & range==27 ~ 1195,
+#                           population=='Hybrid' & row==26 & range %in% 23:27 ~ NA,
+#                           population=='Hybrid' & row==17 & range %in% 23:27 ~ NA,
+#                           population=='Hybrid' & row==7 & range %in% 23:27 ~ NA,
+#                           .default = plot))
+# 
+# sb.sw.all <- full_join(sb.sw, sb_combine, join_by(plot), suffix = c('', '.yield'), keep = FALSE) %>%
+#   select(!ends_with('.yield'))
+# sb.sw.all <- full_join(sb.sw.all, sb_h_ft, join_by(plot), suffix = c('', '.ft'), keep = FALSE) %>%
+#   select(!ends_with('.ft'))
+# sb.sw.all <- full_join(sb.sw.all, sb_h_ht, join_by(plot), suffix = c('', '.ht'), keep = FALSE) %>%
+#   select(!ends_with('.ht'))
+# 
+# sb.sw.all.vars <- c(response_vars.sb[c(1:16, 20:23)], 'combineYield', 'combineMoisture', 'combineTestWt')
+# sb.sw.long <- sb.sw.all %>%
+#   pivot_longer(any_of(sb.sw.all.vars), names_to = 'var', values_to = 'val') %>%
+#   mutate(nLvl = factor(nLvl, levels = c('Low', 'Medium', 'High')),
+#          source = case_when(var %in% c(unl_phenos, paste0(unl_phenos, '.sp')) ~ 'Chidu/Lina',
+#                             var %in% c(rm_phenos, paste0(rm_phenos, '.sp')) ~ 'Ramesh',
+#                             var %in% c(dp_phenos, paste0(dp_phenos, '.sp')) ~ 'Dipak')) %>%
+#   group_by(genotype, var, nLvl) %>%
+#   mutate(rep = 1:n()) %>%
+#   select(genotype, var, nLvl, source, val, rep)
+# 
+# plot.raw <- sb.sw.long %>%
+#   filter(!is.na(nLvl)) %>%
+#   group_by(genotype, var, nLvl, source) %>%
+#   summarise(val = mean(val)) %>%
+#   ggplot(aes(nLvl, val)) + 
+#   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
+#   geom_line(color = 'darkgrey') +
+#   facet_wrap(vars(var), scales = 'free_y') +
+#   labs(title = 'Mean of Raw Phenotype Values', x = 'Nitrogen Level')
+# plot.raw
+# 
+# sb.sw.wide <- pivot_wider(sb.sw.long, 
+#                           id_cols = c(nLvl, genotype), 
+#                           names_from = c(var, rep), 
+#                           values_from = val, 
+#                           names_sep = '.')
+# for(i in sb.sw.all.vars)
+# {
+#   rep1 <- paste0(i, '.1')
+#   rep2 <- paste0(i, '.2')
+#   p <- ggplot(sb.sw.wide, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#     geom_point() +
+#     facet_wrap(vars(nLvl))
+#   print(p)
+#   print(i)
+#   print(cor(sb.sw.wide[[rep1]], sb.sw.wide[[rep2]], use = 'complete.obs'))
+# }
+# 
+# plotRepCorr(sb.sw.all, 'nLvl', 'genotype', sb.sw.all.vars, 'loc')
+# 
+# np1.df <- hybrids.vp %>%
+#   filter(nLvl!='Border' & !is.na(genotype) & loc=='North Platte1') %>%
+#   group_by(genotype, nLvl, loc) %>%
+#   mutate(rep = 1:n()) %>%
+#   ungroup() %>%
+#   pivot_longer(c(combineYield, combineMoisture, combineTestWt, earHt, flagLeafHt), 
+#                names_to = 'var', values_to = 'val') %>%
+#   select(loc, genotype, rep, nLvl, val, var) %>%
+#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+#   
+# for(i in c('combineYield', 'combineMoisture', 'combineTestWt', 'earHt', 'flagLeafHt', 'tasselTipHt'))
+# {
+#   print(i)
+#   rep1 <- paste0(i, '.1')
+#   rep2 <- paste0(i, '.2')
+#   print(cor(sb.sw.wide[[rep1]], sb.sw.wide[[rep2]], use = 'complete.obs'))
+# }
+# 
+# # Now onto figuring out what is up with the MV data
+# ## Let's look at the height data, but not flip the reps-- maybe the field was planted with rep2 and rep1's locations flipped & Lisa knew but forgot to mention
+# mv.plantData.hyb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx', 
+#                                sheet = '4211', 
+#                                col_names = c('row', 'range', 'flagLeafHt', 'earHt', 'rep', 'plot', 'genotype'),
+#                                col_types = c('skip', 'skip', 'numeric', 'numeric', 'skip', 'skip', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
+#                                skip = 1)
+# mv.plantData.hyb <- mv.plantData.hyb %>%
+#   rowwise() %>%
+#   mutate(plot = case_when(rep==1 ~ plot + 100,
+#                           rep==2 ~ plot + 200,
+#                           .default = plot),
+#          genotype = str_to_upper(genotype),
+#          loc = 'Missouri Valley',
+#          field = 'Hybrid HIPS',
+#          nLvl = 'Medium',
+#          irrigation = 'Dryland',
+#          population = 'Hybrid',
+#          flagLeafHt = case_when(flagLeafHt=='n/a - solar' ~ NA, .default = flagLeafHt),
+#          earHt = case_when(earHt=='n/a - solar' ~ NA, .default = earHt)) %>%
+#   fixGenos(hips1.5_genoFixKey)
+# 
+# # Pivot wide
+# mv.ht.wide <- mv.plantData.hyb %>%
+#   group_by(genotype) %>%
+#   mutate(rep = 1:n()) %>%
+#   ungroup() %>%
+#   pivot_longer(c(earHt, flagLeafHt), 
+#                names_to = 'var', values_to = 'val') %>%
+#   select(loc, genotype, rep, nLvl, val, var) %>%
+#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+# for(i in c('earHt', 'flagLeafHt'))
+# {
+#   rep1 <- paste0(i, '.1')
+#   rep2 <- paste0(i, '.2')
+#   p <- ggplot(mv.ht.wide, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#     geom_point()
+#   print(p)
+#   print(i)
+#   print(cor(mv.ht.wide[[rep1]], mv.ht.wide[[rep2]], use = 'complete.obs'))
+# }
+# # What happens if we bind UNL data to plant data by range & row & use plot numbers and genotype info from plant data?
+# mv <- hybrids %>%
+#   filter(loc=='Missouri Valley') %>%
+#   select(c(any_of(unl_phenos), 'qr', 'plot', 'rep', 'range', 'row', 'genotype'))
+# mv.unl.ht <- full_join(mv, mv.plantData.hyb, join_by(range, row), suffix = c('.unl', '.ht'), keep = FALSE) %>%
+#   mutate(plot = plot.ht,
+#          genotype = genotype.ht,
+#          rep = rep.ht) %>%
+#   select(!c(contains('.unl'), contains('.ht'))) %>%
+#   filter(!is.na(row)|!is.na(range))
+# 
+# mv.unl.ht.wide <- mv.unl.ht %>%
+#   group_by(genotype) %>%
+#   mutate(rep = 1:n()) %>%
+#   ungroup() %>%
+#   pivot_longer(any_of(unl_phenos), 
+#                names_to = 'var', values_to = 'val') %>%
+#   select(loc, genotype, rep, nLvl, val, var) %>%
+#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+# 
+# for(i in unl_phenos)
+# {
+#   rep1 <- paste0(i, '.1')
+#   rep2 <- paste0(i, '.2')
+#   p <- ggplot(mv.unl.ht.wide, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#     geom_point()
+#   print(p)
+#   print(i)
+#   print(cor(mv.unl.ht.wide[[rep1]], mv.unl.ht.wide[[rep2]], use = 'complete.obs'))
+# }
+# 
+# for (i in unl_phenos)
+# {
+#   rep1 <- paste0(i, '.1')
+#   rep2 <- paste0(i, '.2')
+#   print(i)
+#   df <- hybrids.wide %>%
+#     filter(loc=='Missouri Valley')
+#   print(cor(df[[rep1]], df[[rep2]], use = 'complete.obs'))
+# } 
+# # Some really good correlations between genotypic reps & some really bad ones -- is this something wrong or is it a feature of this data?
+# # Okay, now what if we bind the combine data in by range and row
+# mv.all <- full_join(mv.unl.ht, mv_hyb, join_by(range, row)) %>%
+#   mutate(loc = 'Missouri Valley',
+#          field = 'Hybrid HIPS')
+# mv.all.wide <- mv.all %>%
+#   group_by(genotype) %>%
+#   mutate(rep = 1:n()) %>%
+#   ungroup() %>%
+#   pivot_longer(any_of(c(dp_phenos, 'earHt', 'flagLeafHt', unl_phenos)), 
+#                names_to = 'var', values_to = 'val') %>%
+#   select(genotype, val, var, rep) %>%
+#   pivot_wider(id_cols = c(genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+# # Low corrs here possibly due to outliers
+# for (i in c(dp_phenos, 'earHt', 'flagLeafHt', unl_phenos))
+# {
+#   rep1 <- paste0(i, '.1')
+#   rep2 <- paste0(i, '.2')
+#   p <- ggplot(mv.all.wide, aes(.data[[rep1]], .data[[rep2]])) +
+#     geom_point() + 
+#     labs(title = 'Missouri Valley Corrected', subtitle = cor(mv.all.wide[[rep1]], mv.all.wide[[rep2]], use = 'complete.obs'))
+#   print(p)
+#   print(i)
+#   print(cor(mv.all.wide[[rep1]], mv.all.wide[[rep2]], use = 'complete.obs'))
+# }
+# 
+# # how was the combine info correct but not the rest? this is my own curiosity
+# mv.c.qr <- full_join(mv, mv_hyb, join_by(range, row), keep = FALSE, suffix = c('.unl', '.c'))
+# 
+# ames.hyb <- filter(hybrids, loc=='Ames')
+# ames.hyb.genoLvl <- ames.hyb %>%
+#   group_by(genotype, nLvl) %>%
+#   summarise(yieldPerAc = mean(yieldPerAc)) %>%
+#   pivot_wider(names_from = nLvl, values_from = yieldPerAc) %>%
+#   mutate(oppositeNResponse = case_when(Low > High ~ TRUE, .default = FALSE))
+# ames.hyb.check <- filter(ames.hyb, genotype %in% c('F42 X MO17', 'B73 X PHZ51', 'LH185 X LH82', 'PHP02 X PHJ89'))
+
+# Function to plot correlation of the first 2 reps of a genotype within a treatment
+# Data is the data frame, subset as desired. This should be an object in your R environment
+# Treatment Var may be nitrogen level, location, year, etc. Each unique combination of these and genotype will be a point in the plot. This should be a string
+# Genotype is the name of the genotype column. This should be a string.
+# Phenotypes is a string vector containing the names of the phenotype columns to plot.
+# Note: in the case genotype(s) have more than 2 replicates, only 2 of the replicates are used here
+# Facet is a string specifying the variable to facet wrap the plot by
+
+
+
+# mapResponse(mv.all, 'combineYield')
+
+# How many hybrids do we have both parents for? -- 18
+inbreds <- filter(hips, population=='Inbred')
+inbreds.genos <- unique(inbreds$genotype)
+hybrid.genos <- tibble(hybrid = unique(hybrids$genotype))
+hybrid.genos <- hybrid.genos %>%
+  rowwise() %>%
+  mutate(P1 = str_split_i(hybrid, ' X ', 1),
+         P2 = str_split_i(hybrid, ' X ', 2), 
+         P1InPanel = P1 %in% inbreds.genos,
+         P2InPanel = P2 %in% inbreds.genos,
+         BothInPanel = case_when(P1InPanel & P2InPanel ~ TRUE, .default = FALSE))
+sum(hybrid.genos$BothInPanel)

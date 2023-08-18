@@ -99,8 +99,7 @@ based on experiment code, which was dependent on the nitrogen level.
 
 This is the level of irrigation the plot was supplied with. It is
 abbreviated as **'irrigation'**. Plots denoted as 'Dryland' received no
-irrigation and were completely rain-fed. Plots denoted as 'Partial'
-recieved @TODO. Plots denoted as 'Full' received @TODO. This information
+irrigation and were completely rain-fed. See the documentation for individual fields (North Platte1, North Platte2, and Scottsbluff) for the amount of irrigation provided to plots under 'Full' and 'Partial' irrigation treatments at these locations. This information
 for the Lincoln location hybrids was taken from the sheet 'Combined
 Dataset' in the file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'.
 This information for the North Platte location was taken from the file
@@ -116,9 +115,9 @@ Lincoln location hybrids was taken from the sheet 'Combined Dataset' in
 the file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This
 information for the hybrids in the Scottsbluff, Missouri Valley, and
 North Platte locations was taken from the file
-'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This information for the Ames and
+'HybridHIPS_plotlevelNIR\$\_v2.xlsx'. This information for the Missouri Valley, Ames, and
 Crawfordsville locations was taken from the sheets 'RawData (4-Row)' and
-'RawData (2-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
+'RawData (2-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. These were misassigned in the QR codes used for ear phenotypes and NIR measurements for the Missouri Valley hybrids, and have been corrected in the replicate column in the dataset.
 
 ### Range
 
@@ -183,7 +182,7 @@ Missouri Valley, Crawfordsville, and Ames locations.
 ### Female Flowering
 
 This is the date when 50% of plants in the plot reached silking. It is
-abbreviated as **'silkingDate'**. This information for the Lincoln
+abbreviated as **'silkDate'**. This information for the Lincoln
 location hybrids was taken from the sheet 'Combined Dataset' in the file
 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This information for
 the Scottsbluff hybrids location was taken from the sheet
@@ -234,7 +233,7 @@ file the replicate numbers were inverted, so the replicate numbers and
 genotypes for a plot at a given range was taken from the yield data for
 Missouri Valley. This information for Ames was taken from the file
 'Plant_data_Ames_2022.xlsx.' This information for Crawfodsville was
-taken from the file 'Plant_data_Crawfordsville.xlsx'.
+taken from the file 'Plant_data_Crawfordsville.xlsx'. Ear heights less than 35 cm were visual outliers in the histogram and were dropped.
 
 ### Flag Leaf Height
 
@@ -248,34 +247,29 @@ location hybrids was taken from the sheet 'Combined Dataset' in the file
 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. For Scottsbluff hybrids
 , this data was taken from the sheet 'Hybrid_height data' from the file
 'Corn_data_Scottsbluff-2022_rk_11.11.2022' and converted from inches.
-This data was not collected in North Platte, Missouri Valley,
-Crawfordsville, and Ames locations. Plot 1172 at Scottsbluff was dropped
+This information for the North Platte location was taken from the sheets
+'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file
+'2022_Schnable_HIPS_data_v4.xlsx' and converted from meters. This
+information for Missouri Valley was taken from the file
+'Plant_data_MO_Valley_2022.xlsx'.  This information for Ames was taken from the file
+'Plant_data_Ames_2022.xlsx.' This information for Crawfordsville was
+taken from the file 'Plant_data_Crawfordsville.xlsx'.  Plot 1322 at Scottsbluff was dropped
 due to having a value 60 cm (\~1.9 feet) greater than all other
-observations.
+observations. Flag leaf heights less than 50 cm were visual outliers in the histogram and were dropped.
 
-### Plant Height
+### Tassel Tip Height
 
 This is the height in centimeters of the plant, including the tassel, of
 one plant from the plot (in the case of Scottsbluff) or the average of
 this measurement for two plants from the plot in Lincoln. All
 measurements from plants noted as stunted or without a silk were marked
 as missing data prior to calculation. It is abbreviated as
-**'plantHt'**. This information for the Lincoln location hybrids was
+**'tasselTipHt'**. This information for the Lincoln location hybrids was
 taken from the sheet 'Combined Dataset' in the file 'Summary of Lincoln
 Hybrid HIPS 2022 Data.xlsx'. For Scottsbluff hybrids, this data was
 taken from the sheet 'Hybrid_height data' from the file
 'Corn_data_Scottsbluff-2022_rk_11.11.2022' and converted from inches.
-This information for the North Platte location was taken from the sheets
-'Full Data', 'Reduced Irr Data', and 'No Irr Data' in the file
-'2022_Schnable_HIPS_data_v4.xlsx' and converted from meters. This
-information for Missouri Valley was taken from the file
-'Plant_data_MO_Valley_2022.xlsx'. The data was collected going through
-the field by range and row, so these are correct, but in this file the
-replicate numbers were inverted, so the replicate numbers and genotypes
-for a plot at a given range was taken from the yield data for Missouri
-Valley. This information for Ames was taken from the file
-'Plant_data_Ames_2022.xlsx.' This information for Crawfordsville was
-taken from the file 'Plant_data_Crawfordsville.xlsx'. Plot 1172 at the
+Plot 1322 at the
 Scottsbluff location was dropped due to having a value more than 114
 centimeters (roughly 3.7 feet) greater than all other observations.
 
@@ -433,7 +427,7 @@ observations, and the mean for plots 879 and 837 in North Platte2 was
 calculated from 3 (rather than 4) ears due to the observation for the
 fourth ear being an order of magnitude larger than all other
 observations. This data was not collected for the Ames and
-Crawfordsville locations.
+Crawfordsville locations. This data was initially not collected for ears phenotyped by the UNL team (North Platte, Scottsbluff, Lincoln, Missouri Valley), but began approximately one-third of the way through phenotyping the first location, Missouri Valley. 
 
 ### EarWidth
 
@@ -522,11 +516,11 @@ remaining observation was an order of magnitude larger than the others.
 
 ### Kernel Rows
 
-This is the mean number of kernel rows. It is abbreviated as
+This is the mean number of kernel rows, i.e. the number of kernels around the circumference of the ear at the middle of the ear. It is abbreviated as
 **'kernelRows'**. This information for hybrids and Missouri Valley
 inbreds was taken from the file 'plotleveleardata_v2.csv'. This
 information for the Ames and Crawfordsville locations was taken from the
-files in the folder '2 KRN And Ear Documentation'. Plot 367 at North
+files in the folder '2 KRN And Ear Documentation'. Plots 367 and 866 at North
 Platte was calculated using 3 ears rather than 4 as the remaining
 observation was an order of magnitude larger than all others.
 
@@ -682,27 +676,6 @@ information for North Platte was taken from the sheets 'No Irr Data',
 This is the date the plot was planted. It is abbreviated as
 **'plantDate'**.
 
-### Historical Flowering Time
-
-This is the historical flowering time, in days, of the inbred and was
-used to for blocking the inbreds. It is abbreviated as **'histFT'**.
-This information was taken from the sheet 'RawData (2-Row)' in the file
-'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
-
-### Historical Plant Height
-
-This is the historical plant height, in centimeters, of the inbred, and
-was used for blocking the inbreds. It is abbreviated as
-**'histPlantHt'**. This information was taken from the sheet 'RawData
-(2-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
-
-### Block
-
-This is the block the inbred was placed in based on historical plant
-height and days to flowering. It is abbreviated as **'block'**. This
-information was taken from the sheet 'RawData (2-Row)' in the file
-'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
-
 ### Plot Length
 
 This is the planted length of the plot in feet. It is abbreviated as
@@ -718,10 +691,10 @@ was taken from personal communications with Lisa Coffey.
 This is the number of days between the planting date and anthesisDate.
 It is abbreviated as **'daysToAnthesis'**.
 
-### Days to Silking
+### Days to Silk
 
-This is the number of days between the planting date and silkingDate. It
-is abbreviated as **'daysToSilk'**. Plots 1397 and 1346 at Scottsbluff
+This is the number of days between the planting date and silkDate. It
+is abbreviated as **'daysToSilk'**. Plots 1397 at North Platte and 1156 at Scottsbluff
 were visual outliers in scatterplots and were dropped.
 
 ### Moisture Corrected Kernel Mass
@@ -731,7 +704,7 @@ kernel mass divided by the quantity 1 - pctMoistureNIR. For the Ames and
 Crawfordsville locations, the percent moisture was not measured during
 ear phenotyping, so the mean of pctMoistureNIR of the other locations
 was used as the moisture percent. It is abbreviated as
-**'moistureCorrectedKernelMass"**.
+**'moistureCorrectedKernelMass"**. Values greater than 450 g were visual outliers in the histogram and were dropped. 
 
 ### Moisture Corrected Hundred Kernel Weight
 
@@ -749,6 +722,26 @@ Valley, North Platte, and Scottsbluff locations, this information was
 taken from the file 'HybridHIPS_plotlevelNIR_v2.5.csv'. This information
 was not collected for the Ames and Crawfordsville locations. It is
 abbreviated as **'pctMoistureNIR'**.
+
+### ASI
+
+This is the anthesis-silking interval in days, and is calculated as the difference between the silkDate and anthesisDate for a plot. It is abbreviated as **'ASI'**. Values greater than 20 days were visual outliers in the histogram and were dropped. 
+
+### GDDToAnthesis
+
+This is the cumulative number of GDDs for the location on between plantDate and anthesisDate for the plot. It is abbreviated as **'GDDToAnthesis'**. GDDs were calculated using temperatures in Fahrenheit with a crop base temperature of 50 degrees and a crop maximum temperature of 86 degrees. Where there was a weather station data for the field, the temperatures recorded therein were used to calculate the daily minimum and maximum temperatures and converted from Celsius if needed. In cases where there was missing data or the maximum temperature was above the maximum observed temperature for the nearest town, data was imputed from DAYMET. In Crawfordsville, there was no weather station but a G2F field was located nearby. The weather data for Crawfordsville was accessed from doi:10.25739/3d3g-pe51 for the site IAH1. This data was previously cleaned and imputed using data from NASA. Values less than 900 GDD were visual outliers in the histogram and were dropped.
+
+### GDDToSilk
+
+This is the cumulative number of GDDs for the location on between plantDate and silkDate for the plot. It is abbreviated as **'GDDToSilk'**. GDDs were calculated using temperatures in Fahrenheit with a crop base temperature of 50 degrees and a crop maximum temperature of 86 degrees. Where there was a weather station data for the field, the temperatures recorded therein were used to calculate the daily minimum and maximum temperatures and converted from Celsius if needed. In cases where there was missing data or the maximum temperature was above the maximum observed temperature for the nearest town, data was imputed from DAYMET. In Crawfordsville, there was no weather station but a G2F field was located nearby. The weather data for Crawfordsville was accessed from doi:10.25739/3d3g-pe51 for the site IAH1. This data was previously cleaned and imputed using data from NASA. Values greater than 1900 GDDs were visual outliers in the histogram and were dropped. 
+
+### ASI.GDD
+
+This is the cumulative number of GDDs for the location on between anthesisDate and silkDate for the plot. It is abbreviated as **'ASI.GDD'**. GDDs were calculated using temperatures in Fahrenheit with a crop base temperature of 50 degrees and a crop maximum temperature of 86 degrees. Where there was a weather station data for the field, the temperatures recorded therein were used to calculate the daily minimum and maximum temperatures and converted from Celsius if needed. In cases where there was missing data or the maximum temperature was above the maximum observed temperature for the nearest town, data was imputed from DAYMET. In Crawfordsville, there was no weather station but a G2F field was located nearby. The weather data for Crawfordsville was accessed from doi:10.25739/3d3g-pe51 for the site IAH1. This data was previously cleaned and imputed using data from NASA. Weather station data can be accessed in the folder data/weather. Values greater than 450 were visual outliers in the histogram and were dropped.
+
+### Experiment
+
+This is the experiment code assigned to nitrogen levels within a population within a location for the Missouri Valley, Ames, and Crawfordsville locations. It is abbreviated as **'exp'**. This information was taken from the 'Basic info' sheet in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. 
 
 # Location Notes
 
@@ -823,8 +816,7 @@ There were 176 plots (88 plots per replication) in this field. The plots
 were four-row plots.
 ![](images/Screen%20Shot%202023-05-31%20at%2016.57.50.png)
 
-The plot numbers shown in the image correspond to those included in the
-QR codes.
+The plot numbers shown in the image correspond to those used in the QR codes. The QR codes mis-assigned the replicate numbers. These have been fixed in the dataset. 
 
 ## North Platte
 
@@ -881,7 +873,7 @@ locations. The field was planted north to south and together, the inbred
 and hybrid fields are 625 feet north to south. The fields were planted
 on May 19, 2022. A combination of 10-34-0 (NPK) liquid fertilizer and
 urea were applied to meet the nitrogen treatment level requirements, as
-shown below.
+shown below. Both field layouts denote that planting of the hybrid plots started in the southeast corner of the field; however, the correlations between two replicates of a genotype within a treatment indicate that planting started in the southwest corner of the field. The inbreds were still located directly to the west of the hybrids. In the corrected layout, plot 1001 is in the SW corner of the field, plot 1025 is in the NW corner of the field, the NE corner of the field is a fill plot, and plot 1491 is in the SE corner of the field. 
 
 ![](images/paste-D4CF04B8.png)
 
@@ -935,7 +927,7 @@ treatments for both hybrids and inbreds were located in the E1 field.
 
 This field was planted on May 22, 2022. Nitrogen was applied using urea
 and 32% UAN on May 17, 2022, and June 1, 2022. The field coordinates
-were 42.015354, -93.732519.
+were 42.015354, -93.732519. The previous crop was corn.
 
 ![](images/LC-Ames-CF2223.B1.png)
 
@@ -944,7 +936,7 @@ were 42.015354, -93.732519.
 ### E1
 
 This field was planted on May 23, 2022. Nitrogen was applied using urea
-on May 21, 2022. The field coordinates were 42.012376, -93.737301.
+on May 21, 2022. The field coordinates were 42.012376, -93.737301. The previous crop was soybeans. 
 
 ![](images/LC-Ames-CF2223.E1.png)
 
@@ -1728,7 +1720,7 @@ not recorded at the Scottsbluff location.
 ### FF Collector
 
 This is the person who collected the female flowering date for this
-plot. It is abbreviated as **'silkingCollector'**. This information for
+plot. It is abbreviated as **'silkCollector'**. This information for
 the Lincoln location was taken from the sheet 'Combined Dataset' in the
 file 'Summary of Lincoln Hybrid HIPS 2022 Data.xlsx'. This data was not
 recorded at the Scottsbluff location.
@@ -1741,3 +1733,24 @@ for the plot. It is abbreviated as **'leafDimHtCollector'**. This
 information for the Lincoln location hybrids was taken from the sheet
 'Combined Dataset' in the file 'Summary of Lincoln Hybrid HIPS 2022
 Data.xlsx'. This data was not recorded at the Scottsbluff location.
+
+### Historical Flowering Time
+
+This is the historical flowering time, in days, of the inbred and was
+used to for blocking the inbreds. It is abbreviated as **'histFT'**.
+This information was taken from the sheet 'RawData (2-Row)' in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
+
+### Historical Plant Height
+
+This is the historical plant height, in centimeters, of the inbred, and
+was used for blocking the inbreds. It is abbreviated as
+**'histPlantHt'**. This information was taken from the sheet 'RawData
+(2-Row)' in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
+
+### Block
+
+This is the block the inbred was placed in based on historical plant
+height and days to flowering. It is abbreviated as **'block'**. This
+information was taken from the sheet 'RawData (2-Row)' in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
