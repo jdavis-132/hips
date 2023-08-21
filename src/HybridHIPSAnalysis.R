@@ -350,25 +350,26 @@ for(i in 1:length(response_vars))
   print(sp.correction.plot)
 }
 
-for(i in spatiallyCorrectedResponseVars)
+for(i in c('yieldPerAc.sp'))
 {
   df.n <- hybrids.vp %>%
-    group_by(loc, lbsNPerAc) %>%
-    summarise('{i}':= mean(.data[[i]], na.rm = TRUE))
-  p <- ggplot(df.n, aes(lbsNPerAc, .data[[i]], color = loc)) +
-    geom_line()
+    group_by(loc, lbsNPerAc) #%>%
+    #summarise('{i}':= mean(.data[[i]], na.rm = TRUE))
+  p <- ggplot(hybrids.vp, aes(nLvl, .data[[i]])) +
+    geom_violin() + 
+    facet_wrap(vars(loc))
   print(p)
 }
-
+sb.np2 <- filter(hybrids.vp, loc=='North Platte2'|(loc=='Scottsbluff' & nLvl %in% c('Low', 'Medium'))|(loc=='Scottsbluff' & nLvl=='High' & yieldPerAc.sp >=100))
 getNitrogenPlasticityByLoc <- function(data, response)
 {
-  locs <- c('Ames', 'Crawfordsville', 'Lincoln', 'North Platte1', 'North Platte2', 'North Platte3', 'Scottsbluff')
+  locs <- c('North Platte2', 'Scottsbluff')
   response.df <- tibble(loc = NULL, genotype = NULL, '{response}':= NULL,)
   for (currLoc in locs)
   {
     loc.df <- filter(data, !is.na(genotype) & loc==currLoc & nLvl!='Border' & !is.na(nLvl))
     fw <- FW(y = loc.df[[response]], VAR = loc.df$genotype, ENV = loc.df$nLvl, saveAt = paste0('analysis/gibbs-samples-', response, '-', currLoc), 
-             nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
+             nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656, saveVAR = c(1:2))
     pl <- fw$b %>%
       as_tibble(rownames = 'genotype') %>%
       mutate(loc = currLoc, '{response}':= Init1) %>%
@@ -378,7 +379,30 @@ getNitrogenPlasticityByLoc <- function(data, response)
   return(response.df)
 }
 
-plasticity.df <- getNitrogenPlasticityByLoc(hybrids.vp, spatiallyCorrectedResponseVars[1])
+plasticitySBNP2.df <- getNitrogenPlasticityByLoc(sb.np2, 'yieldPerAc.sp')
+
+plasticitySBNP2.wide <- plasticitySBNP2.df %>%
+  pivot_wider(id_cols = genotype, names_from = loc, values_from = yieldPerAc.sp)
+
+plasticityCorrPlot <- ggplot(plasticitySBNP2.wide, aes(`North Platte2`, `Scottsbluff`)) + 
+  geom_point() + 
+  labs(x = 'Nitrogen Plasticity of Yield at North Platte Under Partial Irrigation',
+       y = 'Nitrogen Plasticity of Yield at Scottsbluff',
+       subtitle = expression(R^2~'='~'0.04074947'))
+plasticityCorrPlot
+
+sb.np2.summary <- sb.np2 %>%
+  group_by(genotype, loc) %>%
+  summarise(meanYield = mean(yieldPerAc.sp, na.rm = TRUE)) %>%
+  full_join(plasticitySBNP2.df, by = join_by(genotype, loc), keep = FALSE, suffix = c('', ''))
+
+plasticityVsYield <- ggplot(sb.np2.summary, aes(meanYield, yieldPerAc.sp, color = loc)) + 
+  geom_point() +
+  geom_hline(yintercept = 1) +
+  facet_grid(cols = vars(loc)) +
+  labs(x = 'Mean Genotype Yield (Bushels Per Acre)', y = 'Linear Plasticity (Finlay-Wilkinson)')
+plasticityVsYield
+
 for(i in spatiallyCorrectedResponseVars[2:25])
 {
   plasticity.df <- full_join(plasticity.df, getNitrogenPlasticityByLoc(hybrids.vp, i), join_by(genotype, loc), suffix = c('', ''), keep = FALSE)
@@ -661,8 +685,8 @@ for(i in 1:length(spatiallyCorrectedResponseVars))
     arrange(traitMean)
   orderedLocTrts <- orderedLocTrts$locTrt
 
-  df.plot <- df.plot %>%
-    mutate(locTrt = factor(locTrt, levels = orderedLocTrts))
+  # df.plot <- df.plot %>%
+  #   mutate(locTrt = factor(locTrt, levels = orderedLocTrts))
     
   p <- ggplot(df.plot, aes(x = locTrt, y = .data[[spatiallyCorrectedResponseVars[i]]], group = locTrt)) +
     geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill = '#00BFC4', na.rm = TRUE) +
