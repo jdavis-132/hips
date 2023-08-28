@@ -109,8 +109,9 @@ plotVarCorr <- function(data, x, y)
 {
   x.str <- deparse(substitute(x))
   y.str <- deparse(substitute(y))
-  p <- ggplot({{data}}, aes({{x}}, {{y}}, color = loc)) + 
+  p <- ggplot({{data}}, aes({{x}}, {{y}}, color = nLvl)) + 
     geom_point() +
+    facet_wrap(vars(loc)) +
     labs(subtitle = str_c('R = ', cor(data[[x.str]], data[[y.str]], use = 'complete.obs')))
   print(p)
 }
@@ -120,9 +121,9 @@ plotVarCorr(hybrids, ASI, ASI.GDD)
 plotVarCorr(hybrids, daysToSilk, GDDToSilk)
 plotVarCorr(hybrids, daysToAnthesis, GDDToAnthesis)
 plotVarCorr(hybrids, GDDToAnthesis, GDDToSilk)
-plotVarCorr(hybrids, kernelRows, yieldPerAc)
-plotVarCorr(hybrids, kernelRows, moistureCorrectedKernelMass)
-plotVarCorr(hybrids, kernelRows, kernelsPerRow)
+plotVarCorr(hybrids, kernelRows, yieldPerAc) # not very correlated
+plotVarCorr(hybrids, kernelRows, moistureCorrectedKernelMass) # not very correlated
+plotVarCorr(hybrids, kernelRows, kernelsPerRow) # not very correlated
 plotVarCorr(hybrids, kernelRows, earWidth)
 plotVarCorr(hybrids, kernelRows, shelledCobWidth)
 plotVarCorr(hybrids, kernelRows, kernelsPerEar)

@@ -296,8 +296,8 @@ parseMissouriValleyQR <- function(data)
                            rep==2 ~ 1),
       plot = case_when(population=='Hybrid' & rep==1 ~ (plot + 100),
                             population=='Hybrid' & rep==2 ~ (plot + 200),
-                            population=='Inbred' & rep==1 ~ (plot + 100),
-                            population=='Inbred' & rep==2 ~ (plot + 200)))
+                            population=='Inbred' & rep==1 ~ plot,
+                            population=='Inbred' & rep==2 ~ (plot + 400)))
   return(data_parsed)
 }
 # mv <- filter(eardata22, str_detect(qr, 'MV')) %>%

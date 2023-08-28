@@ -637,7 +637,7 @@ Crawfordsville, and Ames was taken from the sheets 'RawData (4-Row)' and
 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. This information for North Platte
 was taken from the sheets 'No Irr Data', 'Reduced Irr Data', and 'Full
 Data' in the file '2022_Schnable_HIPS_data_v4.xlsx' as the sum of the
-columns 'R1 Stand' and 'R2 Stand'.
+columns 'R1 Stand' and 'R2 Stand'. This data was not collected for the hybrid field at Lincoln.
 
 ### Plant Density
 
