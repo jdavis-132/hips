@@ -791,6 +791,7 @@ the field was maize. The GPS coordinates for the field corners were:
 -   SE Corner: 40°51'7.12"N, 96°36'50.29"W
 
 The field was 150 feet north to south and 800 feet east to west.
+Differential weed pressure existed throughout the field according to James. 
 
 ![](images/paste-74DBE9E7.png)
 
@@ -879,7 +880,7 @@ shown below. Both field layouts denote that planting of the hybrid plots started
 
 ### Inbred HIPS field
 
-The plots were 10 foot (7.5 feet planted), 2-row plots.
+The plots were 10 foot (7.5 feet planted), 2-row plots. This field was very weedy according to Ramesh.
 
 ![](images/Scottsbluff%20Inbred%20HIPS%20-%20Summary.png)
 

@@ -3265,5 +3265,29 @@ hips_v3.2 <- hips_v3.2 %>%
 # Export v3.2
 write.table(hips_v3.2, 'outData/HIPS_2022_V3.2.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 
+hips_v3.3 <- hips_v3.2 %>%
+  filter(genotype!='BORDER' & nLvl!='Border' & !(is.na(qr) & is.na(loc) & is.na(plot) & is.na(field) & is.na(row) & is.na(range)) & !is.na(genotype)) %>%
+  rowwise() %>%
+  mutate(notes = str_replace(notes, ',', ';'),
+         ASI = case_when((loc=='Lincoln' & plot==6111)|(loc=='North Platte1' & plot %in% c(3, 88, 156, 360))|(loc=='North Platte3' & plot==1252) ~ NA,
+                         .default = ASI),
+         ASI.GDD = case_when((loc=='Lincoln' & plot %in% c(5210, 6111, 6153))|(loc=='North Platte1' & plot %in% c(3, 156, 360))|(loc=='North Platte2' & plot %in% c(537, 585, 591))|
+                               (loc=='North Platte3' & plot %in% c(1252, 1295, 1515, 1551))|(loc=='Scottsbluff' & plot==1376) ~ NA,
+                             .default = ASI.GDD),
+         GDDToSilk = case_when((loc=='Lincoln' & plot==6277)|(loc=='North Platte1' & plot %in% c(3, 156)) ~ NA,
+                               .default = GDDToSilk),
+         daysToSilk = case_when(loc=='North Platte1' & plot==156 ~ NA, 
+                                .default = daysToSilk),
+         GDDToAnthesis = case_when((loc=='Lincoln' & plot %in% c(5141, 6111))|(loc=='North Platte3' & plot %in% c(1075, 1091)) ~ NA,
+                                   .default = GDDToAnthesis),
+         daysToAnthesis = case_when((loc=='Lincoln' & plot==6111)|(loc=='North Platte1' & plot==88)|(loc=='Scottsbluff' & plot==1087) ~ NA, 
+                                    .default = daysToAnthesis),
+         moistureCorrectedKernelMass = case_when((loc=='North Platte1' & plot==279)|(loc=='North Platte2' & plot %in% c(829, 870, 1035)) ~ NA, 
+                                                 .default = moistureCorrectedKernelMass),
+         yieldPerAc = case_when((loc=='Crawfordsville' & plot==1584399)|(loc=='North Platte3' & plot==1099)|(loc=='Scottsbluff' & plot %in% c(1444, 1449, 1454:1456)) ~ NA,
+                                .default = yieldPerAc),
+         kernelRows = case_when((loc=='Crawfordsville' & plot==1585849)|(loc=='Lincoln' & plot %in% c(5183, 5184, 6248))|(loc=='North Platte3' & plot %in% c(1276, 1358)) ~ NA,
+                                .default = kernelRows),
+         )
 
 
