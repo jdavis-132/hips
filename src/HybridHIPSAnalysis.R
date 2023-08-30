@@ -6,13 +6,9 @@ library(viridis)
 library(scales)
 library(FW)
 # Read in data and change NP so all NP fields have the same loc but different fields --> range/row are unique within a field
-hips <- read.table('outData/HIPS_2022_V3.2.tsv', header = TRUE, sep = '\t')
-hybrids <-  hips %>% 
-  filter(population=='Hybrid') %>%
-  mutate(field = case_when(loc=='North Platte1' ~ 'Full Irrigation',
-                           loc=='North Platte2' ~ 'Partial Irrigation',
-                           loc=='North Platte3' ~ 'Dryland',
-                           .default = field))
+hybrids <- read.table('outData/HIPS_2022_V3.3_HYBRIDS.tsv', header = TRUE, sep = '\t')
+hybrids <-  hybrids %>% 
+  mutate(nLvl = factor(nLvl, levels = c('Low', 'Medium', 'High'), ordered = TRUE))
 # Let's look at how yield varies across fields
 yieldMap <- ggplot(hybrids, aes(range, row, fill = combineYield, color = 'white')) +
   geom_raster() +
@@ -42,7 +38,11 @@ response_vars <- c('earHt', 'flagLeafHt', 'tasselTipHt', 'combineMoisture', 'com
                    'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
                    'yieldPerAc', 'GDDToAnthesis', 'GDDToSilk', 'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass',
                    'moistureCorrectedHundredKernelWt', 'ASI.GDD', 'daysToAnthesis', 'daysToSilk', 'ASI')
-mapResponse(hybrids, 'kernelMass')
+
+locs <- c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville')
+
+mapResponse(hybrids, c('moistureCorrectedProtein'))
+
 for(i in response_vars)
 {
   print(i)
@@ -77,6 +77,37 @@ for(i in response_vars)
     geom_histogram()
   print(p)
 }
+
+# Violins
+for (i in locs)
+{
+  loc.df <- hybrids %>%
+    filter(loc==i) %>%
+    pivot_longer(all_of(response_vars), names_to = 'phenotype', values_to = 'val')
+  
+  p <- ggplot(loc.df, aes(nLvl, val)) + 
+    geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE, fill = 'blue') + 
+    facet_wrap(vars(phenotype), scales = 'free_y') + 
+    labs(title = i)
+  print(p)
+}
+
+# Check NP2 yield and protein
+p <- hybrids %>% 
+  filter(loc=='North Platte2') %>%
+  ggplot(aes(range, yieldPerAc, group = range)) + 
+  geom_boxplot(fill = 'blue') +
+  geom_vline(xintercept = 12) + 
+  geom_vline(xintercept = 24)
+print(p)
+
+p <- hybrids %>% 
+  filter(loc=='North Platte2') %>%
+  ggplot(aes(range, moistureCorrectedProtein, group = range)) + 
+  geom_boxplot(fill = 'blue') +
+  geom_vline(xintercept = 12) + 
+  geom_vline(xintercept = 24)
+print(p)
 
 plotRepCorr <- function(data, treatmentVar, genotype, phenotypes, facet)
 {
@@ -115,6 +146,7 @@ plotVarCorr <- function(data, x, y)
     labs(subtitle = str_c('R = ', cor(data[[x.str]], data[[y.str]], use = 'complete.obs')))
   print(p)
 }
+
 
 plotVarCorr(hybrids, yieldPerAc, moistureCorrectedKernelMass)
 plotVarCorr(hybrids, ASI, ASI.GDD)

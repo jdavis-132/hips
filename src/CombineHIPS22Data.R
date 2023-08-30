@@ -3265,8 +3265,8 @@ hips_v3.2 <- hips_v3.2 %>%
 # Export v3.2
 write.table(hips_v3.2, 'outData/HIPS_2022_V3.2.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 
-hips_v3.3 <- hips_v3.2 %>%
-  filter(genotype!='BORDER' & nLvl!='Border' & !(is.na(qr) & is.na(loc) & is.na(plot) & is.na(field) & is.na(row) & is.na(range)) & !is.na(genotype)) %>%
+hips_v3.3_hyb <- hips_v3.2 %>%
+  filter(genotype!='BORDER' & nLvl!='Border' & !(is.na(qr) & is.na(loc) & is.na(plot) & is.na(field) & is.na(row) & is.na(range)) & !is.na(genotype) & population=='Hybrid') %>%
   rowwise() %>%
   mutate(notes = str_replace(notes, ',', ';'),
          ASI = case_when((loc=='Lincoln' & plot==6111)|(loc=='North Platte1' & plot %in% c(3, 88, 156, 360))|(loc=='North Platte3' & plot==1252) ~ NA,
@@ -3288,6 +3288,44 @@ hips_v3.3 <- hips_v3.2 %>%
                                 .default = yieldPerAc),
          kernelRows = case_when((loc=='Crawfordsville' & plot==1585849)|(loc=='Lincoln' & plot %in% c(5183, 5184, 6248))|(loc=='North Platte3' & plot %in% c(1276, 1358)) ~ NA,
                                 .default = kernelRows),
-         )
+         kernelsPerRow = case_when((loc=='Missouri Valley' & plot==147)|(loc=='North Platte2' & plot %in% c(548, 591))|(loc=='North Platte3' & plot==1276)|(loc=='Scottsbluff' & plot %in% c(1345, 1352)) ~ NA,
+                                   .default = kernelsPerRow),
+         kernelsPerEar = case_when((loc=='North Platte3' & plot %in% c(1115, 1200, 1390))|(loc=='Scottsbluff' & plot==1345) ~ NA, 
+                                   .default = kernelsPerEar),
+         moistureCorrectedOil = case_when(loc== 'Scottsbluff' & plot %in% c(1023, 1108) ~ NA, 
+                                          .default = moistureCorrectedOil),
+         moistureCorrectedProtein = case_when(loc=='North Platte1' & plot==246 ~ NA,
+                                              .default = moistureCorrectedProtein),
+         shelledCobWt = case_when((loc=='Ames' & plot %in% c(1571932, 1585172))|(loc=='Lincoln' & plot==5223)|(loc=='Scottsbluff' & plot %in% c(1345, 1368, 1483)) ~ NA, 
+                                  .default = shelledCobWt),
+         shelledCobWidth = case_when((loc=='North Platte3' & plot==1398)|(loc=='Scottsbluff' & plot==1345) ~ NA,
+                                     .default = shelledCobWidth),
+         earWidth = case_when(loc=='Ames' & plot %in% c(1585251, 1585443) ~ NA, 
+                              .default = earWidth),
+         earFillLen = case_when(loc=='North Platte2' & plot==548 ~ mean(10.5, 13, 12),
+                                (loc=='North Platte2' & plot==830)|(loc=='North Platte3' & plot==1243) ~ NA,
+                                .default = earFillLen),
+         shelledCobLen = case_when((loc=='Ames' & plot %in% c(1571980, 1585172))|(loc=='Scottsbluff' & plot %in% c(1063, 1071, 1165)) ~ NA,
+                                   .default = shelledCobLen),
+         earLen = case_when(loc=='Ames' & plot %in% c(1571980, 1585172, 1585209, 1585443) ~ NA, 
+                            .default = earLen),
+         moistureCorrectedHundredKernelWt = case_when((loc=='Crawfordsville' & plot==1584443)|(loc=='Missouri Valley' & plot==244)|(loc=='North Platte2' & plot %in% c(736, 829, 870, 911))|
+                                                        (loc=='North Platte3' & plot==1260) ~ NA,
+                                                      loc=='North Platte2' & plot==838 ~ mean(39.9, 32.48, 36),
+                                                      .default = moistureCorrectedHundredKernelWt),
+         combineTestWt = case_when((loc=='Lincoln' & plot==4147)|(loc=='North Platte3' & plot %in% c(1337, 1357, 1577))|(loc=='Scottsbluff' & plot %in% c(1065, 1097, 1099, 1106, 1110)) ~ NA,
+                                   .default = combineTestWt),
+         combineMoisture = case_when((loc=='Lincoln' & plot %in% c(5181, 5249, 6128, 6144, 6151, 6222, 6255, 6265))|(loc=='North Platte3' & plot %in% c(1077, 1297, 1298, 1337, 1357, 1377, 1378, 1577)) ~ NA,
+                                     .default = combineMoisture),
+         tasselTipHt = case_when((loc=='Lincoln' & plot==5109)|(loc=='Scottsbluff' & plot %in% c(1172:1174, 1444)) ~ NA,
+                                 .default = tasselTipHt),
+         flagLeafHt = case_when((loc=='Ames' & plot==1550247)|(loc=='North Platte1' & plot %in% c(171, 398, 401, 481))|(loc=='North Platte2' & plot==535)|(loc=='Scottsbluff' & plot %in% c(1164, 1172, 1444, 1446)) ~ NA, 
+                                .default = flagLeafHt),
+         earHt = case_when(loc=='Missouri Valley' & plot==245 ~ NA,
+                           .default = earHt))
+hips_v3.2_inb <- filter(hips_v3.2, population=='Inbred')
 
+# Export inbred and hybrid tables
+write.table(hips_v3.3_hyb, 'outData/HIPS_2022_V3.3_HYBRIDS.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+write.table(hips_v3.2_inb, 'outData/HIPS_2022_V3.2_INBREDS.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 
