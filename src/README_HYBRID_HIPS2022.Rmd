@@ -560,7 +560,7 @@ Lincoln, and 835, 838, 1169, and 1211 at North Platte were calculated
 using 3 ears rather than 4, as the remaining observation was an order of
 magnitude larger than the others.
 
-### kernelMass
+### kernelMassPerEar
 
 This is the mean mass of kernels in grams, per ear. For the North
 Platte, Scottsbluff, Lincoln, and Missouri Valley locations, this is
@@ -915,7 +915,7 @@ previous crop was soybeans.
 
 Upon request, the following data is available:
 
-![](images/Screenshot from 2023-09-07 20-43-55.png)
+![](images/Screenshot%20from%202023-09-07%2020-43-55.png)
 
 # Data Generation and Processing Notes
 

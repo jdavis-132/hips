@@ -6,9 +6,9 @@ library(viridis)
 library(scales)
 library(FW)
 # Read in data and order nLvl
-hybrids <- read.table('outData/HIPS_2022_V3.3_HYBRIDS.tsv', header = TRUE, sep = '\t')
+hybrids <- read.csv('outData/HIPS_2022_V3.4_HYBRIDS.csv')
 hybrids <-  hybrids %>% 
-  mutate(nLvl = factor(nLvl, levels = c('Low', 'Medium', 'High'), ordered = TRUE))
+  mutate(nitrotgentTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'), ordered = TRUE))
 # Let's look at how yield varies across fields
 yieldMap <- ggplot(hybrids, aes(range, row, fill = combineYield, color = 'white')) +
   geom_raster() +

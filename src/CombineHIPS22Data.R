@@ -1927,7 +1927,8 @@ np <- np %>%
          earHt = earHt*100,
          field = 'Hybrid HIPS',
          population = 'Hybrid',
-         harvestDate = case_when(harvestDate=='44572' ~ '01/11/2022', .default = harvestDate),
+         harvestDate = case_when(harvestDate=='44572' ~ '01/11/2022', .default = harvestDate) %>%
+           str_split('/'),
          totalStandCt = (standCt1 + standCt2),
          notes = case_when(solarPanel=='x' ~ 'Solar Panel'),
          harvestTime = as.numeric(harvestTime),
@@ -1935,13 +1936,18 @@ np <- np %>%
          harvestMin = as.integer((harvestTime*24 - harvestHr)*60),
          harvestSec = as.integer(((harvestTime*24 - harvestHr)*60 - harvestMin)*60)) %>%
   mutate(notes = case_when(tattooSensor=='x' ~ str_c(notes, 'tattoo Sensor', sep = ';'), .default = notes),
-         harvestDate = dmy_hms(paste0(harvestDate, harvestHr, harvestMin, harvestSec))) %>%
-  mutate(notes = case_when(nitrateSensor=='x' ~ str_c(notes, 'Nitrate Sensor', sep = ';'), .default = notes)) %>%
+         harvestHr = as.character(harvestHr),
+         harvestMin = as.character(harvestMin),
+         harvestSec = as.character(harvestSec),
+         harvestDate = paste0(harvestDate[2], '/', harvestDate[1], '/', harvestDate[3], ' ', harvestHr, ':', harvestMin, ':', harvestSec)) %>%
+  mutate(notes = case_when(nitrateSensor=='x' ~ str_c(notes, 'Nitrate Sensor', sep = ';'), .default = notes),
+         harvestDate = case_when(harvestDate=='NA/NA/NA NA:NA:NA' ~ NA, .default = harvestDate)) %>%
   mutate(notes = case_when(soilMoistureSensor=='x' ~ str_c(notes, 'Soil Moisture Sensor', sep = ';'), .default = notes)) %>%
   mutate(notes = case_when(waterPotentialSensor=='x' ~ str_c(notes, 'Water Potential Sensor', sep = ';'), .default = notes)) %>%
   mutate(notes = case_when(commercialWaterPotentialSensor=='x' ~ str_c(notes, 'Commercial Water Potential Sensor', sep = ';'), .default = notes))
 # Drop the columns moved to notes / harvestTime(merged into harvestDate)
-np <- select(np, !c(solarPanel, tattooSensor, nitrateSensor, soilMoistureSensor, waterPotentialSensor, commercialWaterPotentialSensor, harvestTime))
+np <- select(np, !c(solarPanel, tattooSensor, nitrateSensor, soilMoistureSensor, waterPotentialSensor, commercialWaterPotentialSensor, harvestTime, harvestHr, 
+                    harvestMin, harvestSec))
 # Look at the notes columns to determine where we should drop observations
 drop_yield <- c(unique(np$combineNotes)[c(1:6, 11, 12, 16, 17)], unique(np$notes_LC)[c(5, 8)])
 drop_combineMoisture <- c(unique(np$combineNotes)[c(18, 21)])
@@ -1959,11 +1965,11 @@ np <- np %>%
          range = case_when(loc=='North Platte1' & plot==35 ~ 12, .default = range),
          row = case_when(loc=='North Platte1' & plot==35 ~ 3, .default = row)) %>%
   select(!c(notes_HL, notes_LC, adjYield))
-np <- select(np, !harvestHr)
 np <- fixGenos(np, hips1.5_genoFixKey)
 hips_v2 <- hips_v2 %>%
   rowwise() %>%
-  mutate(genotype = str_to_upper(genotype))
+  mutate(genotype = str_to_upper(genotype),
+         harvestDate = as.character(harvestDate))
 # Join with hips_v2
 # Gives many-to-many warning: Row 2821 of `x` matches multiple rows in `y`. & Row 1591 of `y` matches multiple rows in `x`.:
 ## Verified OK - JD: these rows only have a genotype but no data
@@ -2771,7 +2777,8 @@ ac.yield.hyb <- ac.yield.hyb %>%
          check = case_when(!is.na(check) ~ 'Check'),
          nitrateSensor = case_when(!is.na(nitrateSensor) ~ 'Nitrate sensor'),
          commercialSoilMoistureSensor = case_when(!is.na(commercialSoilMoistureSensor) ~ 'Commercial soil moisture sensor'),
-         tattooSensor = case_when(!is.na(tattooSensor) ~ 'Tattoo sensor')) %>%
+         tattooSensor = case_when(!is.na(tattooSensor) ~ 'Tattoo sensor'),
+         harvestDate = as.character(harvestDate)) %>%
   unite('notes', c(check, solar, nitrateSensor, commercialSoilMoistureSensor, tattooSensor), na.rm = TRUE, sep = ';', remove = TRUE) %>%        
   select(!c(plotDiscarded, exp)) %>%
   fixGenos(hips1.5_genoFixKey)
@@ -3389,10 +3396,13 @@ hips_v3.4 <- hips_v3.3_hyb %>%
          shelledCobWidth = round(shelledCobWidth, digits = 3),
          kernelsPerRow = round(kernelsPerRow, digits = 1),
          kernelRowNumber = round(kernelRows, digits = 1), 
-         kernelsPerEar = round(kernelsPerEar, digits = 1),
+         kernelsPerEar = round(kernelsPerEar, digits = 0),
          hundredKernelMass = round(hundredKernelWt, digits = 3),
+         kernelMassPerEar = round(kernelMass, digits = 1),
          shelledCobMass = round(shelledCobWt, digits = 3),
-         notes = case_when(notes=='notes' ~ NA, .default = notes)) %>%
+         harvestDate = case_when(is.na(harvestDate) & loc=='Missouri Valley' ~ '10/11/2022', .default = harvestDate),
+         notes = case_when(notes=='notes' ~ NA, .default = notes) %>%
+           str_replace_all(',', ';')) %>%
 rename(qrCode = qr, 
        location = loc,
        nitrogenTreatment = nLvl,
@@ -3411,7 +3421,9 @@ rename(qrCode = qr,
   select(c(qrCode, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range, plotNumber, 
            latitude, longitude, genotype, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, 
            GDDToAnthesis, GDDToSilk, anthesisSilkingIntervalGDD, earHeight, flagLeafHeight, plantDensity, combineYield, yieldPerAcre, combineMoisture, combineTestWeight, 
-           earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber, kernelsPerEar, hundredKernelMass, kernelMass, shelledCobMass, 
-           percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes))
+           earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber, kernelsPerEar, hundredKernelMass, kernelMassPerEar, shelledCobMass, 
+           percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes)) %>%
+  arrange(location, sublocation, block, plotNumber)
+
 # Export version 3.4 --- only remaining changes for hybrids will be to add lat/lon for NE sites if extracted from satellite plot extractions
 write.table(hips_v3.4, 'outData/HIPS_2022_V3.4_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
