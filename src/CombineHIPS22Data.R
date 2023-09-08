@@ -1433,7 +1433,7 @@ hips1.5_genoFixKey <- tibble(orig = hips1.5genos_fix, correct = hips1.5genos_cor
 
 # Okay, let's try just putting together the nir and ear data cleaned by schnable
 # Read in new nir file
-nir_v2 <- read_csv("data/HybridHIPS_plotlevelNIR_v2.5.csv", 
+nir_v2 <- read_csv("data/HybridHIPS_plotlevelNIR_v2.6.csv", 
                    col_names = c('qr', 'loc', 'nLvl', 'irrigation', 'rep', 'row', 'range', 'plot', 'genotype',
                                  'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 
                                  'moistureCorrectedAsh', 'pctMoistureNIR'),
@@ -1928,12 +1928,14 @@ np <- np %>%
          field = 'Hybrid HIPS',
          population = 'Hybrid',
          harvestDate = case_when(harvestDate=='44572' ~ '01/11/2022', .default = harvestDate),
-         harvestHr = (as.numeric(harvestTime)*24),
          totalStandCt = (standCt1 + standCt2),
-         notes = case_when(solarPanel=='x' ~ 'Solar Panel')) %>%
+         notes = case_when(solarPanel=='x' ~ 'Solar Panel'),
+         harvestTime = as.numeric(harvestTime),
+         harvestHr = as.integer(harvestTime*24),
+         harvestMin = as.integer((harvestTime*24 - harvestHr)*60),
+         harvestSec = as.integer(((harvestTime*24 - harvestHr)*60 - harvestMin)*60)) %>%
   mutate(notes = case_when(tattooSensor=='x' ~ str_c(notes, 'tattoo Sensor', sep = ';'), .default = notes),
-         harvestDate = as.POSIXct(str_c(harvestDate, ' ', harvestTime), 
-                                  format = '%d/%m/%Y %H')) %>%
+         harvestDate = dmy_hms(paste0(harvestDate, harvestHr, harvestMin, harvestSec))) %>%
   mutate(notes = case_when(nitrateSensor=='x' ~ str_c(notes, 'Nitrate Sensor', sep = ';'), .default = notes)) %>%
   mutate(notes = case_when(soilMoistureSensor=='x' ~ str_c(notes, 'Soil Moisture Sensor', sep = ';'), .default = notes)) %>%
   mutate(notes = case_when(waterPotentialSensor=='x' ~ str_c(notes, 'Water Potential Sensor', sep = ';'), .default = notes)) %>%
@@ -2055,12 +2057,13 @@ hips_v2.2 <- hips_v2.1 %>%
                              .default = 17.5)) %>%
   mutate(plantDensity = case_when(is.na(plantDensity) & !is.na(totalStandCt) ~ ((totalStandCt/2)*(17.5/plotLen)*1000), .default = plantDensity)) %>%
   mutate(yieldPerAc = buPerAc15.5(combineYield, combineMoisture, plotLen)) %>%
-  mutate(plantDate = case_when(loc=='Lincoln' ~ as.POSIXct('2022-05-22'),
-                               loc=='Scottsbluff' ~ as.POSIXct('2022-05-19'),
-                               loc=='North Platte1'|loc=='North Platte2' ~ as.POSIXct('2022-05-17'),
-                               loc=='North Platte3' ~ as.POSIXct('2022-05-18'),
-                               loc=='Crawfordsville' ~ as.POSIXct('2022-05-11'),
-                               loc=='Ames' ~ as.POSIXct('2022-05-23'),
+  mutate(plantDate = case_when(is.na(plantDate) & loc=='Lincoln' ~ as.POSIXct('2022-05-22'),
+                               is.na(plantDate) & loc=='Scottsbluff' ~ as.POSIXct('2022-05-19'),
+                               is.na(plantDate) & loc=='North Platte1'|loc=='North Platte2' ~ as.POSIXct('2022-05-17'),
+                               is.na(plantDate) & loc=='North Platte3' ~ as.POSIXct('2022-05-18'),
+                               is.na(plantDate) & loc=='Crawfordsville' ~ as.POSIXct('2022-05-11'),
+                               is.na(plantDate) & loc=='Ames' ~ as.POSIXct('2022-05-23'),
+                               is.na(plantDate) & loc=='Missouri Valley' ~ as.POSIXct('2022-04-29'),
                                .default = plantDate),
          notes = case_when(str_detect(genotypeNote, 'commercial')|str_detect(genotypeNote, 'Solar') ~ str_c(notes, genotypeNote, sep = ';'), 
                            .default = notes),
@@ -2893,7 +2896,8 @@ hips_v3 <- hips_v3 %>%
          moistureCorrectedHundredKernelWt = case_when(loc %in% c('Ames', 'Crawfordsville') & !is.na(moistureCorrectedKernelMass) & !is.na(kernelsPerEar)
                                                       ~ moistureCorrectedKernelMass/kernelsPerEar*100,
                                                       .default = moistureCorrectedHundredKernelWt),
-         hundredKernelWt = case_when(loc %in% c('Ames', 'Crawfordsville') & !is.na(kernelMass) & !is.na(kernelsPerEar) ~ kernelMass/kernelsPerEar*100),
+         hundredKernelWt = case_when(loc %in% c('Ames', 'Crawfordsville') & !is.na(kernelMass) & !is.na(kernelsPerEar) ~ kernelMass/kernelsPerEar*100, 
+                                     .default = hundredKernelWt),
          earWidth = case_when(loc=='Ames' & plot==1585236 ~ mean(4.292, 4.328, 4.461), .default = earWidth),
          genotype = case_when(str_detect(genotype, 'SOLAR') ~ NA, .default = genotype)) %>%
   fixGenos(hips1.5_genoFixKey)
@@ -3232,7 +3236,7 @@ hips_v3.2 <- hips_v3.1 %>%
                            .default = field),
          GDDToAnthesis = getCumulativeGDDs(plantDate, anthesisDate, weather.daily, loc),
          GDDToSilk = getCumulativeGDDs(plantDate, silkDate, weather.daily, loc),
-         ASI.GDD = abs(GDDToSilk - GDDToAnthesis),
+         ASI.GDD = GDDToSilk - GDDToAnthesis,
          exp = case_when(loc=='Ames' & population=='Inbred' & nLvl=='High' ~ 'LC_2231',
                          loc=='Ames' & population=='Inbred' & nLvl=='Medium' ~ 'LC_2232',
                          loc=='Ames' & population=='Hybrid' & nLvl=='High' ~ 'LC_4231',
@@ -3322,10 +3326,92 @@ hips_v3.3_hyb <- hips_v3.2 %>%
          flagLeafHt = case_when((loc=='Ames' & plot==1550247)|(loc=='North Platte1' & plot %in% c(171, 398, 401, 481))|(loc=='North Platte2' & plot==535)|(loc=='Scottsbluff' & plot %in% c(1164, 1172, 1444, 1446)) ~ NA, 
                                 .default = flagLeafHt),
          earHt = case_when(loc=='Missouri Valley' & plot==245 ~ NA,
-                           .default = earHt))
+                           .default = earHt),
+         hundredKernelWt = case_when((loc=='Ames' & plot %in% c(1571960, 1571980, 1583849))|(loc=='Crawfordsville' & plot %in% c(1584375, 1584957))|(loc=='Missouri Valley' & plot==244)|
+                                       (loc=='North Platte2' & plot %in% c(736, 829, 838, 870, 911))|(loc=='North Platte3' & plot %in% c(1079, 1118, 1180, 1257, 1260, 1303, 1337)) ~ NA, 
+                                     .default = hundredKernelWt),
+         kernelMass = case_when((loc=='Ames' & plot %in% c(1571980, 1585172, 1585324))|(loc=='Crawfordsville' & plot %in% c(1585056, 1585894))|(loc=='Lincoln' & plot %in% c(4267, 5135, 5223))|
+                                  (loc=='Missouri Valley' & plot %in% c(253, 282))|(loc=='North Platte1' & plot==279)|(loc=='North Platte2' & plot %in% c(829, 870, 1035))|
+                                  (loc=='North Platte3' & plot %in% c( 1081, 1180, 1200, 1201, 1253))|(loc=='Scottsbluff' & plot==1345) ~ NA, 
+                                .default = kernelMass))
 hips_v3.2_inb <- filter(hips_v3.2, population=='Inbred')
 
 # Export inbred and hybrid tables
 write.table(hips_v3.3_hyb, 'outData/HIPS_2022_V3.3_HYBRIDS.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 write.table(hips_v3.2_inb, 'outData/HIPS_2022_V3.2_INBREDS.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 
+hips_v3.4 <- hips_v3.3_hyb %>%
+  mutate(sublocation = case_when(field=='Full Irrigation' ~ 'North Platte1',
+                                 field=='Partial Irrigation' ~ 'North Platte2',
+                                 field=='Non-Irrigated' ~ 'North Platte3',
+                                 field=='B1' ~ 'Ames B1',
+                                 field=='E1' ~ 'Ames E1',
+                                 field=='A' ~ 'Crawfordsville A',
+                                 field=='B' ~ 'Crawfordsville B',
+                                 .default = loc),
+         irrigationProvided = case_when(loc=='North Platte1' ~ 8.6,
+                                        loc=='North Platte2' ~ 4.3,
+                                        loc=='Scottsbluff' ~ 16.9,
+                                        .default = 0),
+         rep = case_when(is.na(rep) ~ 2, 
+                         .default = rep),
+         block = case_when((loc %in% c('North Platte1', 'North Platte2', 'North Platte3', 'Scottsbluff', 'Lincoln') & nLvl=='Low' & rep==1)|
+                             (sublocation %in% c('Ames B1', 'Crawfordsville B') & nLvl=='Medium' & rep==1)|
+                             (sublocation %in% c('Ames E1', 'Crawfordsville A') & nLvl=='Low' & rep==1)|(sublocation=='Missouri Valley' & rep==1) ~ 1,
+                           (loc %in% c('North Platte1', 'North Platte2', 'North Platte3', 'Scottsbluff', 'Lincoln') & nLvl=='Low' & rep==2)|
+                             (sublocation %in% c('Ames B1', 'Crawfordsville B') & nLvl=='Medium' & rep==2)|
+                             (sublocation %in% c('Ames E1', 'Crawfordsville A') & nLvl=='Low' & rep==2)|(sublocation=='Missouri Valley' & rep==2) ~ 2,
+                           (loc %in% c('North Platte1', 'North Platte2', 'North Platte3', 'Scottsbluff', 'Lincoln') & nLvl=='Medium' & rep==1)|
+                             (sublocation %in% c('Ames B1', 'Crawfordsville A') & nLvl=='High' & rep==1) ~ 3,
+                           (loc %in% c('North Platte1', 'North Platte2', 'North Platte3', 'Scottsbluff', 'Lincoln') & nLvl=='Medium' & rep==2)|
+                             (sublocation %in% c('Ames B1', 'Crawfordsville A') & nLvl=='High' & rep==2) ~ 4,
+                           loc %in% c('North Platte1', 'North Platte2', 'North Platte3', 'Scottsbluff', 'Lincoln') & nLvl=='High' & rep==1 ~ 5,
+                           loc %in% c('North Platte1', 'North Platte2', 'North Platte3', 'Scottsbluff', 'Lincoln') & nLvl=='High' & rep==2 ~ 6),
+         percentLodging = sum(pctRootLodge, pctStalkLodge) %>%
+           round(digits = 2),
+         plantingDate = round_date(plantDate, unit = 'day') %>%
+           as.character(), 
+         anthesisDate = as.character(anthesisDate),
+         silkDate = as.character(silkDate),
+         GDDToAnthesis = round(GDDToAnthesis, digits = 2),
+         GDDToSilk = round(GDDToSilk, digits = 2),
+         anthesisSilkingIntervalGDD = round(ASI.GDD, digits = 2),
+         earHeight = round(earHt, digits = 0),
+         flagLeafHeight = round(flagLeafHt, digits = 0),
+         plantDensity = round(plantDensity, digits = 0),
+         combineYield = round(combineYield, digits = 2),
+         yieldPerAcre = round(yieldPerAc, digits = 2),
+         combineMoisture = round(combineMoisture, digits = 1),
+         combineTestWeight = round(combineTestWt, digits = 1),
+         earLength = round(shelledCobLen, digits = 3),
+         earFillLength = round(earFillLen, digits = 1),
+         earWidth = round(earWidth, digits = 3),
+         shelledCobWidth = round(shelledCobWidth, digits = 3),
+         kernelsPerRow = round(kernelsPerRow, digits = 1),
+         kernelRowNumber = round(kernelRows, digits = 1), 
+         kernelsPerEar = round(kernelsPerEar, digits = 1),
+         hundredKernelMass = round(hundredKernelWt, digits = 3),
+         shelledCobMass = round(shelledCobWt, digits = 3),
+         notes = case_when(notes=='notes' ~ NA, .default = notes)) %>%
+rename(qrCode = qr, 
+       location = loc,
+       nitrogenTreatment = nLvl,
+       poundsOfNitrogenPerAcre = lbsNPerAc,
+       plotLength = plotLen, 
+       totalStandCount = totalStandCt,
+       plotNumber = plot,
+       anthesisSilkingInterval = ASI,
+       percentMoisture = pctMoistureNIR,
+       percentStarch = moistureCorrectedStarch,
+       percentProtein = moistureCorrectedProtein,
+       percentOil = moistureCorrectedOil,
+       percentFiber = moistureCorrectedFiber,
+       percentAsh = moistureCorrectedAsh,
+       experiment = exp) %>%
+  select(c(qrCode, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range, plotNumber, 
+           latitude, longitude, genotype, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, 
+           GDDToAnthesis, GDDToSilk, anthesisSilkingIntervalGDD, earHeight, flagLeafHeight, plantDensity, combineYield, yieldPerAcre, combineMoisture, combineTestWeight, 
+           earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber, kernelsPerEar, hundredKernelMass, kernelMass, shelledCobMass, 
+           percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes))
+# Export version 3.4 --- only remaining changes for hybrids will be to add lat/lon for NE sites if extracted from satellite plot extractions
+write.table(hips_v3.4, 'outData/HIPS_2022_V3.4_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)

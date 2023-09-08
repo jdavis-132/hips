@@ -17,7 +17,7 @@ for index, row in df.iterrows():
             negvals = True
     if negvals: continue
     if not myid in dd: dd[myid] = {}
-    for t,v in zip(["MoisturePCT","ProteinPCT","OilPCT","FiberPCT","AshPCT","StarchPCT"],[mymoisture,myprotein,myoil,myfiber,myash,mystarch]):
+    for t,v in zip(["MoisturePCT","ProteinPCT","OilPCT","FiberPCT","AshPCT","StarchPCT"],[float(row['Moisture']),myprotein,myoil,myfiber,myash,mystarch]):
         if not t in dd[myid]: dd[myid][t] = []
         dd[myid][t].append(v)
     dd[myid]["RawBC"] = row["Sample ID"]

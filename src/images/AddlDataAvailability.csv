@@ -1,0 +1,14 @@
+,Location,,,,,
+Phenotype,Scottsbluff,North Platte,Lincoln,Missouri Valley,Ames,Crawfordsville
+Ear-level phenotypes included in data set at plot-level,x,x,x,x,x,x
+Replicate NIR measurements (3 per plot),x,x,x,x,,
+Leaf length (2 plants per plot),,,x,,,
+Leaf width (2 plants per plot),,,x,,,
+Plant-level plant height measurements (2 plants per plot),,,x,,,
+Ear drop number,,x,,,,
+Row-level stand counts,,x,,x,x,x
+Tassel tip height,x,,x,,,
+Kernel striping,x,x,x,x,,
+Occurrence of sweet corn kernels,,,,,x,x
+Shoot lodging percent,,x,,x,x,x
+Root lodging percent,,x,,x,x,x

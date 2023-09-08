@@ -5,7 +5,7 @@ library(tidyverse)
 library(viridis)
 library(scales)
 library(FW)
-# Read in data and change NP so all NP fields have the same loc but different fields --> range/row are unique within a field
+# Read in data and order nLvl
 hybrids <- read.table('outData/HIPS_2022_V3.3_HYBRIDS.tsv', header = TRUE, sep = '\t')
 hybrids <-  hybrids %>% 
   mutate(nLvl = factor(nLvl, levels = c('Low', 'Medium', 'High'), ordered = TRUE))
@@ -65,13 +65,13 @@ idOutliers <- function(data, trait)
 }
 
 outliers <- list()
-for (i in response_vars)
+for (i in c('kernelMass', 'hundredKernelWt'))
 {
   outliers[[i]] <- idOutliers(hybrids, i)
 }
 
 # Histograms
-for(i in response_vars)
+for(i in c('kernelMass', 'hundredKernelWt'))
 {
   p <- ggplot(hybrids, aes(.data[[i]])) +
     geom_histogram()
@@ -83,7 +83,7 @@ for (i in locs)
 {
   loc.df <- hybrids %>%
     filter(loc==i) %>%
-    pivot_longer(all_of(response_vars), names_to = 'phenotype', values_to = 'val')
+    pivot_longer(all_of(c('kernelMass', 'hundredKernelWt')), names_to = 'phenotype', values_to = 'val')
   
   p <- ggplot(loc.df, aes(nLvl, val)) + 
     geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE, fill = 'blue') + 
@@ -133,7 +133,7 @@ plotRepCorr <- function(data, treatmentVar, genotype, phenotypes, facet)
   return(df.wide)
 }
 
-hybrids.wide <- plotRepCorr(hybrids, 'nLvl', 'genotype', response_vars, 'loc')
+hybrids.wide <- plotRepCorr(hybrids, 'nLvl', 'genotype', c('hundredKernelWt', 'kernelMass'), 'loc')
 
 # Correlation plot for 2 vars
 plotVarCorr <- function(data, x, y)
@@ -351,14 +351,8 @@ spatiallyCorrectedResponseVars <- paste0(response_vars, '.sp')
 # Don't use the spatially corrected vals when there's fitting issues
 hybrids.vp <- hybrids %>%
   rowwise() %>%
-  mutate(kernelRows.sp = case_when(loc=='North Platte1' ~ kernelRows, .default = kernelRows.sp),
-         kernelsPerRow.sp = case_when(loc=='North Platte1' ~ kernelsPerRow, .default = kernelsPerRow.sp),
-         moistureCorrectedFiber.sp = case_when(loc=='North Platte1' ~ moistureCorrectedFiber, .default = moistureCorrectedFiber.sp),
-         moistureCorrectedProtein.sp = case_when(loc=='North Platte1' ~ moistureCorrectedProtein, .default = moistureCorrectedProtein.sp),
-         earFillLen.sp = case_when(loc %in% c('North Platte1', 'North Platte3') ~ earFillLen, .default = earFillLen.sp),
-         moistureCorrectedOil.sp = case_when(loc=='North Platte1' ~ moistureCorrectedOil, .default = moistureCorrectedOil.sp),
-         moistureCorrectedHundredKernelWt.sp = case_when(loc=='North Platte1' ~ moistureCorrectedHundredKernelWt, .default = moistureCorrectedHundredKernelWt.sp),
-         moistureCorrectedKernelMass.sp = case_when(loc=='North Platte1' ~ moistureCorrectedKernelMass, .default = moistureCorrectedKernelMass.sp))
+  mutate(ASI.sp = case_when(loc %in% c('North Platte1', 'North Platte2') ~ ASI, 
+                            .default = ASI.sp))
 
 for(i in spatiallyCorrectedResponseVars)
 {
@@ -376,7 +370,7 @@ vp.plot
 # Is there shrinkage toward the max of a treatment ?
 for(i in 1:length(response_vars))
 {
-  sp.correction.plot <- ggplot(hybrids.vp, (aes(.data[[response_vars[i]]], .data[[spatiallyCorrectedResponseVars[i]]], color = nLvl))) +
+  sp.correction.plot <- ggplot(hybrids, (aes(.data[[response_vars[i]]], .data[[spatiallyCorrectedResponseVars[i]]], color = nLvl))) +
     geom_point() +
     geom_abline(slope = 1) +
     facet_wrap(vars(loc)) 
@@ -394,18 +388,22 @@ for(i in c('yieldPerAc.sp'))
   print(p)
 }
 sb.np2 <- filter(hybrids.vp, loc=='North Platte2'|(loc=='Scottsbluff' & nLvl %in% c('Low', 'Medium'))|(loc=='Scottsbluff' & nLvl=='High' & yieldPerAc.sp >=100))
+
 getNitrogenPlasticityByLoc <- function(data, response)
 {
-  locs <- c('North Platte2', 'Scottsbluff')
-  response.df <- tibble(loc = NULL, genotype = NULL, '{response}':= NULL,)
+  locs <- c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville')
+  response.out <- response %>% 
+    str_split_i('.', 1) %>%
+    str_c('.pl')
+  response.df <- tibble(loc = NULL, genotype = NULL, '{response.out}':= NULL,)
   for (currLoc in locs)
   {
     loc.df <- filter(data, !is.na(genotype) & loc==currLoc & nLvl!='Border' & !is.na(nLvl))
     fw <- FW(y = loc.df[[response]], VAR = loc.df$genotype, ENV = loc.df$nLvl, saveAt = paste0('analysis/gibbs-samples-', response, '-', currLoc), 
-             nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656, saveVAR = c(1:2))
+             nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656, saveVAR = c(1:2), saveENV = 1:2)
     pl <- fw$b %>%
       as_tibble(rownames = 'genotype') %>%
-      mutate(loc = currLoc, '{response}':= Init1) %>%
+      mutate(loc = currLoc, '{response.out}':= Init1) %>%
       select(!Init1)
     response.df <- bind_rows(response.df, pl)
   }
@@ -436,7 +434,9 @@ plasticityVsYield <- ggplot(sb.np2.summary, aes(meanYield, yieldPerAc.sp, color 
   labs(x = 'Mean Genotype Yield (Bushels Per Acre)', y = 'Linear Plasticity (Finlay-Wilkinson)')
 plasticityVsYield
 
-for(i in spatiallyCorrectedResponseVars[2:25])
+plasticity.df <- getNitrogenPlasticityByLoc(hybrids.vp, spatiallyCorrectedResponseVars[1])
+
+for(i in spatiallyCorrectedResponseVars[2:length(spatiallyCorrectedResponseVars)])
 {
   plasticity.df <- full_join(plasticity.df, getNitrogenPlasticityByLoc(hybrids.vp, i), join_by(genotype, loc), suffix = c('', ''), keep = FALSE)
 }
@@ -468,6 +468,9 @@ for(i in spatiallyCorrectedResponseVars[2:25])
               moistureCorrectedKernelMass.mu = mean(moistureCorrectedKernelMass.sp, na.rm = TRUE),
               moistureCorrectedHundredKernelWt.mu = mean(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
               ASI.GDD.mu = mean(ASI.GDD.sp, na.rm = TRUE),
+              daysToAnthesis.mu = mean(daysToAnthesis.sp, na.rm = TRUE),
+              daysToSilk.mu = mean(daysToSilk.sp, na.rm = TRUE),
+              ASI.mu = mean(ASI.sp, na.rm = TRUE),
               earHt.max = max(earHt.sp, na.rm = TRUE),
               flagLeafHt.max = max(flagLeafHt.sp, na.rm = TRUE),
               tasselTipHt.max = max(tasselTipHt.sp, na.rm = TRUE),
@@ -492,36 +495,12 @@ for(i in spatiallyCorrectedResponseVars[2:25])
               kernelRows.max = max(kernelRows.sp, na.rm = TRUE),
               moistureCorrectedKernelMass.max = max(moistureCorrectedKernelMass.sp, na.rm = TRUE),
               moistureCorrectedHundredKernelWt.max = max(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-              ASI.GDD.max = max(ASI.GDD.sp, na.rm = TRUE))
+              ASI.GDD.max = max(ASI.GDD.sp, na.rm = TRUE),
+              daysToAnthesis.max = max(daysToAnthesis.sp, na.rm = TRUE),
+              daysToSilk.max = max(daysToSilk.sp, na.rm = TRUE))
   summary.df <- full_join(summary.df, plasticity.df, join_by(genotype, loc), keep = FALSE, suffix = c('', ''))
   summary.df <- filter(summary.df, loc!='Missouri Valley')
-  summary.df <- summary.df %>%
-    rowwise() %>%
-    mutate(earHt.pl = earHt.sp + earHt.mu,
-           flagLeafHt.pl = flagLeafHt.sp + flagLeafHt.mu,
-           tasselTipHt.pl = tasselTipHt.sp + tasselTipHt.mu,
-           combineMoisture.pl = combineMoisture.sp + combineMoisture.mu,
-           combineTestWt.pl = combineTestWt.sp + combineTestWt.mu,
-           earLen.pl = earLen.sp + earLen.mu,
-           earFillLen.pl = earFillLen.sp + earFillLen.mu,
-           earWidth.pl = earWidth.sp + earWidth.mu,
-           shelledCobWidth.pl = shelledCobWidth.sp + shelledCobWidth.mu,
-           shelledCobWt.pl = shelledCobWt.sp + shelledCobWt.mu,
-           shelledCobLen.pl = shelledCobLen.sp + shelledCobLen.mu,
-           kernelsPerEar.pl = kernelsPerEar.sp + kernelsPerEar.mu,
-           moistureCorrectedStarch.pl = moistureCorrectedStarch.sp + moistureCorrectedStarch.mu,
-           moistureCorrectedProtein.pl = moistureCorrectedProtein.sp + moistureCorrectedProtein.mu,
-           moistureCorrectedOil.pl = moistureCorrectedOil.sp + moistureCorrectedOil.mu,
-           moistureCorrectedFiber.pl = moistureCorrectedFiber.sp + moistureCorrectedFiber.mu,
-           moistureCorrectedAsh.pl = moistureCorrectedAsh.sp + moistureCorrectedAsh.mu,
-           yieldPerAc.pl = yieldPerAc.sp + yieldPerAc.mu,
-           GDDToAnthesis.pl = GDDToAnthesis.sp + GDDToAnthesis.mu,
-           GDDToSilk.pl = GDDToSilk.sp + GDDToSilk.mu,
-           kernelsPerRow.pl = kernelsPerRow.sp + kernelsPerRow.mu,
-           kernelRows.pl = kernelRows.sp + kernelRows.mu,
-           moistureCorrectedKernelMass.pl = moistureCorrectedKernelMass.sp + moistureCorrectedKernelMass.mu,
-           moistureCorrectedHundredKernelWt.pl = moistureCorrectedHundredKernelWt.sp + moistureCorrectedHundredKernelWt.mu,
-           ASI.GDD.pl = ASI.GDD.sp + ASI.GDD.mu)
+  
   # Export summary.df so we don't have to re-run FW regression
   write.table(summary.df, 'analysis/genotypeSummaryByLoc.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
   
