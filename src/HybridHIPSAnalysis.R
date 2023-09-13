@@ -5,14 +5,21 @@ library(tidyverse)
 library(viridis)
 library(scales)
 library(FW)
-# Read in data and order nLvl
+library(PerformanceAnalytics)
+# Read in data and order nitrogenTreatment
+# Also calculate moisture correction for kernelMass and hundredKernelMass
 hybrids <- read.csv('outData/HIPS_2022_V3.4_HYBRIDS.csv')
+meanPercentMoisture <- mean(hybrids$percentMoisture, na.rm = TRUE)
 hybrids <-  hybrids %>% 
-  mutate(nitrotgentTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'), ordered = TRUE))
-# Let's look at how yield varies across fields
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'), ordered = TRUE),
+         moistureCorrectedKernelMassPerEar = case_when(!is.na(kernelMassPerEar) & !is.na(percentMoisture) ~ kernelMassPerEar/(1 - (percentMoisture/100)),
+                                                 !is.na(kernelMassPerEar) & location %in% c('Ames', 'Crawfordsville') ~ kernelMassPerEar/(1 - (meanPercentMoisture/100))),
+         moistureCorrectedHundredKernelMass = case_when(!is.na(hundredKernelMass) & !is.na(percentMoisture) ~ hundredKernelMass/(1 - (percentMoisture/100)),
+                                                        !is.na(hundredKernelMass) & location %in% c('Ames', 'Crawfordsville') ~ hundredKernelMass/(1 - (meanPercentMoisture/100))))
+# Let's look at how yield varies across sublocations
 yieldMap <- ggplot(hybrids, aes(range, row, fill = combineYield, color = 'white')) +
   geom_raster() +
-  facet_wrap(vars(loc, field)) + 
+  facet_wrap(vars(location, sublocation)) + 
   scale_x_continuous(breaks = 0:40) +
   scale_y_continuous(breaks = 0:40) +
   scale_fill_viridis(option = 'turbo', direction = -1) +
@@ -24,7 +31,7 @@ mapResponse <- function(data, trait)
 {
   plot <- ggplot(data, aes(range, row, fill = .data[[trait]], color = 'white')) + 
     geom_raster() +
-    facet_wrap(vars(loc, field)) + 
+    facet_wrap(vars(location, sublocation)) + 
     scale_x_continuous(breaks = 0:40) +
     scale_y_continuous(breaks = 0:40) +
     scale_fill_viridis(option = 'turbo', direction = -1) +
@@ -33,15 +40,18 @@ mapResponse <- function(data, trait)
   print(plot)
 }
 
-response_vars <- c('earHt', 'flagLeafHt', 'tasselTipHt', 'combineMoisture', 'combineTestWt', 
-                   'earLen', 'earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'shelledCobLen', 'kernelsPerEar',
-                   'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
-                   'yieldPerAc', 'GDDToAnthesis', 'GDDToSilk', 'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass',
-                   'moistureCorrectedHundredKernelWt', 'ASI.GDD', 'daysToAnthesis', 'daysToSilk', 'ASI')
+response_vars <- c('earHeight', 'flagLeafHeight', 'combineMoisture', 'combineTestWeight', 
+                   'earFillLength', 'earWidth', 'shelledCobWidth', 'shelledCobMass', 'earLength', 'kernelsPerEar',
+                   'percentStarch', 'percentProtein', 'percentOil', 'percentFiber', 'percentAsh', 
+                   'yieldPerAcre', 'GDDToAnthesis', 'GDDToSilk', 'kernelsPerRow', 'kernelRowNumber', 'moistureCorrectedKernelMassPerEar',
+                   'moistureCorrectedHundredKernelMass', 'anthesisSilkingIntervalGDD', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval')
 
-locs <- c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville')
+locations <- c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville')
 
-mapResponse(hybrids, c('moistureCorrectedProtein'))
+# Define 'pretty' labels for response vars
+response_labels <- c('Ear Height (cm)', 'Flag Leaf Height (cm)', 'Harvest Moisture (%)', 'Test Weight (lbs/bushel)', 'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Shelled Cob Mass (g)', 'Ear Length (cm)', 'Kernels Per Ear', 'Starch (%)', 'Protein (%)', 'Oil (%)', 'Fiber (%)', 'Moisture Corrected Ash (%)', 'Yield (Bushels/Acre)', 'GDD to Anthesis', 'GDD to Silk', 'Kernels Per Row', 'Kernel Row Number', 'Moisture Corrected Kernel Mass Per Ear (g)', 'Moisture Corrected Hundred Kernel Mass (g)', 'Anthesis Silking Interval (GDD)', 'Days to Anthesis', 'Days to Silk', 'Anthesis Silking Interval (Days)')
+
+mapResponse(hybrids, c('percentProtein'))
 
 for(i in response_vars)
 {
@@ -65,13 +75,13 @@ idOutliers <- function(data, trait)
 }
 
 outliers <- list()
-for (i in c('kernelMass', 'hundredKernelWt'))
+for (i in c('kernelMassPerEar', 'hundredKernelMass'))
 {
   outliers[[i]] <- idOutliers(hybrids, i)
 }
 
 # Histograms
-for(i in c('kernelMass', 'hundredKernelWt'))
+for(i in c('kernelMassPerEar', 'hundredKernelMass'))
 {
   p <- ggplot(hybrids, aes(.data[[i]])) +
     geom_histogram()
@@ -79,13 +89,13 @@ for(i in c('kernelMass', 'hundredKernelWt'))
 }
 
 # Violins
-for (i in locs)
+for (i in locations)
 {
-  loc.df <- hybrids %>%
-    filter(loc==i) %>%
-    pivot_longer(all_of(c('kernelMass', 'hundredKernelWt')), names_to = 'phenotype', values_to = 'val')
+  location.df <- hybrids %>%
+    filter(location==i) %>%
+    pivot_longer(all_of(c('percentProtein')), names_to = 'phenotype', values_to = 'val')
   
-  p <- ggplot(loc.df, aes(nLvl, val)) + 
+  p <- ggplot(location.df, aes(nitrogenTreatment, val)) + 
     geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE, fill = 'blue') + 
     facet_wrap(vars(phenotype), scales = 'free_y') + 
     labs(title = i)
@@ -94,16 +104,16 @@ for (i in locs)
 
 # Check NP2 yield and protein
 p <- hybrids %>% 
-  filter(loc=='North Platte2') %>%
-  ggplot(aes(range, yieldPerAc, group = range)) + 
+  filter(location=='North Platte2') %>%
+  ggplot(aes(range, yieldPerAcre, group = range)) + 
   geom_boxplot(fill = 'blue') +
   geom_vline(xintercept = 12) + 
   geom_vline(xintercept = 24)
 print(p)
 
 p <- hybrids %>% 
-  filter(loc=='North Platte2') %>%
-  ggplot(aes(range, moistureCorrectedProtein, group = range)) + 
+  filter(location=='North Platte2') %>%
+  ggplot(aes(range, percentProtein, group = range)) + 
   geom_boxplot(fill = 'blue') +
   geom_vline(xintercept = 12) + 
   geom_vline(xintercept = 24)
@@ -133,70 +143,68 @@ plotRepCorr <- function(data, treatmentVar, genotype, phenotypes, facet)
   return(df.wide)
 }
 
-hybrids.wide <- plotRepCorr(hybrids, 'nLvl', 'genotype', c('hundredKernelWt', 'kernelMass'), 'loc')
+hybrids.wide <- plotRepCorr(hybrids, 'nitrogenTreatment', 'genotype', c('hundredKernelMass', 'kernelMassPerEar'), 'location')
 
 # Correlation plot for 2 vars
 plotVarCorr <- function(data, x, y)
 {
   x.str <- deparse(substitute(x))
   y.str <- deparse(substitute(y))
-  p <- ggplot({{data}}, aes({{x}}, {{y}}, color = nLvl)) + 
+  p <- ggplot({{data}}, aes({{x}}, {{y}}, color = nitrogenTreatment)) + 
     geom_point() +
-    facet_wrap(vars(loc)) +
+    facet_wrap(vars(location)) +
     labs(subtitle = str_c('R = ', cor(data[[x.str]], data[[y.str]], use = 'complete.obs')))
   print(p)
 }
 
 
-plotVarCorr(hybrids, yieldPerAc, moistureCorrectedKernelMass)
-plotVarCorr(hybrids, ASI, ASI.GDD)
+plotVarCorr(hybrids, yieldPerAcre, moistureCorrectedKernelMassPerEar)
+plotVarCorr(hybrids, anthesisSilkingInterval, anthesisSilkingIntervalGDD)
 plotVarCorr(hybrids, daysToSilk, GDDToSilk)
 plotVarCorr(hybrids, daysToAnthesis, GDDToAnthesis)
 plotVarCorr(hybrids, GDDToAnthesis, GDDToSilk)
-plotVarCorr(hybrids, kernelRows, yieldPerAc) # not very correlated
-plotVarCorr(hybrids, kernelRows, moistureCorrectedKernelMass) # not very correlated
-plotVarCorr(hybrids, kernelRows, kernelsPerRow) # not very correlated
-plotVarCorr(hybrids, kernelRows, earWidth)
-plotVarCorr(hybrids, kernelRows, shelledCobWidth)
-plotVarCorr(hybrids, kernelRows, kernelsPerEar)
-plotVarCorr(hybrids, kernelsPerRow, earFillLen)
-plotVarCorr(hybrids, kernelsPerRow, shelledCobLen)
+plotVarCorr(hybrids, kernelRowNumber, yieldPerAcre) # not very correlated
+plotVarCorr(hybrids, kernelRowNumber, moistureCorrectedKernelMassPerEar) # not very correlated
+plotVarCorr(hybrids, kernelRowNumber, kernelsPerRow) # not very correlated
+plotVarCorr(hybrids, kernelRowNumber, earWidth)
+plotVarCorr(hybrids, kernelRowNumber, shelledCobWidth)
+plotVarCorr(hybrids, kernelRowNumber, kernelsPerEar)
+plotVarCorr(hybrids, kernelsPerRow, earFillLength)
+plotVarCorr(hybrids, kernelsPerRow, earLength)
 plotVarCorr(hybrids, kernelsPerRow, kernelsPerEar)
-plotVarCorr(hybrids, kernelsPerEar, yieldPerAc)
-plotVarCorr(hybrids, kernelsPerEar, moistureCorrectedKernelMass)
-plotVarCorr(hybrids, kernelsPerEar, moistureCorrectedHundredKernelWt)
-plotVarCorr(hybrids, moistureCorrectedStarch, yieldPerAc)
-plotVarCorr(hybrids, shelledCobWt, yieldPerAc)
-plotVarCorr(hybrids, shelledCobWt, shelledCobWidth)
-plotVarCorr(hybrids, shelledCobWt, shelledCobLen)
+plotVarCorr(hybrids, kernelsPerEar, yieldPerAcre)
+plotVarCorr(hybrids, kernelsPerEar, moistureCorrectedKernelMassPerEar)
+plotVarCorr(hybrids, kernelsPerEar, moistureCorrectedHundredKernelMass)
+plotVarCorr(hybrids, percentStarch, yieldPerAcre)
+plotVarCorr(hybrids, shelledCobMass, yieldPerAcre)
+plotVarCorr(hybrids, shelledCobMass, shelledCobWidth)
+plotVarCorr(hybrids, shelledCobMass, earLength)
 plotVarCorr(hybrids, shelledCobWidth, earWidth)
-plotVarCorr(hybrids, shelledCobLen, earFillLen)
-plotVarCorr(hybrids, shelledCobLen, kernelsPerEar)
-plotVarCorr(hybrids, moistureCorrectedHundredKernelWt, combineTestWt)
-plotVarCorr(hybrids, combineMoisture, combineTestWt)
-plotVarCorr(hybrids, tasselTipHt, flagLeafHt)
-plotVarCorr(hybrids, tasselTipHt, earHt)
-plotVarCorr(hybrids, flagLeafHt, earHt)
-# Cast nLvl, genotype, and irrigation as factors
-#hybrids <- mutate(hybrids, across(c(nLvl, genotype, irrigation, loc), as.factor))
+plotVarCorr(hybrids, earLength, earFillLength)
+plotVarCorr(hybrids, earLength, kernelsPerEar)
+plotVarCorr(hybrids, moistureCorrectedHundredKernelMass, combineTestWeight)
+plotVarCorr(hybrids, combineMoisture, combineTestWeight)
+plotVarCorr(hybrids, flagLeafHeight, earHeight)
+# Cast nitrogenTreatment, genotype, and irrigationProvided as factors
+#hybrids <- mutate(hybrids, across(c(nitrogenTreatment, genotype, irrigationProvided, location), as.factor))
 
-# # Function to do variance partitioning for each location for a given response variable
+# # Function to do variance partitioning for each locationation for a given response variable
 # partitionVariance <- function(data, response)
 # {
-#   # Loop over locations
-#   locs <- c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3')
-#   vc.df <- tibble(modelTerm = NULL, Variance = NULL, SD = NULL, `log10l(lambda)` = NULL, pctVar = NULL, loc = NULL, .rows = 0) 
-#   for(i in locs)
+#   # Loop over locationations
+#   locations <- c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3')
+#   vc.df <- tibble(modelTerm = NULL, Variance = NULL, SD = NULL, `log10l(lambda)` = NULL, pctVar = NULL, location = NULL, .rows = 0) 
+#   for(i in locations)
 #   {
-#     loc.df <- filter(data, loc==i & !is.na(range) & !is.na(row) & !is.na(.data[[response]]))
-#     print(length(loc.df$plot))
-#     if(length(loc.df$plot)==0)
+#     location.df <- filter(data, location==i & !is.na(range) & !is.na(row) & !is.na(.data[[response]]))
+#     print(length(location.df$plot))
+#     if(length(location.df$plotNumber)==0)
 #     {
 #       next
 #     }
 #     # Fit model
-#     rangeKnots <- floor(max(loc.df$range, na.rm = TRUE)/2) + 1
-#     rowKnots <- floor(max(loc.df$row, na.rm = TRUE)/2) + 1
+#     rangeKnots <- floor(max(location.df$range, na.rm = TRUE)/2) + 1
+#     rowKnots <- floor(max(location.df$row, na.rm = TRUE)/2) + 1
 #     print(i)
 #     print(rangeKnots)
 #     print(rowKnots)
@@ -204,12 +212,12 @@ plotVarCorr(hybrids, flagLeafHt, earHt)
 #     if(i=='Missouri Valley')
 #     {
 #       model <- SpATS(response, genotype = 'genotype', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)),
-#                      data = loc.df)
+#                      data = location.df)
 #     }
 #     else
 #     {
 #       model <- SpATS(response, genotype = 'genotype', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)),
-#                    random = ~ nLvl + nLvl:genotype, data = loc.df)
+#                    random = ~ nitrogenTreatment + nitrogenTreatment:genotype, data = location.df)
 #     }
 #     # Extract variance components
 
@@ -225,7 +233,7 @@ plotVarCorr(hybrids, flagLeafHt, earHt)
 #     vc <- vc %>%
 #       rowwise() %>%
 #       mutate(pctVar = Variance/totalVar*100, 
-#              loc = i)
+#              location = i)
 #     summary(vc)
 #     # Bind to df
 #     vc.df <- bind_rows(vc.df, vc)
@@ -236,7 +244,7 @@ plotVarCorr(hybrids, flagLeafHt, earHt)
 #   vc.df <- filter(vc.df, !is.na(pctVar))
 #   vc.plot <- ggplot(vc.df, aes(1, pctVar, fill = modelTerm)) + 
 #     geom_col(position = 'stack') + 
-#     facet_wrap(vars(loc)) + 
+#     facet_wrap(vars(location)) + 
 #     labs(title = response)
 #     theme_minimal()
 #   
@@ -251,76 +259,76 @@ plotVarCorr(hybrids, flagLeafHt, earHt)
 # }
 # 
 # lnk_lowN <- hybrids %>%
-#   filter(loc=='Lincoln' & nLvl=='Low') %>%
-#   mutate(plot = as.factor(plot)) %>%
-#   select(c(plot, range, row, yieldPerAc))
-# m <- SpATS('yieldPerAc', genotype = 'plot', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(8, 14)), fixed = NULL, data = lnk_lowN)
+#   filter(location=='Lincoln' & nitrogenTreatment=='Low') %>%
+#   mutate(plot = as.factor(plotNumber)) %>%
+#   select(c(plotNumber, range, row, yieldPerAcre))
+# m <- SpATS('yieldPerAcre', genotype = 'plotNumber', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(8, 14)), fixed = NULL, data = lnk_lowN)
 # s <- summary(m)
 # plot.SpATS(m)
 # p.blups <- s$coeff %>%
-#   as_tibble(rownames = 'plot')
+#   as_tibble(rownames = 'plotNumber')
 
 # Okay, now let's write a function to get the spatial BLUES for each response on a plot level
-# Will fit model by individual location, nitrogen treatment combination
+# Will fit model by individual locationation, nitrogen treatment combination
 getSpatialCorrections <- function(data, response)
 {
-  # Declare empty df and levels of locs
-  df.sp <- tibble(loc = NULL, plot = NULL, '{response}':= NULL, nLvl = NULL)
-  locs <-  c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Ames', 'Crawfordsville')
-  # Loop over locations
-  for(currLoc in locs)
+  # Declare empty df and levels of locations
+  df.sp <- tibble(location = NULL, plotNumber = NULL, '{response}':= NULL, nitrogenTreatment = NULL)
+  locations <-  c('Missouri Valley', 'Lincoln', 'Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Ames', 'Crawfordsville')
+  # Loop over locationations
+  for(currlocation in locations)
   {
-    loc.df <- filter(data, loc==currLoc & !is.na(row) & !is.na(range) & !is.na(.data[[response]] & !is.na(nLvl)))
-    if(length(loc.df$plot)==0)
+    location.df <- filter(data, location==currlocation & !is.na(row) & !is.na(range) & !is.na(.data[[response]] & !is.na(nitrogenTreatment)))
+    if(length(location.df$plotNumber)==0)
     {
-      print(paste0('No data for ', response, ' at ', currLoc))
+      print(paste0('No data for ', response, ' at ', currlocation))
       next
     }
-    nLvls <- unique(loc.df$nLvl)
+    nitrogenTreatments <- unique(location.df$nitrogenTreatment)
       
     # Loop over nitrogen treatments
-    for(currTrt in nLvls)
+    for(currTrt in nitrogenTreatments)
     {
       if(is.na(currTrt)|currTrt=='Border')
       {
         next
       }
-      loc.n.df <- filter(loc.df, nLvl==currTrt) %>%
-        mutate(as.factor(plot))
-      rangeKnots <- floor(max(loc.n.df$range, na.rm = TRUE)/2) + 1
-      rowKnots <- floor(max(loc.n.df$row, na.rm = TRUE)/2) + 1
-      print(currLoc)
+      location.n.df <- filter(location.df, nitrogenTreatment==currTrt) %>%
+        mutate(as.factor(plotNumber))
+      rangeKnots <- floor(max(location.n.df$range, na.rm = TRUE)/2) + 1
+      rowKnots <- floor(max(location.n.df$row, na.rm = TRUE)/2) + 1
+      print(currlocation)
       print(currTrt)
-      model <- SpATS(response, genotype = 'plot', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)), data = loc.n.df)
+      model <- SpATS(response, genotype = 'plotNumber', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)), data = location.n.df)
       # Plot model
-      plot.SpATS(model, main = paste0(response, ':', currLoc, ':', currTrt))
+      plot.SpATS(model, main = paste0(response, ':', currlocation, ':', currTrt))
       # Extract BLUPS
       summary <- summary(model)
-      if(cor(loc.n.df[[response]], summary$fitted + summary$residuals) > 0.99)
+      if(cor(location.n.df[[response]], summary$fitted + summary$residuals) > 0.99)
       {
-        sp <- tibble(loc = currLoc,
-                     nLvl = currTrt, 
-                     plot = loc.n.df$plot,
+        sp <- tibble(location = currlocation,
+                     nitrogenTreatment = currTrt, 
+                     plotNumber = location.n.df$plotNumber,
                      '{response}':=summary$fitted)
       }
       else
       {
-        print(paste0('Fitted values misordered. r =', cor(loc.n.df[[response]], summary$fitted + summary$residuals), '; ', currLoc, '; ', currTrt))
+        print(paste0('Fitted values misordered. r =', cor(location.n.df[[response]], summary$fitted + summary$residuals), '; ', currlocation, '; ', currTrt))
         next
       }
       # Bind to df
       df.sp <- bind_rows(df.sp, sp) %>%
-        mutate(plot = as.numeric(plot))
+        mutate(plotNumber = as.numeric(plotNumber))
     }
   }
-  print(length(df.sp$plot))
+  print(length(df.sp$plotNumber))
   # Return df
   return(df.sp)
 }
 
 for(i in response_vars)
 {
-  hybrids <- full_join(hybrids, getSpatialCorrections(hybrids, i), by = join_by(loc, plot, nLvl), suffix = c('', '.sp'), keep = FALSE)
+  hybrids <- full_join(hybrids, getSpatialCorrections(hybrids, i), by = join_by(location, plotNumber, nitrogenTreatment), suffix = c('', '.sp'), keep = FALSE)
 }
 
 hybrids <- hybrids %>%
@@ -330,7 +338,7 @@ hybrids <- hybrids %>%
 partitionVariance2 <- function(df, response) 
 {
   df <- filter(df, !is.na(response))
-  lm_formula <- as.formula(paste(response, "~ (1|loc/nLvl) + (1|genotype) + (1|loc:genotype) + (1|nLvl:genotype)"))
+  lm_formula <- as.formula(paste(response, "~ (1|location/nitrogenTreatment) + (1|genotype) + (1|location:genotype) + (1|nitrogenTreatment:genotype)"))
   model <- lmer(lm_formula, data = df, na.action = na.omit)
   vc <- as.data.frame(VarCorr(model), row.names = TRUE, order = 'cov.last', comp = 'Variance') %>%
     as_tibble() %>%
@@ -347,12 +355,36 @@ partitionVariance2 <- function(df, response)
 
 vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
 spatiallyCorrectedResponseVars <- paste0(response_vars, '.sp')
+
+# Is there shrinkage toward the max of a treatment ?
+for(i in 1:length(response_vars))
+{
+  sp.correction.plot <- ggplot(hybrids, (aes(.data[[response_vars[i]]], .data[[spatiallyCorrectedResponseVars[i]]], color = nitrogenTreatment))) +
+    geom_point() +
+    geom_abline(slope = 1) +
+    facet_wrap(vars(location)) 
+  print(sp.correction.plot)
+}
+
 #spatiallyCorrectedResponseVars <- paste0(spatiallyCorrectedResponseVars, '.blup')
 # Don't use the spatially corrected vals when there's fitting issues
 hybrids.vp <- hybrids %>%
   rowwise() %>%
-  mutate(ASI.sp = case_when(loc %in% c('North Platte1', 'North Platte2') ~ ASI, 
-                            .default = ASI.sp))
+  mutate(anthesisSilkingInterval.sp = case_when(location %in% c('North Platte1', 'North Platte2') ~ anthesisSilkingInterval, 
+                            .default = anthesisSilkingInterval.sp),
+         anthesisSilkingIntervalGDD.sp = case_when(location %in% c('North Platte1', 'North Platte2') ~ anthesisSilkingIntervalGDD, 
+                                                 .default = anthesisSilkingIntervalGDD.sp), 
+         percentProtein.sp = case_when(location %in% c('Lincoln', 'North Platte2', 'North Platte3', 'Scottsbluff') ~ percentProtein, 
+                                       .default = percentProtein.sp),
+         kernelsPerEar.sp = case_when(location=='Scottsbluff' ~ kernelsPerEar,
+                                      .default = kernelsPerEar.sp),
+         earLength.sp = case_when(location=='Scottsbluff' ~ earLength, 
+                                  .default = earLength.sp),
+         shelledCobMass.sp = case_when(location=='Scottsbluff' ~ shelledCobMass, 
+                                       .default = shelledCobMass.sp),
+         combineMoisture.sp = case_when(location=='Ames' ~ combineMoisture, 
+                                        .default = combineMoisture.sp),
+         nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'), ordered = TRUE))
 
 for(i in spatiallyCorrectedResponseVars)
 {
@@ -367,204 +399,208 @@ vp.plot <- ggplot(vc_all, aes(responseVar, pctVar, fill = grp)) +
   theme(axis.text.x = element_text(angle = 90))
 vp.plot
 
-# Is there shrinkage toward the max of a treatment ?
-for(i in 1:length(response_vars))
-{
-  sp.correction.plot <- ggplot(hybrids, (aes(.data[[response_vars[i]]], .data[[spatiallyCorrectedResponseVars[i]]], color = nLvl))) +
-    geom_point() +
-    geom_abline(slope = 1) +
-    facet_wrap(vars(loc)) 
-  print(sp.correction.plot)
-}
-
-for(i in c('yieldPerAc.sp'))
+for(i in spatiallyCorrectedResponseVars)
 {
   df.n <- hybrids.vp %>%
-    group_by(loc, lbsNPerAc) #%>%
-    #summarise('{i}':= mean(.data[[i]], na.rm = TRUE))
-  p <- ggplot(hybrids.vp, aes(nLvl, .data[[i]])) +
-    geom_violin() + 
-    facet_wrap(vars(loc))
+    group_by(location, nitrogenTreatment) %>%
+    mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'), ordered = TRUE))
+  p <- ggplot(df.n, aes(nitrogenTreatment, .data[[i]])) +
+    geom_violin(fill = 'blue', draw_quantiles = c(0.25, 0.5, 0.75)) + 
+    facet_wrap(vars(location), scales = 'free')
   print(p)
 }
-sb.np2 <- filter(hybrids.vp, loc=='North Platte2'|(loc=='Scottsbluff' & nLvl %in% c('Low', 'Medium'))|(loc=='Scottsbluff' & nLvl=='High' & yieldPerAc.sp >=100))
 
-getNitrogenPlasticityByLoc <- function(data, response)
+sb.np2 <- filter(hybrids.vp, location=='North Platte2'|(location=='Scottsbluff' & nitrogenTreatment %in% c('Low', 'Medium'))|(location=='Scottsbluff' & nitrogenTreatment=='High' & yieldPerAcre.sp >=100))
+
+getNitrogenPlasticityByLocation <- function(data, response, locations)
 {
-  locs <- c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville')
+  print(response)
   response.out <- response %>% 
-    str_split_i('.', 1) %>%
-    str_c('.pl')
-  response.df <- tibble(loc = NULL, genotype = NULL, '{response.out}':= NULL,)
-  for (currLoc in locs)
+    str_replace('.sp', '.pl')
+  response.df <- tibble(location = NULL, genotype = NULL, '{response.out}':= NULL,)
+  for (currlocation in locations)
   {
-    loc.df <- filter(data, !is.na(genotype) & loc==currLoc & nLvl!='Border' & !is.na(nLvl))
-    fw <- FW(y = loc.df[[response]], VAR = loc.df$genotype, ENV = loc.df$nLvl, saveAt = paste0('analysis/gibbs-samples-', response, '-', currLoc), 
-             nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656, saveVAR = c(1:2), saveENV = 1:2)
+    location.df <- filter(data, !is.na(genotype) & location==currlocation & nitrogenTreatment!='Border' & !is.na(nitrogenTreatment)) %>%
+      group_by(genotype, nitrogenTreatment) %>%
+      summarise('{response}' := mean(.data[[response]], na.rm = TRUE))
+    fw <- FW(y = location.df[[response]], VAR = location.df$genotype, ENV = location.df$nitrogenTreatment, saveAt = paste0('analysis/gibbs-samples-', response, '-', currlocation),
+             nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656, saveVAR = c(1:2), saveENV = c(1:2))
     pl <- fw$b %>%
       as_tibble(rownames = 'genotype') %>%
-      mutate(loc = currLoc, '{response.out}':= Init1) %>%
+      mutate(location = currlocation, 
+             '{response.out}':= Init1 + 1) %>%
       select(!Init1)
     response.df <- bind_rows(response.df, pl)
   }
   return(response.df)
 }
 
-plasticitySBNP2.df <- getNitrogenPlasticityByLoc(sb.np2, 'yieldPerAc.sp')
+# plasticitySBNP2.df <- getNitrogenPlasticityBylocation(sb.np2, 'yieldPerAcre.sp')
+# 
+# plasticitySBNP2.wide <- plasticitySBNP2.df %>%
+#   pivot_wider(id_cols = genotype, names_from = location, values_from = yieldPerAcre.sp)
+# 
+# plasticityCorrPlot <- ggplot(plasticitySBNP2.wide, aes(`North Platte2`, `Scottsbluff`)) + 
+#   geom_point() + 
+#   labs(x = 'Nitrogen Plasticity of Yield at North Platte Under Partial irrigationProvided',
+#        y = 'Nitrogen Plasticity of Yield at Scottsbluff',
+#        subtitle = expression(R^2~'='~'0.04074947'))
+# plasticityCorrPlot
+# 
+# sb.np2.summary <- sb.np2 %>%
+#   group_by(genotype, location) %>%
+#   summarise(meanYield = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+#   full_join(plasticitySBNP2.df, by = join_by(genotype, location), keep = FALSE, suffix = c('', ''))
+# 
+# plasticityVsYield <- ggplot(sb.np2.summary, aes(meanYield, yieldPerAcre.sp, color = location)) + 
+#   geom_point() +
+#   geom_hline(yintercept = 1) +
+#   facet_grid(cols = vars(location)) +
+#   labs(x = 'Mean Genotype Yield (Bushels Per Acre)', y = 'Linear Plasticity (Finlay-Wilkinson)')
+# plasticityVsYield
 
-plasticitySBNP2.wide <- plasticitySBNP2.df %>%
-  pivot_wider(id_cols = genotype, names_from = loc, values_from = yieldPerAc.sp)
-
-plasticityCorrPlot <- ggplot(plasticitySBNP2.wide, aes(`North Platte2`, `Scottsbluff`)) + 
-  geom_point() + 
-  labs(x = 'Nitrogen Plasticity of Yield at North Platte Under Partial Irrigation',
-       y = 'Nitrogen Plasticity of Yield at Scottsbluff',
-       subtitle = expression(R^2~'='~'0.04074947'))
-plasticityCorrPlot
-
-sb.np2.summary <- sb.np2 %>%
-  group_by(genotype, loc) %>%
-  summarise(meanYield = mean(yieldPerAc.sp, na.rm = TRUE)) %>%
-  full_join(plasticitySBNP2.df, by = join_by(genotype, loc), keep = FALSE, suffix = c('', ''))
-
-plasticityVsYield <- ggplot(sb.np2.summary, aes(meanYield, yieldPerAc.sp, color = loc)) + 
-  geom_point() +
-  geom_hline(yintercept = 1) +
-  facet_grid(cols = vars(loc)) +
-  labs(x = 'Mean Genotype Yield (Bushels Per Acre)', y = 'Linear Plasticity (Finlay-Wilkinson)')
-plasticityVsYield
-
-plasticity.df <- getNitrogenPlasticityByLoc(hybrids.vp, spatiallyCorrectedResponseVars[1])
+nitrogenPlasticityLocations <- c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Lincoln',
+                                 'Ames', 'Crawfordsville')
+plasticity.df <- getNitrogenPlasticityByLocation(hybrids.vp, spatiallyCorrectedResponseVars[1], nitrogenPlasticityLocations)
 
 for(i in spatiallyCorrectedResponseVars[2:length(spatiallyCorrectedResponseVars)])
 {
-  plasticity.df <- full_join(plasticity.df, getNitrogenPlasticityByLoc(hybrids.vp, i), join_by(genotype, loc), suffix = c('', ''), keep = FALSE)
+  plasticity.df <- full_join(plasticity.df, getNitrogenPlasticityByLocation(hybrids.vp, i, nitrogenPlasticityLocations), join_by(genotype, location), suffix = c('', ''), keep = FALSE)
 }
 
   summary.df <- hybrids.vp %>%
-    group_by(loc, genotype) %>%
-    summarise(earHt.mu = mean(earHt.sp, na.rm = TRUE),
-              flagLeafHt.mu = mean(flagLeafHt.sp, na.rm = TRUE),
-              tasselTipHt.mu = mean(tasselTipHt.sp, na.rm = TRUE),
+    group_by(location, genotype) %>%
+    summarise(earHeight.mu = mean(earHeight.sp, na.rm = TRUE),
+              flagLeafHeight.mu = mean(flagLeafHeight.sp, na.rm = TRUE),
               combineMoisture.mu = mean(combineMoisture.sp, na.rm = TRUE),
-              combineTestWt.mu = mean(combineTestWt.sp, na.rm = TRUE),
-              earLen.mu = mean(earLen.sp, na.rm = TRUE),
-              earFillLen.mu = mean(earFillLen.sp, na.rm = TRUE),
+              combineTestWeight.mu = mean(combineTestWeight.sp, na.rm = TRUE),
+              earFillLength.mu = mean(earFillLength.sp, na.rm = TRUE),
               earWidth.mu = mean(earWidth.sp, na.rm = TRUE),
               shelledCobWidth.mu = mean(shelledCobWidth.sp, na.rm = TRUE),
-              shelledCobWt.mu = mean(shelledCobWt.sp, na.rm = TRUE),
-              shelledCobLen.mu = mean(shelledCobLen.sp, na.rm = TRUE),
+              shelledCobMass.mu = mean(shelledCobMass.sp, na.rm = TRUE),
+              earLength.mu = mean(earLength.sp, na.rm = TRUE),
               kernelsPerEar.mu = mean(kernelsPerEar.sp, na.rm = TRUE),
-              moistureCorrectedStarch.mu = mean(moistureCorrectedStarch.sp, na.rm = TRUE),
-              moistureCorrectedProtein.mu = mean(moistureCorrectedProtein.sp, na.rm = TRUE),
-              moistureCorrectedOil.mu = mean(moistureCorrectedOil.sp, na.rm = TRUE),
-              moistureCorrectedFiber.mu = mean(moistureCorrectedFiber.sp, na.rm = TRUE),
-              moistureCorrectedAsh.mu = mean(moistureCorrectedAsh.sp, na.rm = TRUE),
-              yieldPerAc.mu = mean(yieldPerAc.sp, na.rm = TRUE),
+              percentStarch.mu = mean(percentStarch.sp, na.rm = TRUE),
+              percentProtein.mu = mean(percentProtein.sp, na.rm = TRUE),
+              percentOil.mu = mean(percentOil.sp, na.rm = TRUE),
+              percentFiber.mu = mean(percentFiber.sp, na.rm = TRUE),
+              percentAsh.mu = mean(percentAsh.sp, na.rm = TRUE),
+              yieldPerAcre.mu = mean(yieldPerAcre.sp, na.rm = TRUE),
               GDDToAnthesis.mu = mean(GDDToAnthesis.sp, na.rm = TRUE),
               GDDToSilk.mu = mean(GDDToSilk.sp, na.rm = TRUE),
               kernelsPerRow.mu = mean(kernelsPerRow.sp, na.rm = TRUE),
-              kernelRows.mu = mean(kernelRows.sp, na.rm = TRUE),
-              moistureCorrectedKernelMass.mu = mean(moistureCorrectedKernelMass.sp, na.rm = TRUE),
-              moistureCorrectedHundredKernelWt.mu = mean(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-              ASI.GDD.mu = mean(ASI.GDD.sp, na.rm = TRUE),
+              kernelRowNumber.mu = mean(kernelRowNumber.sp, na.rm = TRUE),
+              moistureCorrectedKernelMassPerEar.mu = mean(moistureCorrectedKernelMassPerEar.sp, na.rm = TRUE),
+              moistureCorrectedHundredKernelMass.mu = mean(moistureCorrectedHundredKernelMass.sp, na.rm = TRUE),
+              anthesisSilkingIntervalGDD.mu = mean(anthesisSilkingIntervalGDD.sp, na.rm = TRUE),
               daysToAnthesis.mu = mean(daysToAnthesis.sp, na.rm = TRUE),
               daysToSilk.mu = mean(daysToSilk.sp, na.rm = TRUE),
-              ASI.mu = mean(ASI.sp, na.rm = TRUE),
-              earHt.max = max(earHt.sp, na.rm = TRUE),
-              flagLeafHt.max = max(flagLeafHt.sp, na.rm = TRUE),
-              tasselTipHt.max = max(tasselTipHt.sp, na.rm = TRUE),
+              anthesisSilkingInterval.mu = mean(anthesisSilkingInterval.sp, na.rm = TRUE),
+              earHeight.max = max(earHeight.sp, na.rm = TRUE),
+              flagLeafHeight.max = max(flagLeafHeight.sp, na.rm = TRUE),
               combineMoisture.max = max(combineMoisture.sp, na.rm = TRUE),
-              combineTestWt.max = max(combineTestWt.sp, na.rm = TRUE),
-              earLen.max = max(earLen.sp, na.rm = TRUE),
-              earFillLen.max = max(earFillLen.sp, na.rm = TRUE),
+              combineTestWeight.max = max(combineTestWeight.sp, na.rm = TRUE),
+              earFillLength.max = max(earFillLength.sp, na.rm = TRUE),
               earWidth.max = max(earWidth.sp, na.rm = TRUE),
               shelledCobWidth.max = max(shelledCobWidth.sp, na.rm = TRUE),
-              shelledCobWt.max = max(shelledCobWt.sp, na.rm = TRUE),
-              shelledCobLen.max = max(shelledCobLen.sp, na.rm = TRUE),
+              shelledCobMass.max = max(shelledCobMass.sp, na.rm = TRUE),
+              earLength.max = max(earLength.sp, na.rm = TRUE),
               kernelsPerEar.max = max(kernelsPerEar.sp, na.rm = TRUE),
-              moistureCorrectedStarch.max = max(moistureCorrectedStarch.sp, na.rm = TRUE),
-              moistureCorrectedProtein.max = max(moistureCorrectedProtein.sp, na.rm = TRUE),
-              moistureCorrectedOil.max = max(moistureCorrectedOil.sp, na.rm = TRUE),
-              moistureCorrectedFiber.max = max(moistureCorrectedFiber.sp, na.rm = TRUE),
-              moistureCorrectedAsh.max = max(moistureCorrectedAsh.sp, na.rm = TRUE),
-              yieldPerAc.max = max(yieldPerAc.sp, na.rm = TRUE),
+              percentStarch.max = max(percentStarch.sp, na.rm = TRUE),
+              percentProtein.max = max(percentProtein.sp, na.rm = TRUE),
+              percentOil.max = max(percentOil.sp, na.rm = TRUE),
+              percentFiber.max = max(percentFiber.sp, na.rm = TRUE),
+              percentAsh.max = max(percentAsh.sp, na.rm = TRUE),
+              yieldPerAcre.max = max(yieldPerAcre.sp, na.rm = TRUE),
               GDDToAnthesis.max = max(GDDToAnthesis.sp, na.rm = TRUE),
               GDDToSilk.max = max(GDDToSilk.sp, na.rm = TRUE),
               kernelsPerRow.max = max(kernelsPerRow.sp, na.rm = TRUE),
-              kernelRows.max = max(kernelRows.sp, na.rm = TRUE),
-              moistureCorrectedKernelMass.max = max(moistureCorrectedKernelMass.sp, na.rm = TRUE),
-              moistureCorrectedHundredKernelWt.max = max(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-              ASI.GDD.max = max(ASI.GDD.sp, na.rm = TRUE),
+              kernelRowNumber.max = max(kernelRowNumber.sp, na.rm = TRUE),
+              moistureCorrectedKernelMassPerEar.max = max(moistureCorrectedKernelMassPerEar.sp, na.rm = TRUE),
+              moistureCorrectedHundredKernelMass.max = max(moistureCorrectedHundredKernelMass.sp, na.rm = TRUE),
+              anthesisSilkingIntervalGDD.max = max(anthesisSilkingIntervalGDD.sp, na.rm = TRUE),
               daysToAnthesis.max = max(daysToAnthesis.sp, na.rm = TRUE),
-              daysToSilk.max = max(daysToSilk.sp, na.rm = TRUE))
-  summary.df <- full_join(summary.df, plasticity.df, join_by(genotype, loc), keep = FALSE, suffix = c('', ''))
-  summary.df <- filter(summary.df, loc!='Missouri Valley')
+              daysToSilk.max = max(daysToSilk.sp, na.rm = TRUE),
+              earHeight.min = min(earHeight.sp, na.rm = TRUE),
+              flagLeafHeight.min = min(flagLeafHeight.sp, na.rm = TRUE),
+              combineMoisture.min = min(combineMoisture.sp, na.rm = TRUE),
+              combineTestWeight.min = min(combineTestWeight.sp, na.rm = TRUE),
+              earFillLength.min = min(earFillLength.sp, na.rm = TRUE),
+              earWidth.min = min(earWidth.sp, na.rm = TRUE),
+              shelledCobWidth.min = min(shelledCobWidth.sp, na.rm = TRUE),
+              shelledCobMass.min = min(shelledCobMass.sp, na.rm = TRUE),
+              earLength.min = min(earLength.sp, na.rm = TRUE),
+              kernelsPerEar.min = min(kernelsPerEar.sp, na.rm = TRUE),
+              percentStarch.min = min(percentStarch.sp, na.rm = TRUE),
+              percentProtein.min = min(percentProtein.sp, na.rm = TRUE),
+              percentOil.min = min(percentOil.sp, na.rm = TRUE),
+              percentFiber.min = min(percentFiber.sp, na.rm = TRUE),
+              percentAsh.min = min(percentAsh.sp, na.rm = TRUE),
+              yieldPerAcre.min = min(yieldPerAcre.sp, na.rm = TRUE),
+              GDDToAnthesis.min = min(GDDToAnthesis.sp, na.rm = TRUE),
+              GDDToSilk.min = min(GDDToSilk.sp, na.rm = TRUE),
+              kernelsPerRow.min = min(kernelsPerRow.sp, na.rm = TRUE),
+              kernelRowNumber.min = min(kernelRowNumber.sp, na.rm = TRUE),
+              moistureCorrectedKernelMassPerEar.min = min(moistureCorrectedKernelMassPerEar.sp, na.rm = TRUE),
+              moistureCorrectedHundredKernelMass.min = min(moistureCorrectedHundredKernelMass.sp, na.rm = TRUE),
+              anthesisSilkingIntervalGDD.min = min(anthesisSilkingIntervalGDD.sp, na.rm = TRUE),
+              daysToAnthesis.min = min(daysToAnthesis.sp, na.rm = TRUE),
+              daysToSilk.min = min(daysToSilk.sp, na.rm = TRUE))
+  summary.df <- full_join(summary.df, plasticity.df, join_by(genotype, location), keep = FALSE, suffix = c('', ''))
+   summary.df <- filter(summary.df, location!='Missouri Valley')
+   summary.df <- summary.df %>%
+     mutate(across(where(is.numeric), ~na_if(., -Inf)))
+
+   # Export summary.df so we don't have to re-run FW regression
+   write.table(summary.df, 'analysis/genotypeSummaryByLocation.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE, na = '')
+
+  summary.df <- read.table('analysis/genotypeSummaryByLocation.tsv', sep = '\t', header = TRUE)
   
-  # Export summary.df so we don't have to re-run FW regression
-  write.table(summary.df, 'analysis/genotypeSummaryByLoc.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
-  
-  pl.mu.df <- summary.df %>%
-    select(c(genotype, loc, ends_with('.pl'), ends_with('.mu'))) %>%
-    pivot_longer(c(ends_with('.pl'), ends_with('.mu')), names_to = 'var', values_to = 'val')
-  
-  for (i in response_vars)
+  # Plot nitrogen plasticity by location vs. trait mean
+  for (i in 1:length(response_vars))
   {
-    plot.df <- pl.mu.df %>%
-      filter(str_detect(var, i) & !is.na(val))
-    
-    plot <- ggplot(plot.df, aes(val, fill = var, alpha = var)) +
-      geom_histogram() + 
-      facet_wrap(vars(loc)) +
-      scale_alpha_manual(values = c(1, 0.5))
-    print(plot)
-  }
-  
-  for (i in response_vars)
-  {
-    response.max <- paste0(i, '.max')
-    response.mu <- paste0(i, '.mu')
-    response.pl <- paste0(i, '.sp')
-    
-    plot <- ggplot(summary.df) +
-      geom_histogram(aes(.data[[response.max]]), fill = '#F8766D') +
-      geom_histogram(aes(.data[[response.mu]]), fill = '#00BFC4') +
-      geom_histogram(aes(.data[[response.pl]]), fill = '#C77CFF') + 
-      facet_wrap(vars(loc))
-    print(plot)
-  }
-  
-  for (i in response_vars)
-  {
-    response.max <- paste0(i, '.max')
-    response.mu <- paste0(i, '.mu')
-    response.pl <- paste0(i, '.sp')
+    response <- response_vars[i]
+    response.mu <- paste0(response, '.mu')
+    response.pl <- paste0(response, '.pl')
     plot.scatter <- ggplot(summary.df, aes(.data[[response.mu]], .data[[response.pl]])) +
-      geom_point() + 
-      geom_hline(yintercept = 0) +
-      geom_vline(xintercept = mean(summary.df[[response.mu]], na.rm = TRUE)) +
-      facet_wrap(vars(loc)) 
+      geom_point(color = '#00BFC4') + 
+      geom_hline(yintercept = 1) +
+      facet_wrap(vars(location)) + 
+      labs(x = paste0('Mean ', response_labels[i]), y = paste0(response_labels[i], ' Nitrogen Plasticity'))
     print(plot.scatter)
   }
   
-  df.n <- filter(hybrids.vp, loc!='Missouri Valley')
+  # Correlation of plasticities by location
+  for(i in response_vars)
+  {
+    response.pl <- paste0(i, '.pl')
+    df <- summary.df %>%
+      filter(!is.na(.data[[response.pl]])) %>%
+      select(c(genotype, location, all_of(response.pl))) %>%
+      pivot_wider(names_from = location, values_from = .data[[response.pl]]) %>%
+      select(!genotype)
+    cp <- chart.Correlation(df)
+    print(cp)
+  }
+  
+  df.n <- filter(hybrids.vp, location!='Missouri Valley')
   
   plasticity.yield <- summary.df %>%
-    group_by(loc) %>%
-    summarise(max.pl = max(yieldPerAc.sp, na.rm = TRUE),
-              min.pl = min(yieldPerAc.sp, na.rm = TRUE))
+    group_by(location) %>%
+    summarise(max.pl = max(yieldPerAcre.sp, na.rm = TRUE),
+              min.pl = min(yieldPerAcre.sp, na.rm = TRUE))
   qrs.h <- c()
   qrs.l <- c()
   for(i in c('North Platte1', 'North Platte2', 'North Platte3', 'Scottsbluff', 'Lincoln', 'Ames', 'Crawfordsville'))
   {
-    vals.pl <- filter(plasticity.yield, loc==i)
-    genotypes.h <- filter(summary.df, loc==i & yieldPerAc.sp==vals.pl$max.pl)
+    vals.pl <- filter(plasticity.yield, location==i)
+    genotypes.h <- filter(summary.df, location==i & yieldPerAcre.sp==vals.pl$max.pl)
     genotypes.h <- genotypes.h$genotype
-    genotypes.l <- filter(summary.df, loc==i & yieldPerAc.sp==vals.pl$min.pl)
+    genotypes.l <- filter(summary.df, location==i & yieldPerAcre.sp==vals.pl$min.pl)
     genotypes.l <- genotypes.l$genotype
-    vals.h <- filter(df.n, loc==i & genotype %in% genotypes.h)
+    vals.h <- filter(df.n, location==i & genotype %in% genotypes.h)
     qrs.h <- c(qrs.h, vals.h$qr)
-    vals.l <- filter(df.n, loc==i & genotype %in% genotypes.l)
+    vals.l <- filter(df.n, location==i & genotype %in% genotypes.l)
     qrs.l <- c(qrs.l, vals.l$qr)
   }
   
@@ -573,20 +609,20 @@ for(i in spatiallyCorrectedResponseVars[2:length(spatiallyCorrectedResponseVars)
   df.n <- filter(df.n, !(qr %in% c(qrs.h, qrs.l)))
   
   df.n <- df.n %>%
-    group_by(loc, genotype, lbsNPerAc) %>%
-    summarise(yieldPerAc.sp = mean(yieldPerAc.sp, na.rm = TRUE))
+    group_by(location, genotype, poundsOfNitrogenPerAcre) %>%
+    summarise(yieldPerAcre.sp = mean(yieldPerAcre.sp, na.rm = TRUE))
   pl.l <- pl.l %>%
-    group_by(loc, genotype, lbsNPerAc) %>%
-    summarise(yieldPerAc.sp = mean(yieldPerAc.sp))
+    group_by(location, genotype, poundsOfNitrogenPerAcre) %>%
+    summarise(yieldPerAcre.sp = mean(yieldPerAcre.sp))
   pl.h <- pl.h %>%
-    group_by(loc, genotype, lbsNPerAc) %>%
-    summarise(yieldPerAc.sp = mean(yieldPerAc.sp))
-  write.table(df.n, 'analysis/yieldByN_LocAll.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
-  write.table(pl.l, 'analysis/yieldByN_Loc_LowPlasticity.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
-  write.table(pl.h, 'analysis/yieldByN_Loc_HighPlasticity.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+    group_by(location, genotype, poundsOfNitrogenPerAcre) %>%
+    summarise(yieldPerAcre.sp = mean(yieldPerAcre.sp))
+  write.table(df.n, 'analysis/yieldByN_locationAll.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+  write.table(pl.l, 'analysis/yieldByN_location_LowPlasticity.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+  write.table(pl.h, 'analysis/yieldByN_location_HighPlasticity.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
   
   
-  ggplot(df.n, aes(x = lbsNPerAc, y = yieldPerAc.sp, group = lbsNPerAc, color = lbsNPerAc)) +
+  ggplot(df.n, aes(x = poundsOfNitrogenPerAcre, y = yieldPerAcre.sp, group = poundsOfNitrogenPerAcre, color = poundsOfNitrogenPerAcre)) +
     geom_boxplot(fill = hue_pal()(21), color = 'black', outlier.color = 'black', notch = FALSE, na.rm = TRUE) +
     geom_line(data = df.n, aes(group = genotype), color = 'grey', alpha = 0.25) +  
     geom_line(data = pl.l, aes(group = genotype), color = '#377EB8', alpha = 0.5) +
@@ -595,46 +631,34 @@ for(i in spatiallyCorrectedResponseVars[2:length(spatiallyCorrectedResponseVars)
     theme(axis.text.x = element_text(angle = 0, hjust = 1, vjust = 1),
           axis.line = element_line(color = 'black', size = 0.5),  
           legend.position = 'none') +
-    facet_wrap(vars(loc))#+
+    facet_wrap(vars(location))#+
     # scale_x_continuous(limits = c(60, 85), breaks = seq(55, 85, by = 5)) +
     # scale_y_continuous(limits = c(45, 105))  
   
   for (i in spatiallyCorrectedResponseVars)
   {
-    loc.trt <- unite(hybrids.vp, col = 'loc.trt', c(loc, lbsNPerAc), na.rm = TRUE, sep = ';', remove = FALSE) %>%
-      filter(str_detect(loc.trt, ';') & !is.na(.data[[i]]))
-      nLoc.trt <- unique(loc.trt$loc.trt) %>%
+    location.trt <- unite(hybrids.vp, col = 'location.trt', c(location, poundsOfNitrogenPerAcre), na.rm = TRUE, sep = ';', remove = FALSE) %>%
+      filter(str_detect(location.trt, ';') & !is.na(.data[[i]]))
+      nlocation.trt <- unique(location.trt$location.trt) %>%
       length()
-   p <- ggplot(hybrids.vp, aes(x = lbsNPerAc, y = .data[[i]], group = lbsNPerAc, color = lbsNPerAc)) +
-      geom_boxplot(fill = hue_pal()(nLoc.trt), color = 'black', outlier.color = 'black', notch = FALSE, na.rm = TRUE) +
+   p <- ggplot(hybrids.vp, aes(x = poundsOfNitrogenPerAcre, y = .data[[i]], group = poundsOfNitrogenPerAcre, color = poundsOfNitrogenPerAcre)) +
+      geom_boxplot(fill = hue_pal()(nlocation.trt), color = 'black', outlier.color = 'black', notch = FALSE, na.rm = TRUE) +
       geom_line(data = hybrids.vp, aes(group = genotype), color = 'grey', alpha = 0.25) +  
       labs(x = 'Nitrogen Fertilizer (lbs/ac)', y = i, title = 'Pair Plot with Box Plots and Connecting Lines') +
       theme(axis.text.x = element_text(angle = 0, hjust = 1, vjust = 1),
             axis.line = element_line(color = 'black', size = 0.5),  
             legend.position = 'none') +
-      facet_wrap(vars(loc))#+
+      facet_wrap(vars(location))#+
    print(p)
   }
-  
-  # Correlation of plasticities by location
-  for(i in spatiallyCorrectedResponseVars)
-  {
-    df <- summary.df %>%
-      filter(!is.na(.data[[i]])) %>%
-      select(c(genotype, loc, .data[[i]])) %>%
-      pivot_wider(names_from = loc, values_from = .data[[i]]) %>%
-      select(!genotype)
-    cp <- chart.Correlation(df)
-    print(cp)
-  }
-# Plasticities across locs: each nitrogen treatment within a location is an environment
+# Plasticities across locations: each nitrogen treatment within a locationation is an environment
 # Create variable
-locTrt.df <- hybrids.vp %>%
-  unite('locTrt', c(loc, nLvl), sep = '.', remove = FALSE, na.rm = T) %>%
+locationTrt.df <- hybrids.vp %>%
+  unite('locationTrt', c(location, nitrogenTreatment), sep = '.', remove = FALSE, na.rm = T) %>%
   rowwise() %>%
-  mutate(locTrt = case_when(str_detect(locTrt, 'Border')|!str_detect(locTrt, '.') ~ NA, .default = locTrt)) %>%
-  filter(!is.na(genotype) & nLvl!='Border' & !is.na(locTrt) & genotype!='BORDER')
-fw.1 <- FW(y = locTrt.df[[spatiallyCorrectedResponseVars[1]]], VAR = locTrt.df$genotype, ENV = locTrt.df$locTrt, 
+  mutate(locationTrt = case_when(str_detect(locationTrt, 'Border')|!str_detect(locationTrt, '.') ~ NA, .default = locationTrt)) %>%
+  filter(!is.na(genotype) & nitrogenTreatment!='Border' & !is.na(locationTrt) & genotype!='BORDER')
+fw.1 <- FW(y = locationTrt.df[[spatiallyCorrectedResponseVars[1]]], VAR = locationTrt.df$genotype, ENV = locationTrt.df$locationTrt, 
            saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[1]), 
            nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
 pl.allenv <- fw.1$b %>%
@@ -644,7 +668,7 @@ pl.allenv <- fw.1$b %>%
 
 for(i in 2:length(spatiallyCorrectedResponseVars))
 {
-  fw <- FW(y = locTrt.df[[spatiallyCorrectedResponseVars[i]]], VAR = locTrt.df$genotype, ENV = locTrt.df$locTrt, 
+  fw <- FW(y = locationTrt.df[[spatiallyCorrectedResponseVars[i]]], VAR = locationTrt.df$genotype, ENV = locationTrt.df$locationTrt, 
            saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[i]), 
            nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
   pl <- fw$b %>%
@@ -655,24 +679,23 @@ for(i in 2:length(spatiallyCorrectedResponseVars))
 }
 
 # export pl.allenv
-write.table(pl.allenv, 'analysis/PlasticityAcrossLocs.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+write.table(pl.allenv, 'analysis/PlasticityAcrosslocations.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 # get genotypes with the 20 highest and 20 lowest plasticity vals
 high.plasticity <- pl.allenv %>%
-  arrange(desc(yieldPerAc.sp))
+  arrange(desc(yieldPerAcre.sp))
 high.plasticity.genos <- high.plasticity$genotype[1:20]
 
 low.plasticity <- pl.allenv %>%
-  arrange(yieldPerAc.sp)
+  arrange(yieldPerAcre.sp)
 low.plasticity.genos <- low.plasticity$genotype[1:20]
 
-locTrt.df <- locTrt.df %>%
-  mutate(locTrt = factor(locTrt, levels = c( 'Scottsbluff.Low', 'Scottsbluff.Medium', 'Scottsbluff.High', 'North Platte1.Low', 'North Platte1.Medium',
+locationTrt.df <- locationTrt.df %>%
+  mutate(locationTrt = factor(locationTrt, levels = c( 'Scottsbluff.Low', 'Scottsbluff.Medium', 'Scottsbluff.High', 'North Platte1.Low', 'North Platte1.Medium',
                                             'North Platte1.High', 'North Platte2.Low', 'North Platte2.Medium', 'North Platte2.High', 'North Platte3.Low', 
                                             'North Platte3.Medium', 'North Platte3.High', 'Lincoln.Low', 'Lincoln.Medium', 'Lincoln.High', 'Missouri Valley.Medium',
                                             'Ames.Low', 'Ames.Medium', 'Ames.High','Crawfordsville.Low', 'Crawfordsville.Medium', 'Crawfordsville.High')))
 
-# Define 'pretty' labels for response vars
-response_labels <- c('Ear Height (cm)', 'Flag Leaf Height (cm)', 'Tassel Tip Height (cm)', 'Harvest Moisture (%)', 'Test Weight (lbs/bushel)', 'Ear Length (cm)', 'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Shelled Cob Weight (g)', 'Shelled Cob Length (cm)', 'Kernels Per Ear', 'Moisture Corrected Starch (%)', 'Moisture Corrected Protein (%)', 'Moisture Corrected Oil (%)', 'Moisture Corrected Fiber (%)', 'Moisture Corrected Ash (%)', 'Yield (Bushels/Acre)', 'GDD to Anthesis', 'GDD to Silk', 'Kernels Per Row', 'Kernel Rows', 'Moisture Corrected Kernel Mass (g)', 'Moisture Corrected Hundred Kernel Weight (g)', 'ASI (GDD)', 'Days to Anthesis', 'Days to Silk', 'ASI (Days)')
+
 
 for(i in 1:length(spatiallyCorrectedResponseVars))
 {
@@ -684,23 +707,23 @@ for(i in 1:length(spatiallyCorrectedResponseVars))
     arrange(.data[[spatiallyCorrectedResponseVars[i]]])
   low.plasticity.genos <- low.plasticity$genotype[1:20]
   
-  df.plot <- filter(locTrt.df, !is.na(.data[[spatiallyCorrectedResponseVars[i]]])) %>%
-    group_by(genotype, locTrt) %>%
+  df.plot <- filter(locationTrt.df, !is.na(.data[[spatiallyCorrectedResponseVars[i]]])) %>%
+    group_by(genotype, locationTrt) %>%
     summarise('{spatiallyCorrectedResponseVars[i]}' := mean(.data[[spatiallyCorrectedResponseVars[i]]], na.rm = TRUE)) %>%
     rowwise() %>%
     mutate(relPlasticity = case_when(genotype %in% high.plasticity.genos ~ 'High', 
                                      genotype %in% low.plasticity.genos ~ 'Low',
                                      .default = 'Medium'))
-  orderedLocTrts <- df.plot %>%
-    group_by(locTrt) %>%
+  orderedlocationTrts <- df.plot %>%
+    group_by(locationTrt) %>%
     summarise(traitMean = mean(.data[[spatiallyCorrectedResponseVars[i]]])) %>%
     arrange(traitMean)
-  orderedLocTrts <- orderedLocTrts$locTrt
+  orderedlocationTrts <- orderedlocationTrts$locationTrt
 
   # df.plot <- df.plot %>%
-  #   mutate(locTrt = factor(locTrt, levels = orderedLocTrts))
+  #   mutate(locationTrt = factor(locationTrt, levels = orderedlocationTrts))
     
-  p <- ggplot(df.plot, aes(x = locTrt, y = .data[[spatiallyCorrectedResponseVars[i]]], group = locTrt)) +
+  p <- ggplot(df.plot, aes(x = locationTrt, y = .data[[spatiallyCorrectedResponseVars[i]]], group = locationTrt)) +
     geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill = '#00BFC4', na.rm = TRUE) +
     geom_line(data = df.plot, aes(group = genotype, color = relPlasticity), alpha = 0.25) +  
     labs(x = 'Environment', y = response_labels[i]) +
@@ -715,12 +738,12 @@ for(i in 1:length(spatiallyCorrectedResponseVars))
   print(p)
 }
 
-yield.Ames <- locTrt.df %>%
-  filter(!is.na(yieldPerAc.sp) & loc=='Ames') %>%
-  group_by(locTrt, genotype) %>%
-  summarise(yieldPerAc.sp = mean(yieldPerAc.sp)) %>%
-  mutate(locTrt = factor(locTrt, levels = c('Ames.Medium', 'Ames.High', 'Ames.Low'))) %>%
-  ggplot(aes(locTrt, yieldPerAc.sp, group = locTrt)) +
+yield.Ames <- locationTrt.df %>%
+  filter(!is.na(yieldPerAcre.sp) & location=='Ames') %>%
+  group_by(locationTrt, genotype) %>%
+  summarise(yieldPerAcre.sp = mean(yieldPerAcre.sp)) %>%
+  mutate(locationTrt = factor(locationTrt, levels = c('Ames.Medium', 'Ames.High', 'Ames.Low'))) %>%
+  ggplot(aes(locationTrt, yieldPerAcre.sp, group = locationTrt)) +
   geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill = '#00BFC4', na.rm = TRUE) +
   labs(x = 'Environment', y = 'Yield (Bushels/Acre)') +
   theme(text = element_text(size = 16),
@@ -732,81 +755,74 @@ yield.Ames
 
 summary.allenv <- hybrids.vp %>%
   group_by(genotype) %>%
-  summarise(earHt.mu = mean(earHt.sp, na.rm = TRUE),
-            flagLeafHt.mu = mean(flagLeafHt.sp, na.rm = TRUE),
-            tasselTipHt.mu = mean(tasselTipHt.sp, na.rm = TRUE),
+  summarise(earHeight.mu = mean(earHeight.sp, na.rm = TRUE),
             combineMoisture.mu = mean(combineMoisture.sp, na.rm = TRUE),
-            combineTestWt.mu = mean(combineTestWt.sp, na.rm = TRUE),
-            earLen.mu = mean(earLen.sp, na.rm = TRUE),
-            earFillLen.mu = mean(earFillLen.sp, na.rm = TRUE),
+            combineTestWeight.mu = mean(combineTestWeight.sp, na.rm = TRUE),
+            earFillLength.mu = mean(earFillLength.sp, na.rm = TRUE),
             earWidth.mu = mean(earWidth.sp, na.rm = TRUE),
             shelledCobWidth.mu = mean(shelledCobWidth.sp, na.rm = TRUE),
-            shelledCobWt.mu = mean(shelledCobWt.sp, na.rm = TRUE),
-            shelledCobLen.mu = mean(shelledCobLen.sp, na.rm = TRUE),
+            shelledCobMass.mu = mean(shelledCobMass.sp, na.rm = TRUE),
+            earLength.mu = mean(earLength.sp, na.rm = TRUE),
             kernelsPerEar.mu = mean(kernelsPerEar.sp, na.rm = TRUE),
-            moistureCorrectedStarch.mu = mean(moistureCorrectedStarch.sp, na.rm = TRUE),
-            moistureCorrectedProtein.mu = mean(moistureCorrectedProtein.sp, na.rm = TRUE),
-            moistureCorrectedOil.mu = mean(moistureCorrectedOil.sp, na.rm = TRUE),
-            moistureCorrectedFiber.mu = mean(moistureCorrectedFiber.sp, na.rm = TRUE),
-            moistureCorrectedAsh.mu = mean(moistureCorrectedAsh.sp, na.rm = TRUE),
-            yieldPerAc.mu = mean(yieldPerAc.sp, na.rm = TRUE),
+            percentStarch.mu = mean(percentStarch.sp, na.rm = TRUE),
+            percentProtein.mu = mean(percentProtein.sp, na.rm = TRUE),
+            percentOil.mu = mean(percentOil.sp, na.rm = TRUE),
+            percentFiber.mu = mean(percentFiber.sp, na.rm = TRUE),
+            percentAsh.mu = mean(percentAsh.sp, na.rm = TRUE),
+            yieldPerAcre.mu = mean(yieldPerAcre.sp, na.rm = TRUE),
             GDDToAnthesis.mu = mean(GDDToAnthesis.sp, na.rm = TRUE),
             GDDToSilk.mu = mean(GDDToSilk.sp, na.rm = TRUE),
             kernelsPerRow.mu = mean(kernelsPerRow.sp, na.rm = TRUE),
-            kernelRows.mu = mean(kernelRows.sp, na.rm = TRUE),
-            moistureCorrectedKernelMass.mu = mean(moistureCorrectedKernelMass.sp, na.rm = TRUE),
-            moistureCorrectedHundredKernelWt.mu = mean(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-            ASI.GDD.mu = mean(ASI.GDD.sp, na.rm = TRUE),
-            earHt.max = max(earHt.sp, na.rm = TRUE),
-            flagLeafHt.max = max(flagLeafHt.sp, na.rm = TRUE),
-            tasselTipHt.max = max(tasselTipHt.sp, na.rm = TRUE),
+            kernelRowNumber.mu = mean(kernelRowNumber.sp, na.rm = TRUE),
+            moistureCorrectedKernelMassPerEar.mu = mean(moistureCorrectedKernelMassPerEar.sp, na.rm = TRUE),
+            moistureCorrectedHundredKernelMass.mu = mean(moistureCorrectedHundredKernelMass.sp, na.rm = TRUE),
+            anthesisSilkingIntervalGDD.mu = mean(anthesisSilkingIntervalGDD.sp, na.rm = TRUE),
+            earHeight.max = max(earHeight.sp, na.rm = TRUE),
+            flagLeafHeight.max = max(flagLeafHeight.sp, na.rm = TRUE),
             combineMoisture.max = max(combineMoisture.sp, na.rm = TRUE),
-            combineTestWt.max = max(combineTestWt.sp, na.rm = TRUE),
-            earLen.max = max(earLen.sp, na.rm = TRUE),
-            earFillLen.max = max(earFillLen.sp, na.rm = TRUE),
+            combineTestWeight.max = max(combineTestWeight.sp, na.rm = TRUE),
+            earFillLength.max = max(earFillLength.sp, na.rm = TRUE),
             earWidth.max = max(earWidth.sp, na.rm = TRUE),
             shelledCobWidth.max = max(shelledCobWidth.sp, na.rm = TRUE),
-            shelledCobWt.max = max(shelledCobWt.sp, na.rm = TRUE),
-            shelledCobLen.max = max(shelledCobLen.sp, na.rm = TRUE),
+            shelledCobMass.max = max(shelledCobMass.sp, na.rm = TRUE),
+            earLength.max = max(earLength.sp, na.rm = TRUE),
             kernelsPerEar.max = max(kernelsPerEar.sp, na.rm = TRUE),
-            moistureCorrectedStarch.max = max(moistureCorrectedStarch.sp, na.rm = TRUE),
-            moistureCorrectedProtein.max = max(moistureCorrectedProtein.sp, na.rm = TRUE),
-            moistureCorrectedOil.max = max(moistureCorrectedOil.sp, na.rm = TRUE),
-            moistureCorrectedFiber.max = max(moistureCorrectedFiber.sp, na.rm = TRUE),
-            moistureCorrectedAsh.max = max(moistureCorrectedAsh.sp, na.rm = TRUE),
-            yieldPerAc.max = max(yieldPerAc.sp, na.rm = TRUE),
+            percentStarch.max = max(percentStarch.sp, na.rm = TRUE),
+            percentProtein.max = max(percentProtein.sp, na.rm = TRUE),
+            percentOil.max = max(percentOil.sp, na.rm = TRUE),
+            percentFiber.max = max(percentFiber.sp, na.rm = TRUE),
+            percentAsh.max = max(percentAsh.sp, na.rm = TRUE),
+            yieldPerAcre.max = max(yieldPerAcre.sp, na.rm = TRUE),
             GDDToAnthesis.max = max(GDDToAnthesis.sp, na.rm = TRUE),
             GDDToSilk.max = max(GDDToSilk.sp, na.rm = TRUE),
             kernelsPerRow.max = max(kernelsPerRow.sp, na.rm = TRUE),
-            kernelRows.max = max(kernelRows.sp, na.rm = TRUE),
-            moistureCorrectedKernelMass.max = max(moistureCorrectedKernelMass.sp, na.rm = TRUE),
-            moistureCorrectedHundredKernelWt.max = max(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-            ASI.GDD.max = max(ASI.GDD.sp, na.rm = TRUE),
-            earHt.min = min(earHt.sp, na.rm = TRUE),
-            flagLeafHt.min = min(flagLeafHt.sp, na.rm = TRUE),
-            tasselTipHt.min = min(tasselTipHt.sp, na.rm = TRUE),
+            kernelRowNumber.max = max(kernelRowNumber.sp, na.rm = TRUE),
+            moistureCorrectedKernelMassPerEar.max = max(moistureCorrectedKernelMassPerEar.sp, na.rm = TRUE),
+            moistureCorrectedHundredKernelMass.max = max(moistureCorrectedHundredKernelMass.sp, na.rm = TRUE),
+            anthesisSilkingIntervalGDD.max = max(anthesisSilkingIntervalGDD.sp, na.rm = TRUE),
+            earHeight.min = min(earHeight.sp, na.rm = TRUE),
+            flagLeafHeight.min = min(flagLeafHeight.sp, na.rm = TRUE),
             combineMoisture.min = min(combineMoisture.sp, na.rm = TRUE),
-            combineTestWt.min = min(combineTestWt.sp, na.rm = TRUE),
-            earLen.min = min(earLen.sp, na.rm = TRUE),
-            earFillLen.min = min(earFillLen.sp, na.rm = TRUE),
+            combineTestWeight.min = min(combineTestWeight.sp, na.rm = TRUE),
+            earFillLength.min = min(earFillLength.sp, na.rm = TRUE),
             earWidth.min = min(earWidth.sp, na.rm = TRUE),
             shelledCobWidth.min = min(shelledCobWidth.sp, na.rm = TRUE),
-            shelledCobWt.min = min(shelledCobWt.sp, na.rm = TRUE),
-            shelledCobLen.min = min(shelledCobLen.sp, na.rm = TRUE),
+            shelledCobMass.min = min(shelledCobMass.sp, na.rm = TRUE),
+            earLength.min = min(earLength.sp, na.rm = TRUE),
             kernelsPerEar.min = min(kernelsPerEar.sp, na.rm = TRUE),
-            moistureCorrectedStarch.min = min(moistureCorrectedStarch.sp, na.rm = TRUE),
-            moistureCorrectedProtein.min = min(moistureCorrectedProtein.sp, na.rm = TRUE),
-            moistureCorrectedOil.min = min(moistureCorrectedOil.sp, na.rm = TRUE),
-            moistureCorrectedFiber.min = min(moistureCorrectedFiber.sp, na.rm = TRUE),
-            moistureCorrectedAsh.min = min(moistureCorrectedAsh.sp, na.rm = TRUE),
-            yieldPerAc.min = min(yieldPerAc.sp, na.rm = TRUE),
+            percentStarch.min = min(percentStarch.sp, na.rm = TRUE),
+            percentProtein.min = min(percentProtein.sp, na.rm = TRUE),
+            percentOil.min = min(percentOil.sp, na.rm = TRUE),
+            percentFiber.min = min(percentFiber.sp, na.rm = TRUE),
+            percentAsh.min = min(percentAsh.sp, na.rm = TRUE),
+            yieldPerAcre.min = min(yieldPerAcre.sp, na.rm = TRUE),
             GDDToAnthesis.min = min(GDDToAnthesis.sp, na.rm = TRUE),
             GDDToSilk.min = min(GDDToSilk.sp, na.rm = TRUE),
             kernelsPerRow.min = min(kernelsPerRow.sp, na.rm = TRUE),
-            kernelRows.min = min(kernelRows.sp, na.rm = TRUE),
-            moistureCorrectedKernelMass.min = min(moistureCorrectedKernelMass.sp, na.rm = TRUE),
-            moistureCorrectedHundredKernelWt.min = min(moistureCorrectedHundredKernelWt.sp, na.rm = TRUE),
-            ASI.GDD.min = min(ASI.GDD.sp, na.rm = TRUE)) %>%
+            kernelRowNumber.min = min(kernelRowNumber.sp, na.rm = TRUE),
+            moistureCorrectedKernelMassPerEar.min = min(moistureCorrectedKernelMassPerEar.sp, na.rm = TRUE),
+            moistureCorrectedHundredKernelMass.min = min(moistureCorrectedHundredKernelMass.sp, na.rm = TRUE),
+            anthesisSilkingIntervalGDD.min = min(anthesisSilkingIntervalGDD.sp, na.rm = TRUE)) %>%
   filter(!is.na(genotype) & genotype!='BORDER') %>%
   full_join(pl.allenv, join_by(genotype), suffix = c('', ''), keep = FALSE) %>%
   mutate(across(where(is.numeric), ~na_if(., -Inf)))
@@ -842,26 +858,25 @@ for (i in 1:length(response_vars))
   print(p)
 }
 
-unl_phenos <- c('earFillLen', 'earWidth', 'shelledCobWidth', 'shelledCobWt', 'shelledCobLen', 'kernelsPerEar',
-                'moistureCorrectedStarch', 'moistureCorrectedProtein', 'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 
-                'kernelsPerRow', 'kernelRows', 'moistureCorrectedKernelMass', 'moistureCorrectedHundredKernelWt')
-rm_phenos <- c('earHt', 'flagLeafHt', 'tasselTipHt', 'GDDToAnthesis', 'GDDToSilk', 'ASI.GDD')
-dp_phenos <- c('combineMoisture', 'combineTestWt','combineYield')
+unl_phenos <- c('earFillLength', 'earWidth', 'shelledCobWidth', 'shelledCobMass', 'earLength', 'kernelsPerEar',
+                'percentStarch', 'percentProtein', 'percentOil', 'percentFiber', 'percentAsh', 
+                'kernelsPerRow', 'kernelRowNumber', 'moistureCorrectedKernelMassPerEar', 'moistureCorrectedHundredKernelMass')
+rm_phenos <- c('earHeight', 'flagLeafHeight', 'GDDToAnthesis', 'GDDToSilk', 'anthesisSilkingIntervalGDD')
+dp_phenos <- c('combineMoisture', 'combineTestWeight','combineYield')
 response_vars.sb <- response_vars[c(1:5, 7:25)]
 # Look at scottsbluff
-sb <- filter(hybrids, loc=='Scottsbluff' & genotype!='BORDER') %>%
-  select(!contains('earLen')) %>%
+sb <- filter(hybrids, location=='Scottsbluff' & genotype!='BORDER') %>%
   pivot_longer(all_of(response_vars.sb), names_to = 'var', values_to = 'val') %>%
-  mutate(nLvl = factor(nLvl, levels = c('Low', 'Medium', 'High')),
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')),
          source = case_when(var %in% c(unl_phenos, paste0(unl_phenos, '.sp')) ~ 'Chidu/Lina',
                             var %in% c(rm_phenos, paste0(rm_phenos, '.sp')) ~ 'Ramesh',
                             var %in% c(dp_phenos, paste0(dp_phenos, '.sp')) ~ 'Dipak')) %>%
-  select(genotype, var, nLvl, source, val)
+  select(genotype, var, nitrogenTreatment, source, val)
 
 plot.raw <- sb %>%
-  group_by(genotype, var, nLvl, source) %>%
+  group_by(genotype, var, nitrogenTreatment, source) %>%
   summarise(val = mean(val)) %>%
-  ggplot(aes(nLvl, val)) + 
+  ggplot(aes(nitrogenTreatment, val)) + 
   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
   geom_line(color = 'darkgrey') +
   facet_wrap(vars(var), scales = 'free_y') +
@@ -869,9 +884,9 @@ plot.raw <- sb %>%
 plot.raw
 
 plot.sp <- filter(sb, str_detect(var, '.sp')) %>%
-  group_by(genotype, var, nLvl, source) %>%
+  group_by(genotype, var, nitrogenTreatment, source) %>%
   summarise(val = mean(val)) %>%
-  ggplot(aes(nLvl, val)) + 
+  ggplot(aes(nitrogenTreatment, val)) + 
   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
   geom_line(color = 'darkgrey') +
   facet_wrap(vars(var), scales = 'free_y') +
@@ -881,22 +896,22 @@ plot.sp
 # Check correlations of genotypic reps within a treatment 
 ## Pivot
 hybrids.wide <- hybrids.vp %>%
-  filter(nLvl!='Border' & !is.na(genotype)) %>%
-  group_by(genotype, nLvl, loc) %>%
+  filter(nitrogenTreatment!='Border' & !is.na(genotype)) %>%
+  group_by(genotype, nitrogenTreatment, location) %>%
   mutate(rep = 1:n()) %>%
   ungroup() %>%
   pivot_longer(any_of('combineMoisture'), names_to = 'var', values_to = 'val') %>%
-  select(loc, genotype, rep, nLvl, val, var) %>%
-  pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+  select(location, genotype, rep, nitrogenTreatment, val, var) %>%
+  pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
 ## Get plots of r1 & r2
 for (i in response_vars)
 {
   rep1 <- paste0(i, '.1')
   rep2 <- paste0(i, '.2')
   
-  p <- ggplot(hybrids.wide, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) + 
+  p <- ggplot(hybrids.wide, aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) + 
     geom_point() + 
-    facet_wrap(vars(loc))
+    facet_wrap(vars(location))
   print(p)
 }
 # For Scottsbluff only:
@@ -906,21 +921,21 @@ for (i in 'combineMoisture')
   rep2 <- paste0(i, '.2')
   
   p <- hybrids.wide %>%
-    filter(loc=='North Platte1') %>%
-    ggplot(aes(.data[[rep1]], .data[[rep2]], color = nLvl)) + 
+    filter(location=='North Platte1') %>%
+    ggplot(aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) + 
     geom_point() + 
-    facet_wrap(vars(nLvl)) + 
+    facet_wrap(vars(nitrogenTreatment)) + 
     labs(subtitle = paste0('R = ', cor(np1.hips[[rep1]], np1.hips[[rep2]], use = 'complete.obs')))
   print(p)
 }
-np1.hips <- filter(hybrids.wide, loc=='North Platte1')
-sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
+np1.hips <- filter(hybrids.wide, location=='North Platte1')
+sb.hips <- filter(hybrids.wide, location=='Scottsbluff')
 
 # # Test theory that the row numbers inc W to E in Scottsbluff
 # sb <- hybrids %>%
-#   filter(loc=='Scottsbluff') %>%
+#   filter(location=='Scottsbluff') %>%
 #   select(!c(contains('combine'), contains('harvest'), contains('Ht'), contains('GDD'), 
-#             contains('anthesis'), contains('silk'), contains('ASI'), contains('.sp')))
+#             contains('anthesis'), contains('silk'), contains('anthesisSilkingInterval'), contains('.sp')))
 # sb.combine2 <- sb_combine %>%
 #   rowwise() %>%
 #   mutate(row = case_when(row %in% 8:14 ~ row + 3,
@@ -928,39 +943,39 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 #                          .default = row),
 #          range = range + 2)
 # 
-# sb.data2 <- full_join(sb.combine2, sb_h_ft, join_by(plot, loc, field, irrigation, population), 
+# sb.data2 <- full_join(sb.combine2, sb_h_ft, join_by(plot, location, sublocation, irrigationProvided, population), 
 #                       suffix = c('', ''), keep = FALSE)
-# sb.data2 <- full_join(sb.data2, sb_h_ht, join_by(plot, loc, field, irrigation, population), 
+# sb.data2 <- full_join(sb.data2, sb_h_ht, join_by(plot, location, sublocation, irrigationProvided, population), 
 #                       suffix = c('', ''), keep = FALSE)
-# sb.test <- full_join(sb, sb.data2, join_by(range, row, loc, field, irrigation, population))
+# sb.test <- full_join(sb, sb.data2, join_by(range, row, location, sublocation, irrigationProvided, population))
 # sb.test <- sb.test %>%
 #   filter(!is.na(genotype) & genotype!='BORDER') %>%
 #   rowwise() %>%
 #   mutate(plot = plot.x)
 # sb.repcorr <- sb.test %>%
-#   filter(nLvl!='Border') %>%
-#   group_by(genotype, nLvl, loc) %>%
+#   filter(nitrogenTreatment!='Border') %>%
+#   group_by(genotype, nitrogenTreatment, location) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(c(earFillLen, earWidth, shelledCobLen, shelledCobWidth, shelledCobWt, kernelsPerEar, kernelMass, 
-#                  kernelsPerRow, kernelRows, hundredKernelWt, moistureCorrectedStarch, moistureCorrectedProtein, moistureCorrectedOil, moistureCorrectedFiber,
-#                  moistureCorrectedAsh, pctMoistureNIR, moistureCorrectedKernelMass, moistureCorrectedHundredKernelWt, combineYield, combineMoisture, 
-#                  combineTestWt, earHt, flagLeafHt, tasselTipHt), 
+#   pivot_longer(c(earFillLength, earWidth, earLength, shelledCobWidth, shelledCobMass, kernelsPerEar, kernelMass, 
+#                  kernelsPerRow, kernelRowNumber, hundredKernelMass, percentStarch, percentProtein, percentOil, percentFiber,
+#                  percentAsh, percentMoisture, moistureCorrectedKernelMassPerEar, moistureCorrectedHundredKernelMass, combineYield, combineMoisture, 
+#                  combineTestWeight, earHeight, flagLeafHeight), 
 #                names_to = 'var', values_to = 'val') %>%
-#   select(loc, genotype, rep, nLvl, val, var) %>%
-#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
-# sb.test_phenos <- c('earFillLen', 'earWidth', 'shelledCobLen', 'shelledCobWidth', 'shelledCobWt', 'kernelsPerEar', 'kernelMass', 
-#                     'kernelsPerRow', 'kernelRows', 'hundredKernelWt', 'moistureCorrectedStarch', 'moistureCorrectedProtein', 
-#                     'moistureCorrectedOil', 'moistureCorrectedFiber', 'moistureCorrectedAsh', 'pctMoistureNIR', 'moistureCorrectedKernelMass',
-#                     'moistureCorrectedHundredKernelWt', 'combineYield', 'combineMoisture', 
-#                     'combineTestWt', 'earHt', 'flagLeafHt', 'tasselTipHt')
+#   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
+#   pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+# sb.test_phenos <- c('earFillLength', 'earWidth', 'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelsPerEar', 'kernelMass', 
+#                     'kernelsPerRow', 'kernelRowNumber', 'hundredKernelMass', 'percentStarch', 'percentProtein', 
+#                     'percentOil', 'percentFiber', 'percentAsh', 'percentMoisture', 'moistureCorrectedKernelMassPerEar',
+#                     'moistureCorrectedHundredKernelMass', 'combineYield', 'combineMoisture', 
+#                     'combineTestWeight', 'earHeight', 'flagLeafHeight')
 # for(i in sb.test_phenos)
 # {
 #   rep1 <- paste0(i, '.1')
 #   rep2 <- paste0(i, '.2')
-#   p <- ggplot(sb.repcorr, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#   p <- ggplot(sb.repcorr, aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) +
 #     geom_point() +
-#     facet_wrap(vars(nLvl)) +
+#     facet_wrap(vars(nitrogenTreatment)) +
 #     labs(title = 'Scottsbluff Corrected')
 #   print(p)
 # }
@@ -980,7 +995,7 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 #          match = case_when(genotype.index==genotype.qr ~ TRUE, 
 #                            .default = FALSE)) 
 # # the qrs match the index we have from lisa
-# # check if the field was planted starting in the SW corner but labeled from the SE corner
+# # check if the sublocation was planted starting in the SW corner but labeled from the SE corner
 # # then reassign qrs to pair plot numbers correctly (and thus genotypes correctly)
 # sb.sw <- sb #%>%
 #   filter(!c(plot %in% c(1021:1025, 1191:1195, 1361:1365))) %>%
@@ -1014,23 +1029,23 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 # sb.sw <- full_join(sb.sw, sb.qrs, join_by(plot), keep = FALSE, suffix = c('', '')) 
 # 
 # sb.sw.repcorr <- sb.sw %>%
-#   group_by(genotype, nLvl, loc) %>%
+#   group_by(genotype, nitrogenTreatment, location) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
 #   pivot_longer(any_of(unl_phenos), 
 #                names_to = 'var', values_to = 'val') %>%
-#   select(loc, genotype, rep, nLvl, val, var) %>%
+#   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
 #   filter(!is.na(val)) %>%
-#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+#   pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
 # for(i in unl_phenos[1:length(unl_phenos)])
 # {
 #   rep1 <- paste0(i, '.1')
 #   print(i)
 #   rep2 <- paste0(i, '.2')
 #   
-#   p <- ggplot(sb.sw.repcorr, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#   p <- ggplot(sb.sw.repcorr, aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) +
 #     geom_point() + 
-#     facet_wrap(vars(nLvl)) +
+#     facet_wrap(vars(nitrogenTreatment)) +
 #     labs(title = 'Scottsbluff SW Plant Start')
 #   print(p)
 #   
@@ -1038,7 +1053,7 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 # }
 # 
 # # Check correlation of traits collected at UNL for sites other than SB + MV
-# corr.df <- filter(hybrids.wide, loc!='Scottsbluff' & loc!='Missouri Valley')
+# corr.df <- filter(hybrids.wide, location!='Scottsbluff' & location!='Missouri Valley')
 # 
 # for(i in unl_phenos)
 # {
@@ -1048,7 +1063,7 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 #   print(cor(corr.df[[rep1]], corr.df[[rep2]], use = 'complete.obs'))
 # }
 # 
-# np1.df <- filter(hybrids.wide, loc=='North Platte1')
+# np1.df <- filter(hybrids.wide, location=='North Platte1')
 # 
 # for(i in unl_phenos)
 # {
@@ -1109,22 +1124,22 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 # sb.sw.all <- full_join(sb.sw.all, sb_h_ht, join_by(plot), suffix = c('', '.ht'), keep = FALSE) %>%
 #   select(!ends_with('.ht'))
 # 
-# sb.sw.all.vars <- c(response_vars.sb[c(1:16, 20:23)], 'combineYield', 'combineMoisture', 'combineTestWt')
+# sb.sw.all.vars <- c(response_vars.sb[c(1:16, 20:23)], 'combineYield', 'combineMoisture', 'combineTestWeight')
 # sb.sw.long <- sb.sw.all %>%
 #   pivot_longer(any_of(sb.sw.all.vars), names_to = 'var', values_to = 'val') %>%
-#   mutate(nLvl = factor(nLvl, levels = c('Low', 'Medium', 'High')),
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')),
 #          source = case_when(var %in% c(unl_phenos, paste0(unl_phenos, '.sp')) ~ 'Chidu/Lina',
 #                             var %in% c(rm_phenos, paste0(rm_phenos, '.sp')) ~ 'Ramesh',
 #                             var %in% c(dp_phenos, paste0(dp_phenos, '.sp')) ~ 'Dipak')) %>%
-#   group_by(genotype, var, nLvl) %>%
+#   group_by(genotype, var, nitrogenTreatment) %>%
 #   mutate(rep = 1:n()) %>%
-#   select(genotype, var, nLvl, source, val, rep)
+#   select(genotype, var, nitrogenTreatment, source, val, rep)
 # 
 # plot.raw <- sb.sw.long %>%
-#   filter(!is.na(nLvl)) %>%
-#   group_by(genotype, var, nLvl, source) %>%
+#   filter(!is.na(nitrogenTreatment)) %>%
+#   group_by(genotype, var, nitrogenTreatment, source) %>%
 #   summarise(val = mean(val)) %>%
-#   ggplot(aes(nLvl, val)) + 
+#   ggplot(aes(nitrogenTreatment, val)) + 
 #   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
 #   geom_line(color = 'darkgrey') +
 #   facet_wrap(vars(var), scales = 'free_y') +
@@ -1132,7 +1147,7 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 # plot.raw
 # 
 # sb.sw.wide <- pivot_wider(sb.sw.long, 
-#                           id_cols = c(nLvl, genotype), 
+#                           id_cols = c(nitrogenTreatment, genotype), 
 #                           names_from = c(var, rep), 
 #                           values_from = val, 
 #                           names_sep = '.')
@@ -1140,27 +1155,27 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 # {
 #   rep1 <- paste0(i, '.1')
 #   rep2 <- paste0(i, '.2')
-#   p <- ggplot(sb.sw.wide, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#   p <- ggplot(sb.sw.wide, aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) +
 #     geom_point() +
-#     facet_wrap(vars(nLvl))
+#     facet_wrap(vars(nitrogenTreatment))
 #   print(p)
 #   print(i)
 #   print(cor(sb.sw.wide[[rep1]], sb.sw.wide[[rep2]], use = 'complete.obs'))
 # }
 # 
-# plotRepCorr(sb.sw.all, 'nLvl', 'genotype', sb.sw.all.vars, 'loc')
+# plotRepCorr(sb.sw.all, 'nitrogenTreatment', 'genotype', sb.sw.all.vars, 'location')
 # 
 # np1.df <- hybrids.vp %>%
-#   filter(nLvl!='Border' & !is.na(genotype) & loc=='North Platte1') %>%
-#   group_by(genotype, nLvl, loc) %>%
+#   filter(nitrogenTreatment!='Border' & !is.na(genotype) & location=='North Platte1') %>%
+#   group_by(genotype, nitrogenTreatment, location) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(c(combineYield, combineMoisture, combineTestWt, earHt, flagLeafHt), 
+#   pivot_longer(c(combineYield, combineMoisture, combineTestWeight, earHeight, flagLeafHeight), 
 #                names_to = 'var', values_to = 'val') %>%
-#   select(loc, genotype, rep, nLvl, val, var) %>%
-#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+#   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
+#   pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
 #   
-# for(i in c('combineYield', 'combineMoisture', 'combineTestWt', 'earHt', 'flagLeafHt', 'tasselTipHt'))
+# for(i in c('combineYield', 'combineMoisture', 'combineTestWeight', 'earHeight', 'flagLeafHeight'))
 # {
 #   print(i)
 #   rep1 <- paste0(i, '.1')
@@ -1169,25 +1184,25 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 # }
 # 
 # # Now onto figuring out what is up with the MV data
-# ## Let's look at the height data, but not flip the reps-- maybe the field was planted with rep2 and rep1's locations flipped & Lisa knew but forgot to mention
+# ## Let's look at the height data, but not flip the reps-- maybe the sublocation was planted with rep2 and rep1's locationations flipped & Lisa knew but forgot to mention
 # mv.plantData.hyb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx', 
 #                                sheet = '4211', 
-#                                col_names = c('row', 'range', 'flagLeafHt', 'earHt', 'rep', 'plot', 'genotype'),
+#                                col_names = c('row', 'range', 'flagLeafHeight', 'earHeight', 'rep', 'plot', 'genotype'),
 #                                col_types = c('skip', 'skip', 'numeric', 'numeric', 'skip', 'skip', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
 #                                skip = 1)
 # mv.plantData.hyb <- mv.plantData.hyb %>%
 #   rowwise() %>%
-#   mutate(plot = case_when(rep==1 ~ plot + 100,
-#                           rep==2 ~ plot + 200,
-#                           .default = plot),
+#   mutate(plotNumber = case_when(rep==1 ~ plotNumber + 100,
+#                           rep==2 ~ plotNumber + 200,
+#                           .default = plotNumber),
 #          genotype = str_to_upper(genotype),
-#          loc = 'Missouri Valley',
-#          field = 'Hybrid HIPS',
-#          nLvl = 'Medium',
-#          irrigation = 'Dryland',
+#          location = 'Missouri Valley',
+#          sublocation = 'Hybrid HIPS',
+#          nitrogenTreatment = 'Medium',
+#          irrigationProvided = 'Dryland',
 #          population = 'Hybrid',
-#          flagLeafHt = case_when(flagLeafHt=='n/a - solar' ~ NA, .default = flagLeafHt),
-#          earHt = case_when(earHt=='n/a - solar' ~ NA, .default = earHt)) %>%
+#          flagLeafHeight = case_when(flagLeafHeight=='n/a - solar' ~ NA, .default = flagLeafHeight),
+#          earHeight = case_when(earHeight=='n/a - solar' ~ NA, .default = earHeight)) %>%
 #   fixGenos(hips1.5_genoFixKey)
 # 
 # # Pivot wide
@@ -1195,15 +1210,15 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 #   group_by(genotype) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(c(earHt, flagLeafHt), 
+#   pivot_longer(c(earHeight, flagLeafHeight), 
 #                names_to = 'var', values_to = 'val') %>%
-#   select(loc, genotype, rep, nLvl, val, var) %>%
-#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
-# for(i in c('earHt', 'flagLeafHt'))
+#   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
+#   pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+# for(i in c('earHeight', 'flagLeafHeight'))
 # {
 #   rep1 <- paste0(i, '.1')
 #   rep2 <- paste0(i, '.2')
-#   p <- ggplot(mv.ht.wide, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#   p <- ggplot(mv.ht.wide, aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) +
 #     geom_point()
 #   print(p)
 #   print(i)
@@ -1211,10 +1226,10 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 # }
 # # What happens if we bind UNL data to plant data by range & row & use plot numbers and genotype info from plant data?
 # mv <- hybrids %>%
-#   filter(loc=='Missouri Valley') %>%
-#   select(c(any_of(unl_phenos), 'qr', 'plot', 'rep', 'range', 'row', 'genotype'))
+#   filter(location=='Missouri Valley') %>%
+#   select(c(any_of(unl_phenos), 'qr', 'plotNumber', 'rep', 'range', 'row', 'genotype'))
 # mv.unl.ht <- full_join(mv, mv.plantData.hyb, join_by(range, row), suffix = c('.unl', '.ht'), keep = FALSE) %>%
-#   mutate(plot = plot.ht,
+#   mutate(plotNumber = plotNumber.ht,
 #          genotype = genotype.ht,
 #          rep = rep.ht) %>%
 #   select(!c(contains('.unl'), contains('.ht'))) %>%
@@ -1226,14 +1241,14 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 #   ungroup() %>%
 #   pivot_longer(any_of(unl_phenos), 
 #                names_to = 'var', values_to = 'val') %>%
-#   select(loc, genotype, rep, nLvl, val, var) %>%
-#   pivot_wider(id_cols = c(loc, nLvl, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
+#   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
+#   pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
 # 
 # for(i in unl_phenos)
 # {
 #   rep1 <- paste0(i, '.1')
 #   rep2 <- paste0(i, '.2')
-#   p <- ggplot(mv.unl.ht.wide, aes(.data[[rep1]], .data[[rep2]], color = nLvl)) +
+#   p <- ggplot(mv.unl.ht.wide, aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) +
 #     geom_point()
 #   print(p)
 #   print(i)
@@ -1246,24 +1261,24 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 #   rep2 <- paste0(i, '.2')
 #   print(i)
 #   df <- hybrids.wide %>%
-#     filter(loc=='Missouri Valley')
+#     filter(location=='Missouri Valley')
 #   print(cor(df[[rep1]], df[[rep2]], use = 'complete.obs'))
 # } 
 # # Some really good correlations between genotypic reps & some really bad ones -- is this something wrong or is it a feature of this data?
 # # Okay, now what if we bind the combine data in by range and row
 # mv.all <- full_join(mv.unl.ht, mv_hyb, join_by(range, row)) %>%
-#   mutate(loc = 'Missouri Valley',
-#          field = 'Hybrid HIPS')
+#   mutate(location = 'Missouri Valley',
+#          sublocation = 'Hybrid HIPS')
 # mv.all.wide <- mv.all %>%
 #   group_by(genotype) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(any_of(c(dp_phenos, 'earHt', 'flagLeafHt', unl_phenos)), 
+#   pivot_longer(any_of(c(dp_phenos, 'earHeight', 'flagLeafHeight', unl_phenos)), 
 #                names_to = 'var', values_to = 'val') %>%
 #   select(genotype, val, var, rep) %>%
 #   pivot_wider(id_cols = c(genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
 # # Low corrs here possibly due to outliers
-# for (i in c(dp_phenos, 'earHt', 'flagLeafHt', unl_phenos))
+# for (i in c(dp_phenos, 'earHeight', 'flagLeafHeight', unl_phenos))
 # {
 #   rep1 <- paste0(i, '.1')
 #   rep2 <- paste0(i, '.2')
@@ -1278,17 +1293,17 @@ sb.hips <- filter(hybrids.wide, loc=='Scottsbluff')
 # # how was the combine info correct but not the rest? this is my own curiosity
 # mv.c.qr <- full_join(mv, mv_hyb, join_by(range, row), keep = FALSE, suffix = c('.unl', '.c'))
 # 
-# ames.hyb <- filter(hybrids, loc=='Ames')
+# ames.hyb <- filter(hybrids, location=='Ames')
 # ames.hyb.genoLvl <- ames.hyb %>%
-#   group_by(genotype, nLvl) %>%
-#   summarise(yieldPerAc = mean(yieldPerAc)) %>%
-#   pivot_wider(names_from = nLvl, values_from = yieldPerAc) %>%
+#   group_by(genotype, nitrogenTreatment) %>%
+#   summarise(yieldPerAcre = mean(yieldPerAcre)) %>%
+#   pivot_wider(names_from = nitrogenTreatment, values_from = yieldPerAcre) %>%
 #   mutate(oppositeNResponse = case_when(Low > High ~ TRUE, .default = FALSE))
 # ames.hyb.check <- filter(ames.hyb, genotype %in% c('F42 X MO17', 'B73 X PHZ51', 'LH185 X LH82', 'PHP02 X PHJ89'))
 
 # Function to plot correlation of the first 2 reps of a genotype within a treatment
 # Data is the data frame, subset as desired. This should be an object in your R environment
-# Treatment Var may be nitrogen level, location, year, etc. Each unique combination of these and genotype will be a point in the plot. This should be a string
+# Treatment Var may be nitrogen level, locationation, year, etc. Each unique combination of these and genotype will be a point in the plot. This should be a string
 # Genotype is the name of the genotype column. This should be a string.
 # Phenotypes is a string vector containing the names of the phenotype columns to plot.
 # Note: in the case genotype(s) have more than 2 replicates, only 2 of the replicates are used here
