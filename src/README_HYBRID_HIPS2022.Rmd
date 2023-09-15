@@ -189,20 +189,6 @@ sheets 'RawData (4-Row)' and 'RawData (2-Row)' in the file
 'YTMC_Lisa_Plot_Coordinates_v4.xlsx' and uses the number sequence at the
 end of the QR.
 
-### latituded
-
-This is the latitude of the plot. This information for Missouri Valley,
-Crawfordsville, and Ames was taken from the sheets 'RawData (4-Row)' and
-'RawData (2-Row)' for hybrids and inbreds, respectively, in the file
-'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
-
-### longitude
-
-This is the longitude of the plot. This information for Missouri Valley,
-Crawfordsville, and Ames was taken from the sheets 'RawData (4-Row)' and
-'RawData (2-Row)' for hybrids and inbreds, respectively, in the file
-'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
-
 ### genotype
 
 This is the genotype grown in the plot.This information for the Lincoln
@@ -915,7 +901,7 @@ previous crop was soybeans.
 
 Upon request, the following data is available:
 
-![](images/Screenshot%20from%202023-09-07%2020-43-55.png)
+![](images/AddlDataAvailability.png)
 
 # Data Generation and Processing Notes
 
@@ -1106,3 +1092,19 @@ respectively, in the file 'YTMC_Lisa_Plot_Coordinates_v4.xlsx'. This
 information for North Platte was taken from the sheets 'No Irr Data',
 'Reduced Irr Data', and 'Full Data' in the file
 '2022_Schnable_HIPS_data_v4.xlsx'.
+
+### latitude
+
+This is the latitude of the plot. This information for Missouri Valley,
+Crawfordsville, and Ames was taken from the sheets 'RawData (4-Row)' and
+'RawData (2-Row)' for hybrids and inbreds, respectively, in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
+
+### longitude
+
+This is the longitude of the plot. This information for Missouri Valley,
+Crawfordsville, and Ames was taken from the sheets 'RawData (4-Row)' and
+'RawData (2-Row)' for hybrids and inbreds, respectively, in the file
+'YTMC_Lisa_Plot_Coordinates_v4.xlsx'.
+
+### 

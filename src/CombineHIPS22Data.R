@@ -3427,3 +3427,8 @@ rename(qrCode = qr,
 
 # Export version 3.4 --- only remaining changes for hybrids will be to add lat/lon for NE sites if extracted from satellite plot extractions
 write.table(hips_v3.4, 'outData/HIPS_2022_V3.4_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
+
+hips_v3.5 <- select(hips_v3.4, !c(latitude, longitude))
+
+# Export version 3.5 - FINAL version for hybrids
+write.table(hips_v3.5, 'outData/HIPS_2022_V3.5_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
