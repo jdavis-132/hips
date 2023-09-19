@@ -2397,7 +2397,7 @@ for(currFile in cob.files)
 
 cob.df <- cob.df %>%
   rowwise() %>%
-  mutate(qr = case_when(str_detect(qr, '2-') & !str_detect(qr, '22-') ~ str_replace(qr, '2-', '22-'), .default = qr)) %>%
+  mutate(qr = case_when(str_detect(qr, '2-') & str_detect(qr, '22-', negate = TRUE) ~ str_replace(qr, '2-', '22-'), .default = qr)) %>%
   group_by(qr, loc, plot, irrigation) %>%
   summarise(shelledCobLen = mean(shelledCobLen, na.rm = TRUE),
             shelledCobWidth = mean(shelledCobWidth, na.rm = TRUE),
@@ -3345,7 +3345,7 @@ hips_v3.2_inb <- filter(hips_v3.2, population=='Inbred')
 
 # Export inbred and hybrid tables
 write.table(hips_v3.3_hyb, 'outData/HIPS_2022_V3.3_HYBRIDS.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
-write.table(hips_v3.2_inb, 'outData/HIPS_2022_V3.2_INBREDS.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+write.table(hips_v3.2_inb, 'outData/HIPS_2022_V3.3_INBREDS.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
 
 hips_v3.4 <- hips_v3.3_hyb %>%
   mutate(sublocation = case_when(field=='Full Irrigation' ~ 'North Platte1',
