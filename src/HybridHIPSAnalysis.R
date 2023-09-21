@@ -591,7 +591,7 @@ for (i in 1:length(response_vars))
           legend.position = 'right',
           legend.background = element_rect(color = 'black'))
   print(plot.scatter)
-  ggsave(filename = paste0('analysis/', response, 'PlasticityVsMean.png'), plot = plot.scatter, width = 1745, height = 948, units = 'px')
+  ggsave(filename = paste0('analysis/', response, 'PlasticityVsMean.png'), plot = plot.scatter)
 }
   
 # Correlation of plasticities by location
@@ -771,7 +771,7 @@ for(i in 1:length(response_vars))
           panel.grid = element_blank(),
           text = element_text(size = 16))
   print(p)
-  ggsave(paste0('analysis/', response_vars[i], 'ViolinWithRelativePlasticity.svg'), width = 1745, height = 945, units = 'px', plot = p)
+  ggsave(paste0('analysis/', response_vars[i], 'ViolinWithRelativePlasticity.svg'), plot = p)
 }
 
 # yield.Ames <- locationTreatment.df %>%
@@ -904,7 +904,7 @@ for (i in 1:length(response_vars))
           legend.position = 'right',
           legend.background = element_rect(color = 'black'))
   print(p)
-  ggsave(paste0('analysis/', response_vars[i], 'PlasticityVsMeanMinMax.png'), width = 532, height = 594, units = 'px', plot = p)
+  ggsave(paste0('analysis/', response_vars[i], 'PlasticityVsMeanMinMax.png'), plot = p)
 }
 
 for(i in 1:length(response_vars))
@@ -927,7 +927,7 @@ for(i in 1:length(response_vars))
           legend.background = element_rect(color = 'black'))
   print(p)
   
-  ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), width = 1745, height = 945, units = 'px', plot = p)
+  ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
 }
 
 # unl_phenos <- c('earFillLength', 'earWidth', 'shelledCobWidth', 'shelledCobMass', 'earLength', 'kernelsPerEar',
