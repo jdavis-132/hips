@@ -77,11 +77,11 @@ idOutliers <- function(data, trait)
   return(df_filt)
 }
 
-outliers <- list()
-for (i in c('kernelMassPerEar', 'hundredKernelMass'))
-{
-  outliers[[i]] <- idOutliers(hybrids, i)
-}
+# outliers <- list()
+# for (i in c('kernelMassPerEar', 'hundredKernelMass'))
+# {
+#   outliers[[i]] <- idOutliers(hybrids, i)
+# }
 
 # Histograms
 for(i in c('kernelMassPerEar', 'hundredKernelMass'))
@@ -272,7 +272,7 @@ plotVarCorr(hybrids, flagLeafHeight, earHeight)
 #   as_tibble(rownames = 'plotNumber')
 
 # Okay, now let's write a function to get the spatial BLUES for each response on a plot level
-# Will fit model by individual locationation, nitrogen treatment combination
+# Will fit model by individual location, nitrogen treatment combination
 getSpatialCorrections <- function(data, response)
 {
   # Declare empty df and levels of locations
@@ -359,15 +359,15 @@ partitionVariance2 <- function(df, response)
 vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
 spatiallyCorrectedResponseVars <- paste0(response_vars, '.sp')
 
-# Is there shrinkage toward the mean of a treatment ?
-for(i in 1:length(response_vars))
-{
-  sp.correction.plot <- ggplot(hybrids, (aes(.data[[response_vars[i]]], .data[[spatiallyCorrectedResponseVars[i]]], color = nitrogenTreatment))) +
-    geom_point() +
-    geom_abline(slope = 1) +
-    facet_wrap(vars(location)) 
-  print(sp.correction.plot)
-}
+# # Is there shrinkage toward the mean of a treatment ?
+# for(i in 1:length(response_vars))
+# {
+#   sp.correction.plot <- ggplot(hybrids, (aes(.data[[response_vars[i]]], .data[[spatiallyCorrectedResponseVars[i]]], color = nitrogenTreatment))) +
+#     geom_point() +
+#     geom_abline(slope = 1) +
+#     facet_wrap(vars(location)) 
+#   print(sp.correction.plot)
+# }
 
 #spatiallyCorrectedResponseVars <- paste0(spatiallyCorrectedResponseVars, '.blup')
 # Don't use the spatially corrected vals when there's fitting issues
@@ -388,6 +388,9 @@ hybrids.vp <- hybrids %>%
          combineMoisture.sp = case_when(location=='Ames' ~ combineMoisture, 
                                         .default = combineMoisture.sp),
          nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'), ordered = TRUE))
+# Export spatially corrected values
+write.table(hybrids.vp, 'analysis/hybridDataWithSpatiallyCorrectedPhenotypes.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
+hybrids.vp <- read.table('analysis/hybridDataWithSpatiallyCorrectedPhenotypes.csv', header = TRUE, sep = ',')
 
 for(i in spatiallyCorrectedResponseVars)
 {
@@ -420,7 +423,23 @@ for(i in spatiallyCorrectedResponseVars)
   print(p)
 }
 
-sb.np2 <- filter(hybrids.vp, location=='North Platte2'|(location=='Scottsbluff' & nitrogenTreatment %in% c('Low', 'Medium'))|(location=='Scottsbluff' & nitrogenTreatment=='High' & yieldPerAcre.sp >=100))
+# sb.np2 <- filter(hybrids.vp, location=='North Platte2'|(location=='Scottsbluff' & nitrogenTreatment %in% c('Low', 'Medium'))|(location=='Scottsbluff' & nitrogenTreatment=='High' & yieldPerAcre.sp >=100))
+
+# Those didn't really work, so let's use the formula Bernardo gives on page 190: LS estimate
+estimatePlasticity <- function(data, trait, envs)
+{
+  mu <- mean(data[[trait]], na.rm = TRUE)
+  df <- data %>%
+    group_by(.data[[envs]]) %>%
+    mutate(traitMean = mean(.data[[trait]], na.rm = TRUE)) %>%
+    ungroup() %>%
+    arrange(genotype, traitMean) %>%
+    group_by(genotype)
+  denominator <- sum((unique(df$traitMean) - mu)^2, na.rm = TRUE)
+  df <- df %>%
+    summarise('{trait}':= sum(.data[[trait]] * (traitMean - mu), na.rm = TRUE)/denominator)
+  return(df)
+}
 
 getNitrogenPlasticityByLocation <- function(data, response, locations)
 {
@@ -433,13 +452,15 @@ getNitrogenPlasticityByLocation <- function(data, response, locations)
     location.df <- filter(data, !is.na(genotype) & location==currlocation & nitrogenTreatment!='Border' & !is.na(nitrogenTreatment)) %>%
       group_by(genotype, nitrogenTreatment) %>%
       summarise('{response}' := mean(.data[[response]], na.rm = TRUE))
-    fw <- FW(y = location.df[[response]], VAR = location.df$genotype, ENV = location.df$nitrogenTreatment, saveAt = paste0('analysis/gibbs-samples-', response, '-', currlocation),
-             nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656, saveVAR = c(1:2), saveENV = c(1:2))
-    pl <- fw$b %>%
-      as_tibble(rownames = 'genotype') %>%
-      mutate(location = currlocation, 
-             '{response.out}':= Init1) %>%
-      select(!Init1)
+    # fw <- FW(y = location.df[[response]], VAR = location.df$genotype, ENV = location.df$nitrogenTreatment, saveAt = paste0('analysis/gibbs-samples-', response, '-', currlocation),
+    #          nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656, saveVAR = c(1:2), saveENV = c(1:2))
+    # pl <- fw$b %>%
+    #   as_tibble(rownames = 'genotype') %>%
+    #   mutate(location = currlocation, 
+    #          '{response.out}':= Init1) %>%
+    #   select(!Init1)
+    pl <- estimatePlasticity(location.df, response, 'nitrogenTreatment') %>%
+      mutate(location = currlocation)
     response.df <- bind_rows(response.df, pl)
   }
   return(response.df)
@@ -484,7 +505,6 @@ for(i in spatiallyCorrectedResponseVars[2:length(spatiallyCorrectedResponseVars)
 {
   plasticity.df <- full_join(plasticity.df, getNitrogenPlasticityByLocation(hybrids.pl, i, nitrogenPlasticityLocations), join_by(genotype, location), suffix = c('', ''), keep = FALSE)
 }
-
 summary.df <- hybrids.vp %>%
   group_by(location, genotype) %>%
   summarise(earHeight.mu = mean(earHeight.sp, na.rm = TRUE),
@@ -568,16 +588,16 @@ summary.df <- filter(summary.df, location!='Missouri Valley')
 summary.df <- summary.df %>%
   mutate(across(where(is.numeric), ~na_if(., -Inf)))
 # Export summary.df so we don't have to re-run FW regression
-write.table(summary.df, 'analysis/genotypeSummaryByLocation.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE, na = '')
+# write.table(summary.df, 'analysis/genotypeSummaryByLocation.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE, na = '')
 
-summary.df <- read.table('analysis/genotypeSummaryByLocation.tsv', sep = '\t', header = TRUE)
+# summary.df <- read.table('analysis/genotypeSummaryByLocation.tsv', sep = '\t', header = TRUE)
   
 # Plot nitrogen plasticity by location vs. trait mean
 for (i in 1:length(response_vars))
 {
   response <- response_vars[i]
   response.mu <- paste0(response, '.mu')
-  response.pl <- paste0(response, '.pl')
+  response.pl <- paste0(response, '.sp')
   plot.scatter <- ggplot(summary.df, aes(.data[[response.mu]], .data[[response.pl]])) +
     geom_point(color = '#00BFC4') + 
     geom_hline(yintercept = 1) +
@@ -592,14 +612,14 @@ for (i in 1:length(response_vars))
           legend.position = 'right',
           legend.background = element_rect(color = 'black'))
   print(plot.scatter)
-  # ggsave(filename = paste0('analysis/', response, 'PlasticityVsMean.png'), plot = plot.scatter)
+  ggsave(filename = paste0('analysis/', response, 'PlasticityVsMean.png'), plot = plot.scatter)
 }
   
 # Correlation of plasticities by location
 
 for(i in response_vars)
 {
-response.pl <- paste0(i, '.pl')
+response.pl <- paste0(i, '.sp')
 df <- summary.df %>%
   filter(!is.na(.data[[response.pl]])) %>%
   select(c(genotype, location, all_of(response.pl))) %>%
@@ -612,7 +632,7 @@ print(cp)
 cm <- cor(df)
 cp2 <- ggcorrplot(cm, title = response.pl)
 print(cp2)
-# ggsave(paste0('analysis/', i, 'NitrogenPlasticityCorrelationAcrossLocs.png'), plot = cp2, width = 1745, height = 945, units = 'px')
+ggsave(paste0('analysis/', i, 'NitrogenPlasticityCorrelationAcrossLocs.png'), plot = cp2)
 }
   
 # df.n <- filter(hybrids.vp, location!='Missouri Valley')
@@ -683,44 +703,46 @@ print(cp2)
 #       facet_wrap(vars(location))#+
 #    print(p)
 #   }
-# Plasticities across locations: each nitrogen treatment within a locationation is an environment
+# Plasticities across locations: each nitrogen treatment within a location is an environment
 # Create variable
 locationTreatment.df <- hybrids.pl %>%
   unite('locationTreatment', c(location, nitrogenTreatment), sep = '.', remove = FALSE, na.rm = T) %>%
   rowwise() %>%
   mutate(locationTreatment = case_when(str_detect(locationTreatment, 'Border')|!str_detect(locationTreatment, '.') ~ NA, .default = locationTreatment)) %>%
   filter(!is.na(genotype) & nitrogenTreatment!='Border' & !is.na(locationTreatment) & genotype!='BORDER')
-fw.1 <- FW(y = locationTreatment.df[[spatiallyCorrectedResponseVars[1]]], VAR = locationTreatment.df$genotype, ENV = locationTreatment.df$locationTreatment, 
-           saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[1]), 
-           nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
-pl.allenv <- fw.1$b %>%
-  as_tibble(rownames = 'genotype') %>%
-  mutate('{spatiallyCorrectedResponseVars[1]}':= Init1) %>%
-  select(!Init1)
+# fw.1 <- FW(y = locationTreatment.df[[spatiallyCorrectedResponseVars[1]]], VAR = locationTreatment.df$genotype, ENV = locationTreatment.df$locationTreatment, 
+#            saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[1]), 
+#            nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
+# pl.allenv <- fw.1$b %>%
+#   as_tibble(rownames = 'genotype') %>%
+#   mutate('{spatiallyCorrectedResponseVars[1]}':= Init1) %>%
+#   select(!Init1)
+pl.allenv <- estimatePlasticity(locationTreatment.df, spatiallyCorrectedResponseVars[1], 'locationTreatment')
 
 for(i in 2:length(spatiallyCorrectedResponseVars))
 {
-  fw <- FW(y = locationTreatment.df[[spatiallyCorrectedResponseVars[i]]], VAR = locationTreatment.df$genotype, ENV = locationTreatment.df$locationTreatment, 
-           saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[i]), 
-           nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
-  pl <- fw$b %>%
-    as_tibble(rownames = 'genotype') %>%
-    mutate('{spatiallyCorrectedResponseVars[i]}':= Init1) %>%
-    select(!Init1)
+  # fw <- FW(y = locationTreatment.df[[spatiallyCorrectedResponseVars[i]]], VAR = locationTreatment.df$genotype, ENV = locationTreatment.df$locationTreatment, 
+  #          saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[i]), 
+  #          nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
+  # pl <- fw$b %>%
+  #   as_tibble(rownames = 'genotype') %>%
+  #   mutate('{spatiallyCorrectedResponseVars[i]}':= Init1) %>%
+  #   select(!Init1)
+  pl <- estimatePlasticity(locationTreatment.df, spatiallyCorrectedResponseVars[i], 'locationTreatment')
   pl.allenv <- full_join(pl.allenv, pl, join_by(genotype), suffix = c('', ''), keep = FALSE)
 }
 
 colnames(pl.allenv) <- str_replace_all(colnames(pl.allenv), '.sp', '.pl')
 # export pl.allenv
-write.table(pl.allenv, 'analysis/PlasticityAcrossLocations.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
-pl.allenv <- read.table('analysis/PlasticityAcrossLocations.tsv', sep = '\t', header = TRUE)
-# get genotypes with the 20 highest and 20 lowest plasticity vals
+# write.table(pl.allenv, 'analysis/PlasticityAcrossLocations.tsv', quote = FALSE, sep = '\t', row.names = FALSE, col.names = TRUE)
+# pl.allenv <- read.table('analysis/PlasticityAcrossLocations.tsv', sep = '\t', header = TRUE)
+# get genotypes with the 20 highest and 20 lowest plasticity vals for yield
 high.plasticity <- pl.allenv %>%
-  arrange(desc(yieldPerAcre.sp))
+  arrange(desc(yieldPerAcre.pl))
 high.plasticity.genos <- high.plasticity$genotype[1:20]
 
 low.plasticity <- pl.allenv %>%
-  arrange(yieldPerAcre.sp)
+  arrange(yieldPerAcre.pl)
 low.plasticity.genos <- low.plasticity$genotype[1:20]
 
 locationTreatment.df <- locationTreatment.df %>%
@@ -728,8 +750,6 @@ locationTreatment.df <- locationTreatment.df %>%
                                             'North Platte1.High', 'North Platte2.Low', 'North Platte2.Medium', 'North Platte2.High', 'North Platte3.Low', 
                                             'North Platte3.Medium', 'North Platte3.High', 'Lincoln.Low', 'Lincoln.Medium', 'Lincoln.High', 'Missouri Valley.Medium',
                                             'Ames.Low', 'Ames.Medium', 'Ames.High','Crawfordsville.Low', 'Crawfordsville.Medium', 'Crawfordsville.High')))
-
-
 
 for(i in 1:length(response_vars))
 {
@@ -875,8 +895,8 @@ summary.allenv <- hybrids.vp %>%
   mutate(across(where(is.numeric), ~na_if(., -Inf)))
 
 # Export summary.allenv
-write.table(summary.allenv, 'analysis/genotypeSummaryAcrossLocations.csv', sep = ',', row.names = FALSE, col.names = TRUE)
-summary.allenv <- read.csv('analysis/genotypeSummaryAcrossLocations.csv')
+# write.table(summary.allenv, 'analysis/genotypeSummaryAcrossLocations.csv', sep = ',', row.names = FALSE, col.names = TRUE)
+# summary.allenv <- read.csv('analysis/genotypeSummaryAcrossLocations.csv')
 # Tradeoff between plasticity and good performance - there doesn't seem to be one
 for (i in 1:length(response_vars))
 {
@@ -907,7 +927,7 @@ for (i in 1:length(response_vars))
           legend.position = 'right',
           legend.background = element_rect(color = 'black'))
   print(p)
-  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityVsMeanMinMax.png'), plot = p)
+  ggsave(paste0('analysis/', response_vars[i], 'PlasticityVsMeanMinMax.png'), plot = p)
 }
 
 for(i in 1:length(response_vars))
@@ -919,9 +939,6 @@ for(i in 1:length(response_vars))
   
   p <- ggplot(summary.allenv, aes(.data[[response.mu]], .data[[response.pl]])) + 
     geom_point(color = '#00BFC4') +
-    geom_hline(yintercept = 1, color = 'red') +
-    geom_hline(yintercept = 0, color = 'red') +
-    geom_hline(yintercept = mean(summary.allenv[[response.pl]], na.rm = TRUE), color = 'blue') +
     labs(x = meanLabel, y = plasticityLabel) + 
     theme(text = element_text(color = 'black', size = 16),
           axis.line = element_line(color = 'black', size = 1),
@@ -933,7 +950,7 @@ for(i in 1:length(response_vars))
           legend.background = element_rect(color = 'black'))
   print(p)
   
-  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+  ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
 }
 
 # #OLS plasticity estimate using FW package
@@ -1015,27 +1032,31 @@ for(i in 1:length(response_vars))
   print(p)
 }
 
-getExpectedPlasticityMean <- function(data, trait, envs)
-{
-  numEnvs <- length(unique(data[[envs]]))
-  orderedEnvs <- data %>%
-    group_by(.data[[envs]]) %>%
-    summarise(traitMean = mean(.data[[trait]], na.rm = TRUE)) %>%
-    arrange(traitMean)
-  
-  meanSlope <- (orderedEnvs$traitMean[22] - orderedEnvs$traitMean[1])/numEnvs
-  return(meanSlope)
-}
-
-meanPlasticityVals <- tibble(trait = NA, naive = NaN, FW = NaN, .rows = length(response_vars))
-for(i in 1:length(response_vars))
-{
-  response.sp <- paste0(response_vars[i], '.sp')
-  response.pl <- paste0(response_vars[i], '.pl')
-  meanPlasticityVals$trait[i] <- response_vars[i]
-  meanPlasticityVals$naive[i] <- getExpectedPlasticityMean(locationTreatment.df, response.sp, 'locationTreatment')
-  meanPlasticityVals$FW[i] <- mean(pl.allenv[[response.pl]], na.rm = TRUE)
-}
+# getExpectedPlasticityMean <- function(data, trait, envs)
+# {
+#   numEnvs <- length(unique(data[[envs]]))
+#   orderedEnvs <- data %>%
+#     group_by(.data[[envs]]) %>%
+#     summarise(traitMean = mean(.data[[trait]], na.rm = TRUE)) %>%
+#     arrange(traitMean)
+#   
+#   meanSlope <- (orderedEnvs$traitMean[22] - orderedEnvs$traitMean[1])/numEnvs
+#   return(meanSlope)
+# }
+# 
+# meanPlasticityVals <- tibble(trait = NA, naive = NaN, FW = NaN, .rows = length(response_vars))
+# for(i in 1:length(response_vars))
+# {
+#   response.sp <- paste0(response_vars[i], '.sp')
+#   response.pl <- paste0(response_vars[i], '.pl')
+#   meanPlasticityVals$trait[i] <- response_vars[i]
+#   meanPlasticityVals$naive[i] <- getExpectedPlasticityMean(locationTreatment.df, response.sp, 'locationTreatment')
+#   meanPlasticityVals$FW[i] <- mean(pl.allenv[[response.pl]], na.rm = TRUE)
+# }
+# 
+# 
+# #Let's try with lm
+# fit.yield <- lm(yieldPerAcre.sp ~ genotype + genotype:locationTreatment, data = locationTreatment.df)
 # unl_phenos <- c('earFillLength', 'earWidth', 'shelledCobWidth', 'shelledCobMass', 'earLength', 'kernelsPerEar',
 #                 'percentStarch', 'percentProtein', 'percentOil', 'percentFiber', 'percentAsh', 
 #                 'kernelsPerRow', 'kernelRowNumber', 'moistureCorrectedKernelMassPerEar', 'moistureCorrectedHundredKernelMass')
