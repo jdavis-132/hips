@@ -8,6 +8,7 @@ library(FW)
 library(PerformanceAnalytics)
 library(ggcorrplot)
 library(svglite)
+library(readxl)
 # Read in data and order nitrogenTreatment
 # Also calculate moisture correction for kernelMass and hundredKernelMass
 hybrids <- read.csv('outData/HIPS_2022_V3.5_HYBRIDS.csv')
@@ -303,7 +304,7 @@ getSpatialCorrections <- function(data, response)
       print(currTrt)
       model <- SpATS(response, genotype = 'plotNumber', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)), data = location.n.df)
       # Plot model
-      plot.SpATS(model, main = paste0(response, ':', currlocation, ':', currTrt))
+      # plot.SpATS(model, main = paste0(response, ':', currlocation, ':', currTrt))
       # Extract BLUPS
       summary <- summary(model)
       if(cor(location.n.df[[response]], summary$fitted + summary$residuals) > 0.99)
@@ -437,7 +438,7 @@ getNitrogenPlasticityByLocation <- function(data, response, locations)
     pl <- fw$b %>%
       as_tibble(rownames = 'genotype') %>%
       mutate(location = currlocation, 
-             '{response.out}':= Init1 + 1) %>%
+             '{response.out}':= Init1) %>%
       select(!Init1)
     response.df <- bind_rows(response.df, pl)
   }
@@ -591,7 +592,7 @@ for (i in 1:length(response_vars))
           legend.position = 'right',
           legend.background = element_rect(color = 'black'))
   print(plot.scatter)
-  ggsave(filename = paste0('analysis/', response, 'PlasticityVsMean.png'), plot = plot.scatter)
+  # ggsave(filename = paste0('analysis/', response, 'PlasticityVsMean.png'), plot = plot.scatter)
 }
   
 # Correlation of plasticities by location
@@ -611,7 +612,7 @@ print(cp)
 cm <- cor(df)
 cp2 <- ggcorrplot(cm, title = response.pl)
 print(cp2)
-ggsave(paste0('analysis/', i, 'NitrogenPlasticityCorrelationAcrossLocs.png'), plot = cp2, width = 1745, height = 945, units = 'px')
+# ggsave(paste0('analysis/', i, 'NitrogenPlasticityCorrelationAcrossLocs.png'), plot = cp2, width = 1745, height = 945, units = 'px')
 }
   
 # df.n <- filter(hybrids.vp, location!='Missouri Valley')
@@ -684,7 +685,7 @@ ggsave(paste0('analysis/', i, 'NitrogenPlasticityCorrelationAcrossLocs.png'), pl
 #   }
 # Plasticities across locations: each nitrogen treatment within a locationation is an environment
 # Create variable
-locationTreatment.df <- hybrids.vp %>%
+locationTreatment.df <- hybrids.pl %>%
   unite('locationTreatment', c(location, nitrogenTreatment), sep = '.', remove = FALSE, na.rm = T) %>%
   rowwise() %>%
   mutate(locationTreatment = case_when(str_detect(locationTreatment, 'Border')|!str_detect(locationTreatment, '.') ~ NA, .default = locationTreatment)) %>%
@@ -873,7 +874,9 @@ summary.allenv <- hybrids.vp %>%
   full_join(pl.allenv, join_by(genotype), suffix = c('', ''), keep = FALSE) %>%
   mutate(across(where(is.numeric), ~na_if(., -Inf)))
 
-
+# Export summary.allenv
+write.table(summary.allenv, 'analysis/genotypeSummaryAcrossLocations.csv', sep = ',', row.names = FALSE, col.names = TRUE)
+summary.allenv <- read.csv('analysis/genotypeSummaryAcrossLocations.csv')
 # Tradeoff between plasticity and good performance - there doesn't seem to be one
 for (i in 1:length(response_vars))
 {
@@ -904,7 +907,7 @@ for (i in 1:length(response_vars))
           legend.position = 'right',
           legend.background = element_rect(color = 'black'))
   print(p)
-  ggsave(paste0('analysis/', response_vars[i], 'PlasticityVsMeanMinMax.png'), plot = p)
+  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityVsMeanMinMax.png'), plot = p)
 }
 
 for(i in 1:length(response_vars))
@@ -916,6 +919,9 @@ for(i in 1:length(response_vars))
   
   p <- ggplot(summary.allenv, aes(.data[[response.mu]], .data[[response.pl]])) + 
     geom_point(color = '#00BFC4') +
+    geom_hline(yintercept = 1, color = 'red') +
+    geom_hline(yintercept = 0, color = 'red') +
+    geom_hline(yintercept = mean(summary.allenv[[response.pl]], na.rm = TRUE), color = 'blue') +
     labs(x = meanLabel, y = plasticityLabel) + 
     theme(text = element_text(color = 'black', size = 16),
           axis.line = element_line(color = 'black', size = 1),
@@ -927,9 +933,109 @@ for(i in 1:length(response_vars))
           legend.background = element_rect(color = 'black'))
   print(p)
   
-  ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
 }
 
+# #OLS plasticity estimate using FW package
+# fw.OLS1 <- FW(y = locationTreatment.df[[spatiallyCorrectedResponseVars[1]]], VAR = locationTreatment.df$genotype, ENV = locationTreatment.df$locationTreatment, 
+#            method = 'OLS', saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[1]), 
+#            nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
+# plOLS.allenv <- fw.OLS1$b %>%
+#   as_tibble(rownames = 'genotype') %>%
+#   mutate('{spatiallyCorrectedResponseVars[1]}':= V1) %>%
+#   select(!V1)
+# 
+# for(i in 2:length(spatiallyCorrectedResponseVars))
+# {
+#   fwOLS <- FW(y = locationTreatment.df[[spatiallyCorrectedResponseVars[i]]], VAR = locationTreatment.df$genotype, ENV = locationTreatment.df$locationTreatment, 
+#            method = 'OLS', saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[i]), 
+#            nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
+#   pl <- fwOLS$b %>%
+#     as_tibble(rownames = 'genotype') %>%
+#     mutate('{spatiallyCorrectedResponseVars[i]}':= V1) %>%
+#     select(!V1)
+#   plOLS.allenv <- full_join(pl.allenv, pl, join_by(genotype), suffix = c('', ''), keep = FALSE)
+# }
+# 
+# colnames(plOLS.allenv) <- str_replace_all(colnames(pl.allenv), '.pl', '.OLS')
+# 
+# summary.allenv <- full_join(summary.allenv, plOLS.allenv[, 1:27], join_by(genotype), suffix = c('', ''), keep = FALSE)
+# 
+# for(i in 1:length(response_vars))
+# {
+#   response.mu <- paste0(response_vars[i], '.mu')
+#   meanLabel <- paste0('Mean ', response_labels[i])
+#   response.pl <- paste0(response_vars[i], '.OLS')
+#   plasticityLabel <- paste0(response_labels[i], ' Linear Plasticity')
+#   
+#   p <- ggplot(summary.allenv, aes(.data[[response.mu]], .data[[response.pl]])) + 
+#     geom_point(color = '#00BFC4') +
+#     geom_hline(yintercept = 1, color = 'red') +
+#     geom_hline(yintercept = 0, color = 'red') +
+#     geom_hline(yintercept = mean(summary.allenv[[response.pl]], na.rm = TRUE), color = 'blue') +
+#     labs(x = meanLabel, y = plasticityLabel) + 
+#     theme(text = element_text(color = 'black', size = 16),
+#           axis.line = element_line(color = 'black', size = 1),
+#           panel.background = element_blank(),
+#           panel.border = element_blank(),
+#           panel.grid = element_blank(), 
+#           plot.background = element_blank(), 
+#           legend.position = 'right',
+#           legend.background = element_rect(color = 'black'))
+#   print(p)
+#   
+#   #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+# }
+
+# Okay, let's plot the lines to see if the plasticity values make sense
+for(i in 1:length(response_vars))
+{
+  response.sp <- paste0(response_vars[i], '.sp')
+  orderedLocationTreatments <- locationTreatment.df %>%
+    group_by(locationTreatment) %>%
+    summarise(traitMean = mean(.data[[response.sp]], na.rm = TRUE)) %>%
+    arrange(traitMean)
+  envDf <- locationTreatment.df %>%
+    mutate(locationTreatment = factor(locationTreatment, levels = orderedLocationTreatments$locationTreatment))
+  
+  env1 <- envDf %>%
+    filter(locationTreatment==orderedLocationTreatments$locationTreatment[1])
+  env1Mean <- mean(env1[[response.sp]], na.rm = TRUE)
+  print(paste0('env1Mean: ',env1Mean))
+  env22 <- envDf %>%
+    filter(locationTreatment==orderedLocationTreatments$locationTreatment[22])
+  env22Mean <- mean(env22[[response.sp]], na.rm = TRUE)
+  print(paste0('env22Mean: ', env22Mean))
+  meanSlope = (env22Mean - env1Mean)/22
+  print('meanSlope: ', meanSlope)
+ 
+  p <- ggplot(aes(locationTreatment, .data[[response.sp]], group = genotype), data = envDf) +
+    geom_line(color = '#00BFC4') + 
+    geom_abline(slope = meanSlope, intercept = env1Mean, color = 'red')
+  print(p)
+}
+
+getExpectedPlasticityMean <- function(data, trait, envs)
+{
+  numEnvs <- length(unique(data[[envs]]))
+  orderedEnvs <- data %>%
+    group_by(.data[[envs]]) %>%
+    summarise(traitMean = mean(.data[[trait]], na.rm = TRUE)) %>%
+    arrange(traitMean)
+  
+  meanSlope <- (orderedEnvs$traitMean[22] - orderedEnvs$traitMean[1])/numEnvs
+  return(meanSlope)
+}
+
+meanPlasticityVals <- tibble(trait = NA, naive = NaN, FW = NaN, .rows = length(response_vars))
+for(i in 1:length(response_vars))
+{
+  response.sp <- paste0(response_vars[i], '.sp')
+  response.pl <- paste0(response_vars[i], '.pl')
+  meanPlasticityVals$trait[i] <- response_vars[i]
+  meanPlasticityVals$naive[i] <- getExpectedPlasticityMean(locationTreatment.df, response.sp, 'locationTreatment')
+  meanPlasticityVals$FW[i] <- mean(pl.allenv[[response.pl]], na.rm = TRUE)
+}
 # unl_phenos <- c('earFillLength', 'earWidth', 'shelledCobWidth', 'shelledCobMass', 'earLength', 'kernelsPerEar',
 #                 'percentStarch', 'percentProtein', 'percentOil', 'percentFiber', 'percentAsh', 
 #                 'kernelsPerRow', 'kernelRowNumber', 'moistureCorrectedKernelMassPerEar', 'moistureCorrectedHundredKernelMass')
