@@ -778,29 +778,31 @@ for(i in 1:length(response_vars))
     mutate(relativePlasticity = case_when(genotype %in% high.plasticity.genos ~ 'High', 
                                      genotype %in% low.plasticity.genos ~ 'Low',
                                      .default = 'Medium'))
-  orderedlocationTreatments <- df.plot %>%
-    group_by(locationTreatment) %>%
-    summarise(traitMean = mean(.data[[response.sp]])) %>%
-    arrange(traitMean)
-  orderedlocationTreatments <- orderedlocationTreatments$locationTreatment
+  # orderedlocationTreatments <- df.plot %>%
+  #   group_by(locationTreatment) %>%
+  #   summarise(traitMean = mean(.data[[response.sp]])) %>%
+  #   arrange(traitMean)
+  # orderedlocationTreatments <- orderedlocationTreatments$locationTreatment
 
   # df.plot <- df.plot %>%
   #   mutate(locationTreatment = factor(locationTreatment, levels = orderedlocationTreatments))
     
   p <- ggplot(df.plot, aes(x = locationTreatment, y = .data[[response.sp]], group = locationTreatment)) +
-    geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill = '#00BFC4', na.rm = TRUE) +
+    geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill = moma.colors('VanGogh', 1), na.rm = TRUE) +
     geom_line(data = df.plot, aes(group = genotype, color = relativePlasticity), alpha = 0.25) +  
     labs(x = 'Environment', y = response_labels[i]) +
-    scale_color_manual(values = c('#C77CFF', '#F8766D', 'azure4')) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
-          axis.line = element_line(color = 'black', size = 1),  
+    scale_color_manual(values = moma.colors('VanGogh', 3)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, color = 'white'),
+          axis.line = element_line(color = 'white', size = 1),  
           legend.position = 'none',
           plot.background = element_rect(fill = 'transparent', color = NA),
           panel.background = element_rect(fill = 'transparent', color = NA),
           panel.grid = element_blank(),
-          text = element_text(size = 16))
+          text = element_text(size = 14, color = 'white'),
+          axis.text.y = element_text(size = 14, color = 'white'),
+          axis.ticks = element_line(color = 'white'))
   print(p)
-  ggsave(paste0('analysis/', response_vars[i], 'ViolinWithRelativePlasticity.svg'), plot = p)
+  #ggsave(paste0('analysis/', response_vars[i], 'ViolinWithRelativePlasticity.svg'), plot = p)
 }
 
 # yield.Ames <- locationTreatment.df %>%
@@ -938,7 +940,7 @@ for (i in 1:length(response_vars))
   # ggsave(paste0('analysis/', response_vars[i], 'PlasticityVsMeanMinMax.png'), plot = p)
 }
 
-for(i in 1:length(response_vars))
+for(i in 16)
 {
   response.mu <- paste0(response_vars[i], '.mu')
   meanLabel <- paste0('Mean ', response_labels[i])
@@ -946,9 +948,11 @@ for(i in 1:length(response_vars))
   plasticityLabel <- paste0(response_labels[i], ' Linear Plasticity')
   
   p <- ggplot(summary.allenv, aes(.data[[response.mu]], .data[[response.pl]])) + 
-    geom_point(color = '#00BFC4') +
+    geom_point(color = moma.colors('VanGogh', 1)) +
+    geom_hline(yintercept = 1) +
+    scale_y_continuous(limits = c(0.45, 1.75)) +
     labs(x = meanLabel, y = plasticityLabel) + 
-    theme(text = element_text(color = 'black', size = 16),
+    theme(text = element_text(color = 'black', size = 14),
           axis.line = element_line(color = 'black', size = 1),
           panel.background = element_blank(),
           panel.border = element_blank(),
@@ -958,7 +962,7 @@ for(i in 1:length(response_vars))
           legend.background = element_rect(color = 'black'))
   print(p)
   
-  ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
 }
 
 # #OLS plasticity estimate using FW package
