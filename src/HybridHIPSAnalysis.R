@@ -1536,3 +1536,46 @@ for(i in 1:length(response_vars))
 #          P2InPanel = P2 %in% inbreds.genos,
 #          BothInPanel = case_when(P1InPanel & P2InPanel ~ TRUE, .default = FALSE))
 # sum(hybrid.genos$BothInPanel)
+
+
+# Which phenotypes are more plastic?
+for(i in response_vars[-1])
+{
+  response.max <- paste0(i, '.max')
+  response.min <- paste0(i, '.min')
+  response.mu <- paste0(i, '.mu')
+  response.nr <- paste0(i, '_nr')
+  
+  summary.allenv <- summary.allenv %>%
+    rowwise() %>%
+    mutate('{response.nr}' := ((.data[[response.max]] - .data[[response.min]])/.data[[response.mu]])*100)
+}
+
+normalizedRatio <- summary.allenv %>%
+  ungroup() %>%
+  select(ends_with('_nr')) %>%
+  summarise(across(ends_with('_nr'), .fns = list(mean = ~mean(., na.rm = TRUE), sd = ~sd(., na.rm = TRUE)))) %>%
+  pivot_longer(cols = everything(), 
+               names_to = 'col',
+               values_to = 'val') %>%
+  mutate(summaryType = str_split_i(col, '_', 3)) %>%
+  mutate(var = str_split_i(col, '_', 1)) %>%
+  pivot_wider(id_cols = var, names_from = summaryType, values_from = val) %>%
+  mutate(label = response_labels) %>%
+  filter(var != 'anthesisSilkingIntervalGDD')
+
+p.normRatio <- ggplot(normalizedRatio, aes(label, mean)) +
+  geom_col(fill = moma.colors('VanGogh', 1), color = moma.colors('VanGogh', 1)) +
+  geom_errorbar(aes(x = label, ymin = mean - sd, ymax = mean + sd)) +
+  labs(x = 'Phenotype', y = 'Range/Mean (%)') +
+  theme_minimal() +
+  theme(line = element_line(color = 'black'),
+        text = element_text(color = 'black', size = 14), 
+        axis.text.x = element_text(color = 'black', angle = 90),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        plot.background = element_blank())
+p.normRatio
+
+ggsave('analysis/RangeToMean.jpeg', width = 9.02, height = 7.04)
