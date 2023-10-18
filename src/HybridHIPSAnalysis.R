@@ -714,10 +714,9 @@ print(cp2)
 # Plasticities across locations: each nitrogen treatment within a location is an environment
 # Create variable
 locationTreatment.df <- hybrids.pl %>%
-  unite('locationTreatment', c(location, nitrogenTreatment), sep = '.', remove = FALSE, na.rm = T) %>%
+  filter((nitrogenTreatment!='Border') & (genotype!='BORDER') & (!is.na(location) & (!is.na(nitrogenTreatment)))) %>%
   rowwise() %>%
-  mutate(locationTreatment = case_when(str_detect(locationTreatment, 'Border')|!str_detect(locationTreatment, '.') ~ NA, .default = locationTreatment)) %>%
-  filter(!is.na(genotype) & nitrogenTreatment!='Border' & !is.na(locationTreatment) & genotype!='BORDER')
+  mutate(locationTreatment = str_c(location, '.', nitrogenTreatment))
 # fw.1 <- FW(y = locationTreatment.df[[spatiallyCorrectedResponseVars[1]]], VAR = locationTreatment.df$genotype, ENV = locationTreatment.df$locationTreatment, 
 #            saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[1]), 
 #            nIter = 51000, burnIn = 1000, thin = 10, seed = 3425656)
@@ -754,7 +753,7 @@ low.plasticity <- pl.allenv %>%
 low.plasticity.genos <- low.plasticity$genotype[1:20]
 
 locationTreatment.df <- locationTreatment.df %>%
-  mutate(locationTreatment = factor(locationTreatment, levels = c('Scottsbluff.Low', 'Scottsbluff.Medium', 'Scottsbluff.High', 'North Platte.1Low', 'North Platte1.Medium',
+  mutate(locationTreatment = factor(locationTreatment, levels = c('Scottsbluff.Low', 'Scottsbluff.Medium', 'Scottsbluff.High', 'North Platte1.Low', 'North Platte1.Medium',
                                             'North Platte1.High', 'North Platte2.Low', 'North Platte2.Medium', 'North Platte2.High', 'North Platte3.Low', 
                                             'North Platte3.Medium', 'North Platte3.High', 'Lincoln.Low', 'Lincoln.Medium', 'Lincoln.High', 'Missouri Valley.Medium',
                                             'Ames.Low', 'Ames.Medium', 'Ames.High','Crawfordsville.Low', 'Crawfordsville.Medium', 'Crawfordsville.High')),
@@ -779,7 +778,8 @@ for(i in 16)
     rowwise() %>%
     mutate(relativePlasticity = case_when(genotype %in% high.plasticity.genos ~ 'High', 
                                      genotype %in% low.plasticity.genos ~ 'Low',
-                                     .default = 'Medium'))
+                                     .default = 'Medium') %>%
+             factor(levels = c('Low', 'Medium', 'High')))
   # orderedlocationTreatments <- df.plot %>%
   #   group_by(locationTreatment) %>%
   #   summarise(traitMean = mean(.data[[response.sp]])) %>%
@@ -790,13 +790,12 @@ for(i in 16)
   #   mutate(locationTreatment = factor(locationTreatment, levels = orderedlocationTreatments))
   nColors <- moma.colors('vonHeyl')
   nColors <- c(nColors[3], nColors[2], nColors[1])
-  plasticityColors <- moma.colors('van')
   p <- ggplot(df.plot, aes(x = locationTreatment, y = .data[[response.sp]], fill = nitrogenTreatment, group = locationTreatment)) +
     geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE, color = 'white') +
     geom_line(data = df.plot, aes(group = genotype, color = relativePlasticity), alpha = 0.25) +  
     labs(x = 'Environment', y = response_labels[i]) +
     scale_fill_manual(values = nColors) +
-    scale_color_manual(values = moma.colors('VanGogh', 3)) +
+    scale_color_manual(values = moma.colors('ustwo', 3)) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, color = 'white'),
           axis.line = element_line(color = 'white', linewidth = 1),  
           legend.position = 'none',
@@ -809,6 +808,7 @@ for(i in 16)
   print(p)
   #ggsave(paste0('analysis/', response_vars[i], 'ViolinWithRelativePlasticity.svg'), plot = p)
 }
+
 
 
 
