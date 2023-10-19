@@ -4,13 +4,13 @@ library(SpATS)
 library(tidyverse)
 library(viridis)
 library(scales)
-library(FW)
 library(PerformanceAnalytics)
 library(ggcorrplot)
 library(svglite)
 library(readxl)
 library(MoMAColors)
 library(wesanderson)
+library(ragg)
 
 # Read in data and order nitrogenTreatment
 # Also calculate moisture correction for kernelMass and hundredKernelMass
@@ -55,10 +55,20 @@ response_vars <- c('earHeight', 'flagLeafHeight', 'combineMoisture', 'combineTes
 locations <- c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville')
 
 # Define 'pretty' labels for response vars
-response_labels <- c('Ear Height (cm)', 'Flag Leaf Height (cm)', 'Harvest Moisture (%)', 'Test Weight (lbs/bushel)', 'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Shelled Cob Mass (g)', 'Ear Length (cm)', 'Kernels Per Ear', 'Starch (%)', 'Protein (%)', 'Oil (%)', 'Fiber (%)', 'Ash (%)', 'Yield (Bushels/Acre)', 'GDD to Anthesis', 'GDD to Silk', 'Kernels Per Row', 'Kernel Row Number', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)', 'Anthesis Silking Interval (GDD)')
+response_labels <- c('Ear Height (cm)', 'Flag Leaf Height (cm)', 'Harvest Moisture (%)', 'Test Weight (lbs/bushel)', 
+                     'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Shelled Cob Mass (g)', 
+                     'Ear Length (cm)', 'Kernels Per Ear', 'Starch (%)', 'Protein (%)', 'Oil (%)', 'Fiber (%)', 
+                     'Ash (%)', 'Yield (Bushels/Acre)', 'GDD to Anthesis', 'GDD to Silk', 'Kernels Per Row', 
+                     'Kernel Row Number', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)', 
+                     'Anthesis Silking Interval (GDD)')
 
 mapResponse(hybrids, c('percentProtein'))
 
+yieldComponents <- c('earFillLength', 'earWidth', 'shelledCobWidth', 'earLength', 'kernelsPerEar', 'yieldPerAcre', 
+                     'kernelsPerRow', 'kernelRowNumber', 'moistureCorrectedKernelMassPerEar', 'moistureCorrectedHundredKernelMass')
+yieldComponentsLabels <- c('Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Ear Length (cm)',
+                           'Kernels Per Ear', 'Yield (Bushels/Acre)', 'Kernels Per Row', 'Kernel Row Number', 
+                           'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)')
 for(i in response_vars)
 {
   print(i)
@@ -396,28 +406,38 @@ hybrids.vp <- hybrids %>%
 write.table(hybrids.vp, 'analysis/hybridDataWithSpatiallyCorrectedPhenotypes.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
 hybrids.vp <- read.table('analysis/hybridDataWithSpatiallyCorrectedPhenotypes.csv', header = TRUE, sep = ',')
 
-for(i in 1:length(spatiallyCorrectedResponseVars))
+for(i in 1:length(yieldComponents))
 {
-  vc_all <- bind_rows(vc_all, partitionVariance2(hybrids.vp, spatiallyCorrectedResponseVars[i], response_labels[i]))
+  var <- paste0(yieldComponents[i], '.sp')
+  vc_all <- bind_rows(vc_all, partitionVariance2(hybrids.vp, var, yieldComponentsLabels[i]))
 }
 vc_all <- vc_all %>%
   rowwise() %>%
-  mutate(grp = case_when(grp=='genotype' ~ 'Genotype Main Effect',
-                         grp=='location' ~ 'Location Main Effect',
-                         grp=='location:genotype' ~ 'Genotype x Location Interaction',
-                         grp=='nitrogenTreatment:genotype' ~ 'Genotype x Nitrogen Treatment Interaction',
-                         grp=='nitrogenTreatment:location' ~ 'Nitrogen Treatment Main Efffect',
-                         .default = grp))
+  mutate(grp = case_when(grp=='genotype' ~ 'Genotype',
+                         grp=='location' ~ 'Location',
+                         grp=='location:genotype' ~ 'Genotype x Location',
+                         grp=='nitrogenTreatment:genotype' ~ 'Genotype x Nitrogen',
+                         grp=='nitrogenTreatment:location' ~ 'Nitrogen Treatment',
+                         .default = grp) %>%
+           factor(levels = c('Location', 'Genotype', 
+                  'Nitrogen Treatment', 
+                  'Genotype x Location', 'Genotype x Nitrogen', 'Residual')),
+         label = factor(label, levels = c('Yield (Bushels/Acre)', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)',
+                                          'Kernels Per Ear', 'Kernel Row Number', 'Kernels Per Row', 'Ear Length (cm)', 
+                                          'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)')))
 vp.plot <- ggplot(vc_all, aes(label, pctVar, fill = grp)) +
   geom_col(position = 'stack') + 
   scale_fill_manual(values = moma.colors('VanGogh')) +
-  labs(x = 'Phenotype', y = 'Percent Variance', fill = 'Variance Component') +
+  labs(x = 'Phenotype', y = 'Percent Variance', fill = '') +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, color = 'black'),
         axis.text.y = element_text(color = 'black'),
-        text = element_text(size = 14, color = 'black'))
+        text = element_text(size = 14, color = 'black'),
+        legend.position = 'top',
+        line = element_line(color = 'black', linewidth = 1),
+        panel.grid = element_blank())
 vp.plot
-ggsave('analysis/variancePartitioning.jpeg', width = 9, height = 7.35)
+ggsave('analysis/variancePartitioning.jpeg', width = multiplier*9, height = 4.75, units = 'in', dpi = 1000)
 
 for(i in spatiallyCorrectedResponseVars)
 {
@@ -947,7 +967,7 @@ for (i in 1:length(response_vars))
   print(p)
   # ggsave(paste0('analysis/', response_vars[i], 'PlasticityVsMeanMinMax.png'), plot = p)
 }
-
+agg_png('analysis/yieldPerAcrePlasticityAcrossLocationsVsMean.png', width = 0.715, height = 0.488, units = 'in', scaling =  0.1, res = 1000)
 for(i in 16)
 {
   response.mu <- paste0(response_vars[i], '.mu')
@@ -960,7 +980,8 @@ for(i in 16)
     geom_hline(yintercept = 1) +
     scale_y_continuous(limits = c(0.45, 1.75)) +
     labs(x = meanLabel, y = plasticityLabel) + 
-    theme(text = element_text(color = 'black', size = 14),
+    theme(text = element_text(color = 'black'),
+          axis.text = element_text(color = 'black'),
           axis.line = element_line(color = 'black', size = 1),
           panel.background = element_blank(),
           panel.border = element_blank(),
@@ -973,6 +994,7 @@ for(i in 16)
   #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
 }
 
+dev.off()
 # #OLS plasticity estimate using FW package
 # fw.OLS1 <- FW(y = locationTreatment.df[[spatiallyCorrectedResponseVars[1]]], VAR = locationTreatment.df$genotype, ENV = locationTreatment.df$locationTreatment, 
 #            method = 'OLS', saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[1]), 
@@ -1569,8 +1591,12 @@ normalizedRatio <- summary.allenv %>%
   mutate(summaryType = str_split_i(col, '_', 3)) %>%
   mutate(var = str_split_i(col, '_', 1)) %>%
   pivot_wider(id_cols = var, names_from = summaryType, values_from = val) %>%
-  mutate(label = response_labels) %>%
-  filter(var != 'anthesisSilkingIntervalGDD')
+  filter(var %in% yieldComponents) %>%
+  mutate(label = yieldComponentsLabels %>%
+           factor(levels = c('Yield (Bushels/Acre)', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)',
+                             'Kernels Per Ear', 'Kernel Row Number', 'Kernels Per Row', 'Ear Length (cm)', 
+                             'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)')))
+  
 
 p.normRatio <- ggplot(normalizedRatio, aes(label, mean)) +
   geom_col(fill = moma.colors('VanGogh', 1), color = moma.colors('VanGogh', 1)) +
@@ -1586,4 +1612,5 @@ p.normRatio <- ggplot(normalizedRatio, aes(label, mean)) +
         plot.background = element_blank())
 p.normRatio
 
-ggsave('analysis/RangeToMean.jpeg', width = 9.02, height = 7.04)
+ggsave('analysis/RangeToMean.jpeg', width = multiplier*8.9, height = 4.84, units = 'in', dpi = 1000)
+
