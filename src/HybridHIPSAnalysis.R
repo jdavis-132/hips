@@ -1614,3 +1614,26 @@ p.normRatio
 
 ggsave('analysis/RangeToMean.jpeg', width = multiplier*8.9, height = 4.84, units = 'in', dpi = 1000)
 
+# Make piechart of seed composition for presentation
+seed_comp <- hybrids.vp %>%
+  select(percentStarch.sp, percentProtein.sp, percentOil.sp, percentFiber.sp, percentAsh.sp) %>%
+  summarise(Starch = mean(percentStarch.sp, na.rm = TRUE),
+            Protein = mean(percentProtein.sp, na.rm = TRUE),
+            Oil = mean(percentOil.sp, na.rm = TRUE),
+            Fiber = mean(percentFiber.sp, na.rm = TRUE),
+            Ash = mean(percentAsh.sp, na.rm = TRUE)) %>%
+  pivot_longer(cols = everything(), names_to = 'seedComponent', values_to = 'percent') %>%
+  mutate(seedComponent = factor(seedComponent, levels = c('Starch', 'Protein', 'Oil', 'Fiber', 'Ash')))
+
+p.seedComp <- ggplot(seed_comp, aes('', percent, fill = seedComponent)) +
+  geom_bar(stat = 'identity', width = 1, color = 'white') +
+  coord_polar('y', start = 0) +
+  scale_fill_manual(values = moma.colors('Connors', 5, direction = -1)) +
+  labs(fill = '') +
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'transparent', color = NA),
+        panel.background = element_rect(fill = 'transparent', color = NA),
+        panel.grid = element_blank(),
+        legend.background = element_rect(fill = 'transparent', color = NA),
+        legend.box.background = element_rect(fill = 'transparent', color = NA))
+p.seedComp
