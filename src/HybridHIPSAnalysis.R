@@ -58,7 +58,7 @@ locations <- c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3',
 response_labels <- c('Ear Height (cm)', 'Flag Leaf Height (cm)', 'Harvest Moisture (%)', 'Test Weight (lbs/bushel)', 
                      'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Shelled Cob Mass (g)', 
                      'Ear Length (cm)', 'Kernels Per Ear', 'Starch (%)', 'Protein (%)', 'Oil (%)', 'Fiber (%)', 
-                     'Ash (%)', 'Yield (Bushels/Acre)', 'GDD to Anthesis', 'GDD to Silk', 'Kernels Per Row', 
+                     'Ash (%)', 'Yield (Bushels / Acre)', 'GDD to Anthesis', 'GDD to Silk', 'Kernels Per Row', 
                      'Kernel Row Number', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)', 
                      'Anthesis Silking Interval (GDD)')
 
@@ -67,8 +67,9 @@ mapResponse(hybrids, c('percentProtein'))
 yieldComponents <- c('earFillLength', 'earWidth', 'shelledCobWidth', 'earLength', 'kernelsPerEar', 'yieldPerAcre', 
                      'kernelsPerRow', 'kernelRowNumber', 'moistureCorrectedKernelMassPerEar', 'moistureCorrectedHundredKernelMass')
 yieldComponentsLabels <- c('Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Ear Length (cm)',
-                           'Kernels Per Ear', 'Yield (Bushels/Acre)', 'Kernels Per Row', 'Kernel Row Number', 
+                           'Kernels Per Ear', 'Yield (Bushels / Acre)', 'Kernels Per Row', 'Kernel Row Number', 
                            'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)')
+spatiallyCorrectedResponseVars <- paste0(response_vars, '.sp')
 for(i in response_vars)
 {
   print(i)
@@ -370,8 +371,8 @@ partitionVariance2 <- function(df, response, label)
 
 
 
-vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
-spatiallyCorrectedResponseVars <- paste0(response_vars, '.sp')
+
+
 
 # # Is there shrinkage toward the mean of a treatment ?
 # for(i in 1:length(response_vars))
@@ -404,8 +405,10 @@ hybrids.vp <- hybrids %>%
          nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'), ordered = TRUE))
 # Export spatially corrected values
 write.table(hybrids.vp, 'analysis/hybridDataWithSpatiallyCorrectedPhenotypes.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
+
 hybrids.vp <- read.table('analysis/hybridDataWithSpatiallyCorrectedPhenotypes.csv', header = TRUE, sep = ',')
 
+vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
 for(i in 1:length(yieldComponents))
 {
   var <- paste0(yieldComponents[i], '.sp')
@@ -422,22 +425,23 @@ vc_all <- vc_all %>%
            factor(levels = c('Location', 'Genotype', 
                   'Nitrogen Treatment', 
                   'Genotype x Location', 'Genotype x Nitrogen', 'Residual')),
-         label = factor(label, levels = c('Yield (Bushels/Acre)', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)',
+         label = factor(label, levels = c('Yield (Bushels / Acre)', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)',
                                           'Kernels Per Ear', 'Kernel Row Number', 'Kernels Per Row', 'Ear Length (cm)', 
                                           'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)')))
 vp.plot <- ggplot(vc_all, aes(label, pctVar, fill = grp)) +
   geom_col(position = 'stack') + 
   scale_fill_manual(values = moma.colors('VanGogh')) +
+  scale_x_discrete(labels = label_wrap(8)) +
   labs(x = 'Phenotype', y = 'Percent Variance', fill = '') +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, color = 'black'),
-        axis.text.y = element_text(color = 'black'),
+  theme(axis.text.x = element_text(size = rel(0.8), color = 'black'),
+        axis.text.y = element_text(size = rel(0.8), color = 'black'),
         text = element_text(size = 14, color = 'black'),
         legend.position = 'top',
         line = element_line(color = 'black', linewidth = 1),
         panel.grid = element_blank())
 vp.plot
-ggsave('analysis/variancePartitioning.jpeg', width = multiplier*9, height = 4.75, units = 'in', dpi = 1000)
+ggsave('analysis/variancePartitioning.jpeg', width = 9.15*multiplier, height = 4.75, units = 'in', dpi = 1000)
 
 for(i in spatiallyCorrectedResponseVars)
 {
@@ -967,8 +971,8 @@ for (i in 1:length(response_vars))
   print(p)
   # ggsave(paste0('analysis/', response_vars[i], 'PlasticityVsMeanMinMax.png'), plot = p)
 }
-agg_png('analysis/yieldPerAcrePlasticityAcrossLocationsVsMean.png', width = 0.715, height = 0.488, units = 'in', scaling =  0.1, res = 1000)
-for(i in 16)
+
+for(i in 19)
 {
   response.mu <- paste0(response_vars[i], '.mu')
   meanLabel <- paste0('Mean ', response_labels[i])
@@ -979,9 +983,9 @@ for(i in 16)
     geom_point(color = moma.colors('VanGogh', 1)) +
     geom_hline(yintercept = 1) +
     scale_y_continuous(limits = c(0.45, 1.75)) +
-    labs(x = meanLabel, y = plasticityLabel) + 
-    theme(text = element_text(color = 'black'),
-          axis.text = element_text(color = 'black'),
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20)) + 
+    theme(text = element_text(color = 'black', size = 14),
+          axis.text = element_text(color = 'black', size = rel(1)),
           axis.line = element_line(color = 'black', size = 1),
           panel.background = element_blank(),
           panel.border = element_blank(),
@@ -993,8 +997,8 @@ for(i in 16)
   
   #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
 }
+ggsave('analysis/kernelsPerRowPlasticityAcrossLocationsVsMean.jpeg', width = multiplier*6.85, height = 2.5, units = 'in', dpi = 1000)
 
-dev.off()
 # #OLS plasticity estimate using FW package
 # fw.OLS1 <- FW(y = locationTreatment.df[[spatiallyCorrectedResponseVars[1]]], VAR = locationTreatment.df$genotype, ENV = locationTreatment.df$locationTreatment, 
 #            method = 'OLS', saveAt = paste0('analysis/gibbs-samples-allenv-', spatiallyCorrectedResponseVars[1]), 
@@ -1593,7 +1597,7 @@ normalizedRatio <- summary.allenv %>%
   pivot_wider(id_cols = var, names_from = summaryType, values_from = val) %>%
   filter(var %in% yieldComponents) %>%
   mutate(label = yieldComponentsLabels %>%
-           factor(levels = c('Yield (Bushels/Acre)', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)',
+           factor(levels = c('Yield (Bushels / Acre)', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)',
                              'Kernels Per Ear', 'Kernel Row Number', 'Kernels Per Row', 'Ear Length (cm)', 
                              'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)')))
   
@@ -1601,18 +1605,19 @@ normalizedRatio <- summary.allenv %>%
 p.normRatio <- ggplot(normalizedRatio, aes(label, mean)) +
   geom_col(fill = moma.colors('VanGogh', 1), color = moma.colors('VanGogh', 1)) +
   geom_errorbar(aes(x = label, ymin = mean - sd, ymax = mean + sd)) +
-  labs(x = 'Phenotype', y = 'Range/Mean (%)') +
+  scale_x_discrete(label = label_wrap(8)) +
+  labs(x = 'Phenotype', y = str_wrap('Range / Mean (%)', width = 8)) +
   theme_minimal() +
   theme(line = element_line(color = 'black'),
         text = element_text(color = 'black', size = 14), 
-        axis.text.x = element_text(color = 'black', angle = 90),
+        axis.text.x = element_text(color = 'black', size = rel(0.38)),
+        axis.text.y = element_text(color = 'black', size = rel(0.38)),
         panel.background = element_blank(),
         panel.border = element_blank(),
         panel.grid = element_blank(),
         plot.background = element_blank())
 p.normRatio
-
-ggsave('analysis/RangeToMean.jpeg', width = multiplier*8.9, height = 4.84, units = 'in', dpi = 1000)
+ggsave('analysis/RangeToMean.jpeg', width = multiplier*9.13, height = 1.85, units = 'in', dpi = 1000)
 
 # Make piechart of seed composition for presentation
 seed_comp <- hybrids.vp %>%
@@ -1637,3 +1642,61 @@ p.seedComp <- ggplot(seed_comp, aes('', percent, fill = seedComponent)) +
         legend.background = element_rect(fill = 'transparent', color = NA),
         legend.box.background = element_rect(fill = 'transparent', color = NA))
 p.seedComp
+
+examplePlasticityGenotypes <- pl.allenv %>%
+  arrange(yieldPerAcre.pl) %>%
+  select(genotype, yieldPerAcre.pl)
+examplePlasticityGenotypes <- examplePlasticityGenotypes[c(1, 42, 84), ]
+examplePlasticityEnvironments <- locationTreatment.df %>%
+  group_by(locationTreatment) %>%
+  summarise(envMeanYield = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  arrange(envMeanYield)
+examplePlasticityEnvironments <- examplePlasticityEnvironments[c(1, 22), ]
+examplePlasticityData <- locationTreatment.df %>%
+  filter(genotype %in% examplePlasticityGenotypes$genotype & locationTreatment %in% examplePlasticityEnvironments$locationTreatment) %>%
+  select(genotype, locationTreatment, yieldPerAcre.sp) %>%
+  mutate(relPlasticity = case_when(genotype=='LH185 X LH145' ~ 'Low', 
+                                   genotype=='LH195 X PHZ51' ~ 'Average',
+                                   genotype=='LH195 X LH123HT' ~ 'High') %>%
+           factor(levels = c('Low', 'Average', 'High')), 
+         locationTreatment = factor(locationTreatment, levels = c('Lincoln.High', 'North Platte1.High')))
+
+examplePlasticityPlot <- ggplot(examplePlasticityData, aes(locationTreatment, yieldPerAcre.sp, group = genotype, color = relPlasticity)) +
+  geom_line() +
+  scale_color_manual(values = moma.colors('ustwo', 3)) +
+  labs(x = 'Environment', y = str_wrap('Yield Per Acre (Bushels / Acre)', 14), color = 'Relative Plasticity Level') + 
+  theme_minimal() +
+  theme(line = element_line(color = 'black'),
+        text = element_text(color = 'black', size = 14), 
+        axis.text.x = element_text(color = 'black', size = rel(0.75)),
+        axis.text.y = element_text(color = 'black', size = rel(0.75)),
+        legend.text = element_text(color = 'black', size = rel(0.75)),
+        legend.position = 'top',
+        axis.line = element_line(color = 'black', linewidth = 1),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        plot.background = element_blank())
+examplePlasticityPlot
+ggsave('analysis/examplePlasticityYield.png', width = multiplier*11.5, height = 2.69, dpi = 1000, units = 'in')
+
+yieldViolinByLoc <- hybrids.vp %>%
+  filter(location!='Missouri Valley') %>%
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = 'Low', 'Medium', 'High'))
+  ggplot(aes(nitrogenTreatment, yieldPerAcre.sp, fill = nitrogenTreatment)) +
+  geom_violin(color = 'black', draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  facet_wrap(vars(location), nrow = 2) +
+  labs(x = 'Nitrogen Level', y = 'Yield Per Acre (Bushels / Acre)') + 
+  theme_minimal() +
+  theme(line = element_line(color = 'black'),
+        text = element_text(color = 'black', size = 14), 
+        axis.text.x = element_text(color = 'black', size = rel(0.75)),
+        axis.text.y = element_text(color = 'black', size = rel(0.75)),
+        legend.text = element_text(color = 'black', size = rel(0.75)),
+        legend.position = 'none',
+        axis.line = element_line(color = 'black', linewidth = 1),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        plot.background = element_blank())
+yieldViolinByLoc
