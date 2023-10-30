@@ -10,7 +10,7 @@ library(svglite)
 library(readxl)
 library(MoMAColors)
 library(wesanderson)
-library(ragg)
+library(ggh4x)
 
 # Read in data and order nitrogenTreatment
 # Also calculate moisture correction for kernelMass and hundredKernelMass
@@ -1677,3 +1677,114 @@ yieldViolinByLoc <- hybrids.vp %>%
         panel.grid = element_blank(),
         plot.background = element_blank())
 yieldViolinByLoc
+
+agLossDataPath <- '../agLosses/data'
+agLossFiles <- list.files(path = agLossDataPath, full.names = TRUE, pattern = 'colsom')
+agLossVars <- c('commodityYear', '', 'state', '', 'county', '', 'commodity', '', '', '', '', '', 'causeOfLoss', 'lossMonth', '', 'lossYear', '',
+                '', 'netPlantedQuantity', '', '', '', '', '', '', '', '', 'netLossQuantity', 'loss', 'lossRatio')
+agLossColClasses <- c('numeric', 'NULL', 'character', 'NULL', 'character', 'NULL', 'character', rep('NULL', 5), 'character', 'numeric', 
+                      'NULL', 'numeric', rep('NULL', 2), 'numeric', rep('NULL', 8), rep('numeric', 3))
+agLossData <- read.delim(agLossFiles[1], header=FALSE, sep = '|', row.names = NULL, col.names = agLossVars, colClasses = agLossColClasses, 
+                         strip.white = TRUE)
+for (i in 2:length(agLossFiles))
+{
+  print(i)
+  agLossData <- read.delim(agLossFiles[i], header=FALSE, sep = '|', row.names = NULL, col.names = agLossVars, colClasses = agLossColClasses, 
+                           strip.white = TRUE) %>%
+    bind_rows(agLossData)
+}
+
+envLosses <- c("Drought", "Insufficient Chilling Hours", "Heat", "Excess Moisture/Precipitation/Rain", "Plant Disease", "Wind/Excess Wind",                           "Mycotoxin (Aflatoxin)", "Hail", "Frost", "Fire", "Cold Wet Weather", "Other (Snow,Lightning,etc)", "Flood", "Freeze", "Hot Wind",
+               "Cold Winter", "Tornado", "Hurricane/Tropical Depression", "Cyclone", "Fruit Set Failure", "Volcanic Eruption", "Force Fire", 
+               "Earthquake", "Other (Volcano,Snow,Lightning,etc)", "Drought Deviation", "Drought Deviation", 
+               "Inability to Prepare Land for Irrigation", "Asian Soybean Rust", "Ice Flow", "Oxygen Depletion", "Storm Surge", "Ice floe", 
+               "Ice Floe", "Tidal Wave/Tsunami", "All Other Causes", "Post Bloom Fruit Drop", 'Mycotoxin')
+
+cpi <- read.table('../agLosses/data/annualCPI.txt', header = TRUE, sep = ',') %>%
+  rowwise() %>%
+  mutate(ratio2022 = cpi$Annual[34]/Annual)
+agEnvLossData <- agLossData %>%
+  filter(causeOfLoss %in% envLosses) %>%
+  full_join(cpi, join_by(commodityYear==Year), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
+  rowwise() %>%
+  mutate(adjustedLoss = loss*ratio2022)
+agEnvLossPlot <- ggplot(agEnvLossData, aes(commodityYear, adjustedLoss, fill = causeOfLoss)) +
+  geom_col()
+agEnvLossPlot
+
+cornEnvLossData <- agEnvLossData %>%
+  mutate(causeOfLoss = str_to_upper(causeOfLoss),
+         commodity = str_to_upper(commodity)) %>%
+  filter(str_detect(commodity, 'CORN'))
+
+drought <- c('DROUGHT', 'DROUGHT DEVIATION')
+excessMoisture <- c('EXCESS MOISTURE/PRECIPITATION/RAIN', 'FLOOD', 'COLD WET WEATHER')
+frost <- c('FREEZE', 'FROST', 'COLD WINTER')
+heat <- c('HEAT', "INSUFFICIENT CHILLING HOURS")
+disease <- c('PLANT DISEASE', 'MYCOTOXIN (AFLATOXIN)', 'MYCOTOXIN')
+fire <- c('FIRE', 'FORCE FIRE')
+tornado <- c('TORNADO', 'CYCLONE')
+other <- c("OTHER (SNOW,LIGHTNING,ETC)", "OTHER (VOLCANO,SNOW,LIGHTNING,ETC)", "VOLCANIC ERUPTION", 
+           "FRUIT SET FAILURE", "ALL OTHER CAUSES", 'INABILITY TO PREPARE LAND FOR IRRIGATION')
+
+cornEnvLossData <- cornEnvLossData %>%
+  rowwise() %>%
+  mutate(causeOfLoss = case_when(causeOfLoss %in% drought ~ 'DROUGHT',
+                                 causeOfLoss %in% excessMoisture ~ 'EXCESS MOISTURE/FLOOD',
+                                 causeOfLoss %in% frost ~ 'FROST/COLD',
+                                 causeOfLoss %in% heat ~ 'HEAT',
+                                 causeOfLoss %in% disease ~ 'DISEASE/MYCOTOXINS',
+                                 causeOfLoss %in% fire ~ 'FIRE',
+                                 causeOfLoss %in% tornado ~ 'TORNADO/CYCLONE',
+                                 causeOfLoss %in% other ~ 'OTHER (SNOW, LIGHTNING, VOLCANO, FRUIT SET FAILURE, ETC.)',
+                                 .default = causeOfLoss))
+
+cornEnvLossPlot <- ggplot(cornEnvLossData, aes(commodityYear, adjustedLoss/1e9, fill = causeOfLoss)) +
+  geom_col() +
+  scale_fill_viridis(discrete = TRUE, option = 'D', direction = -1,
+                     labels = ~str_wrap(., 15)) +
+  scale_x_continuous(breaks = c(1995, 2000, 2005, 2010, 2015, 2020), 
+                     minor_breaks = c(1991:1994, 1996:1999, 2001:2004, 2006:2009, 2011:2014, 2016:2019, 2021:2022),
+                     guide = 'axis_minor',
+                     expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(x = 'Year', y = str_wrap('Maize Crop Loss (Billion 2022-Adjusted US Dollars)', 25), fill = 'Cause of Loss') +
+  theme_minimal() +
+  theme(line = element_line(color = 'black'),
+        text = element_text(color = 'black', size = 14), 
+        axis.text.x = element_text(color = 'black', size = rel(1)),
+        axis.text.y = element_text(color = 'black', size = rel(1)),
+        axis.ticks.x = element_line(color = 'black'),
+        ggh4x.axis.ticks.length.minor = rel(1),
+        legend.text = element_text(color = 'black', size = rel(0.5)),
+        legend.position = 'right',
+        axis.line = element_line(color = c('black'), linewidth = 1),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        plot.background = element_blank())
+cornEnvLossPlot
+ggsave('../cornEnvironmentalLoss.png', width = multiplier*11.41, height = 3.5, dpi = 1000, units = 'in')
+
+fwFig3 <- ggplot() +
+  geom_hline(yintercept = 1) +
+  geom_abline(intercept = 0, slope = 1) +
+  geom_abline(intercept = 2, slope = -1) +
+  scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.25, 0.5, 0.75, 1), labels = c(0, 25, 50, 75, 100)) +
+  scale_y_continuous(limits = c(0, 2)) + 
+  labs(x = str_wrap('Mean Yield (Bushels / Acre)', 14), y = str_wrap('Linear Plasticity', 9)) + 
+  theme_minimal() +
+  theme(line = element_line(color = 'black'),
+        text = element_text(color = 'black', size = 14), 
+        axis.text.x = element_text(color = 'black', size = rel(1)),
+        axis.text.y = element_text(color = 'black', size = rel(1)),
+        axis.ticks.x = element_blank(),
+        legend.text = element_text(color = 'black', size = rel(0.5)),
+        legend.position = 'right',
+        axis.line = element_line(color = c('black'), linewidth = 1),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        plot.background = element_blank())
+fwFig3
+ggsave('analysis')
