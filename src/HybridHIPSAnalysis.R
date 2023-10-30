@@ -151,6 +151,7 @@ plotRepCorr <- function(data, treatmentVar, genotype, phenotypes, facet)
     rep1 <- paste0(i, '.1')
     rep2 <- paste0(i, '.2')
     print(i)
+    print(cor(df.wide[[rep1]], df.wide[[rep2]], use = 'complete.obs'))
     
     p <- ggplot(df.wide, aes(.data[[rep1]], .data[[rep2]], color = .data[[treatmentVar]])) + 
       geom_point() + 
@@ -160,7 +161,7 @@ plotRepCorr <- function(data, treatmentVar, genotype, phenotypes, facet)
   return(df.wide)
 }
 
-hybrids.wide <- plotRepCorr(hybrids, 'nitrogenTreatment', 'genotype', c('hundredKernelMass', 'kernelMassPerEar'), 'location')
+hybrids.wide <- plotRepCorr(hybrids, 'nitrogenTreatment', 'genotype', response_vars, 'location')
 
 # Correlation plot for 2 vars
 plotVarCorr <- function(data, x, y)
@@ -1617,8 +1618,31 @@ p.normRatio <- ggplot(normalizedRatio, aes(label, mean)) +
         panel.grid = element_blank(),
         plot.background = element_blank())
 p.normRatio
-
 ggsave('analysis/RangeToMean.jpeg', width = multiplier*9.13, height = 1.85, units = 'in', dpi = 1000)
+
+# Make piechart of seed composition for presentation
+seed_comp <- hybrids.vp %>%
+  select(percentStarch.sp, percentProtein.sp, percentOil.sp, percentFiber.sp, percentAsh.sp) %>%
+  summarise(Starch = mean(percentStarch.sp, na.rm = TRUE),
+            Protein = mean(percentProtein.sp, na.rm = TRUE),
+            Oil = mean(percentOil.sp, na.rm = TRUE),
+            Fiber = mean(percentFiber.sp, na.rm = TRUE),
+            Ash = mean(percentAsh.sp, na.rm = TRUE)) %>%
+  pivot_longer(cols = everything(), names_to = 'seedComponent', values_to = 'percent') %>%
+  mutate(seedComponent = factor(seedComponent, levels = c('Starch', 'Protein', 'Oil', 'Fiber', 'Ash')))
+
+p.seedComp <- ggplot(seed_comp, aes('', percent, fill = seedComponent)) +
+  geom_bar(stat = 'identity', width = 1, color = 'white') +
+  coord_polar('y', start = 0) +
+  scale_fill_manual(values = moma.colors('Connors', 5, direction = -1)) +
+  labs(fill = '') +
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'transparent', color = NA),
+        panel.background = element_rect(fill = 'transparent', color = NA),
+        panel.grid = element_blank(),
+        legend.background = element_rect(fill = 'transparent', color = NA),
+        legend.box.background = element_rect(fill = 'transparent', color = NA))
+p.seedComp
 
 examplePlasticityGenotypes <- pl.allenv %>%
   arrange(yieldPerAcre.pl) %>%
@@ -1749,6 +1773,55 @@ cornEnvLossPlot <- ggplot(cornEnvLossData, aes(commodityYear, adjustedLoss/1e9, 
                      expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   labs(x = 'Year', y = str_wrap('Maize Crop Loss (Billion 2022-Adjusted US Dollars)', 25), fill = 'Cause of Loss') +
+cornEnvLossPlot
+ggsave('../cornEnvironmentalLoss.png', width = multiplier*11.41, height = 3.5, dpi = 1000, units = 'in')
+
+
+examplePlasticityEnvironments <- locationTreatment.df %>%
+  group_by(locationTreatment) %>%
+  summarise(envMeanYield = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  arrange(envMeanYield)
+examplePlasticityData <- locationTreatment.df %>%
+  filter(genotype %in% examplePlasticityGenotypes$genotype) %>%
+  mutate(relPlasticity = case_when(genotype=='LH185 X LH145' ~ 'Low', 
+                                   genotype=='LH195 X PHZ51' ~ 'Average',
+                                   genotype=='LH195 X LH123HT' ~ 'High') %>%
+           factor(levels = c('Low', 'Average', 'High')),
+         locationTreatment = factor(locationTreatment, levels = examplePlasticityEnvironments$locationTreatment)) %>%
+  group_by(locationTreatment) %>%
+  mutate(envMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  select(genotype, locationTreatment, nitrogenTreatment, yieldPerAcre.sp, relPlasticity, envMean)
+
+examplePlasticityPlotAllEnvs <- ggplot(examplePlasticityData) +
+  geom_line(aes(locationTreatment, yieldPerAcre.sp, color = relPlasticity, group = genotype)) +
+  geom_point(aes(locationTreatment, envMean), color = 'black') +
+  scale_color_manual(values = moma.colors('ustwo', 3)) +
+  labs(x = 'Environment', y = str_wrap('Yield Per Acre (Bushels / Acre)', 14), color = 'Relative Plasticity Level') + 
+  theme_minimal() +
+  theme(line = element_line(color = 'black'),
+        text = element_text(color = 'black', size = 14), 
+        axis.text.x = element_text(color = 'black', size = rel(0.75), angle = 90),
+        axis.text.y = element_text(color = 'black', size = rel(0.75)),
+        legend.text = element_text(color = 'black', size = rel(0.75)),
+        legend.position = 'top',
+        axis.line = element_line(color = 'black', linewidth = 1),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        plot.background = element_blank())
+examplePlasticityPlotAllEnvs
+ggsave('analysis/examplePlasticityYieldAllEnvs.png', width = multiplier*8.72, height = 3.75, dpi = 1000, units = 'in')
+
+dummyPlasticityData <- tibble(env = rep(c('A', 'B'), times = 3), 
+                              envMean = rep(c(100, 200), times = 3), 
+                              yield = c(125, 175, 100, 200, 75, 225), 
+                              relPlasticity = c('Low', 'Low', 'Average', 'Average', 'High', 'High')) %>%
+  mutate(relPlasticity = factor(relPlasticity, levels = c('Low', 'Average', 'High')))
+dummyPlasticityPlot <- ggplot(dummyPlasticityData) + 
+  geom_line(aes(env, yield, color = relPlasticity, group = relPlasticity)) +
+  geom_point(aes(env, envMean), color = 'black') +
+  scale_color_manual(values = moma.colors('ustwo', 3)) +
+  labs(x = 'Environment', y = str_wrap('Yield Per Acre (Bushels / Acre)', 14), color = str_wrap('Relative Plasticity Level', 10)) + 
   theme_minimal() +
   theme(line = element_line(color = 'black'),
         text = element_text(color = 'black', size = 14), 
@@ -1759,20 +1832,22 @@ cornEnvLossPlot <- ggplot(cornEnvLossData, aes(commodityYear, adjustedLoss/1e9, 
         legend.text = element_text(color = 'black', size = rel(0.5)),
         legend.position = 'right',
         axis.line = element_line(color = c('black'), linewidth = 1),
+        legend.text = element_text(color = 'black', size = rel(1)),
+        legend.position = 'right',
         panel.background = element_blank(),
         panel.border = element_blank(),
         panel.grid = element_blank(),
         plot.background = element_blank())
-cornEnvLossPlot
-ggsave('../cornEnvironmentalLoss.png', width = multiplier*11.41, height = 3.5, dpi = 1000, units = 'in')
+dummyPlasticityPlot
+ggsave('analysis/dummyPlasticityYieldPlot.png', width = multiplier*12.59, height = 2.14, units = 'in', dpi = 1000)
 
-fwFig3 <- ggplot() +
+fwConcept <- ggplot() +
   geom_hline(yintercept = 1) +
-  geom_abline(intercept = 0, slope = 1) +
-  geom_abline(intercept = 2, slope = -1) +
-  scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.25, 0.5, 0.75, 1), labels = c(0, 25, 50, 75, 100)) +
-  scale_y_continuous(limits = c(0, 2)) + 
-  labs(x = str_wrap('Mean Yield (Bushels / Acre)', 14), y = str_wrap('Linear Plasticity', 9)) + 
+  geom_abline(slope = 1, intercept = 0) +
+  geom_abline(slope = -1, intercept = 2) +
+  scale_x_continuous(limits = c(0, 1)) + 
+  scale_y_continuous(limits = c(0, 2)) +
+  labs(x = str_wrap('Mean Yield (Bushels / Acre)', 14),y = str_wrap('Linear Plasticity', 10)) +
   theme_minimal() +
   theme(line = element_line(color = 'black'),
         text = element_text(color = 'black', size = 14), 
@@ -1782,9 +1857,13 @@ fwFig3 <- ggplot() +
         legend.text = element_text(color = 'black', size = rel(0.5)),
         legend.position = 'right',
         axis.line = element_line(color = c('black'), linewidth = 1),
+        legend.text = element_text(color = 'black', size = rel(1)),
+        legend.position = 'right',
+        axis.line = element_line(color = 'black', linewidth = 1),
         panel.background = element_blank(),
         panel.border = element_blank(),
         panel.grid = element_blank(),
         plot.background = element_blank())
-fwFig3
-ggsave('analysis')
+fwConcept
+ggsave('analysis/FWConcept.svg', width = 3.53, height = multiplier*5.73, units = 'in', dpi = 1000)
+                              
