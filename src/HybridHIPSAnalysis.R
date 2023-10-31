@@ -1845,7 +1845,7 @@ fwConcept <- ggplot() +
   geom_hline(yintercept = 1) +
   geom_abline(slope = 1, intercept = 0) +
   geom_abline(slope = -1, intercept = 2) +
-  scale_x_continuous(limits = c(0, 1)) + 
+  scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.25, 0.5, 0.75, 1), labels = c(0, 25, 50, 75, 100)) + 
   scale_y_continuous(limits = c(0, 2)) +
   labs(x = str_wrap('Mean Yield (Bushels / Acre)', 14),y = str_wrap('Linear Plasticity', 10)) +
   theme_minimal() +
@@ -1855,15 +1855,12 @@ fwConcept <- ggplot() +
         axis.text.y = element_text(color = 'black', size = rel(1)),
         axis.ticks.x = element_blank(),
         legend.text = element_text(color = 'black', size = rel(0.5)),
-        legend.position = 'right',
         axis.line = element_line(color = c('black'), linewidth = 1),
-        legend.text = element_text(color = 'black', size = rel(1)),
         legend.position = 'right',
-        axis.line = element_line(color = 'black', linewidth = 1),
         panel.background = element_blank(),
         panel.border = element_blank(),
         panel.grid = element_blank(),
         plot.background = element_blank())
 fwConcept
-ggsave('analysis/FWConcept.svg', width = 3.53, height = multiplier*5.73, units = 'in', dpi = 1000)
+ggsave('analysis/FWConcept.svg', width=multiplier*7.72, height = 2.53, units = 'in', dpi = 1000)
                               
