@@ -939,7 +939,9 @@ summary.allenv <- hybrids.vp %>%
 
 # Export summary.allenv
 # write.table(summary.allenv, 'analysis/genotypeSummaryAcrossLocations.csv', sep = ',', row.names = FALSE, col.names = TRUE)
-# summary.allenv <- read.csv('analysis/genotypeSummaryAcrossLocations.csv')
+summary.allenv <- read.csv('analysis/genotypeSummaryAcrossLocations.csv')
+
+
 # Tradeoff between plasticity and good performance - there doesn't seem to be one
 for (i in 1:length(response_vars))
 {
@@ -1562,17 +1564,98 @@ for(i in 1:length(response_vars))
 # # How many hybrids do we have both parents for? -- 18
 # inbreds <- filter(hips, population=='Inbred')
 # inbreds.genos <- unique(inbreds$genotype)
-# hybrid.genos <- tibble(hybrid = unique(hybrids$genotype))
-# hybrid.genos <- hybrid.genos %>%
-#   rowwise() %>%
-#   mutate(P1 = str_split_i(hybrid, ' X ', 1),
-#          P2 = str_split_i(hybrid, ' X ', 2), 
-#          P1InPanel = P1 %in% inbreds.genos,
-#          P2InPanel = P2 %in% inbreds.genos,
-#          BothInPanel = case_when(P1InPanel & P2InPanel ~ TRUE, .default = FALSE))
+hybrid.genos <- tibble(hybrid = unique(hybrids$genotype))
+hybrid.genos <- hybrid.genos %>%
+  rowwise() %>%
+  mutate(P1 = str_split_i(hybrid, ' X ', 1),
+         P2 = str_split_i(hybrid, ' X ', 2))
+         # P1InPanel = P1 %in% inbreds.genos,
+         # P2InPanel = P2 %in% inbreds.genos,
+         # BothInPanel = case_when(P1InPanel & P2InPanel ~ TRUE, .default = FALSE))
+hybridParents <- unique(c(hybrid.genos$P1, hybrid.genos$P2)) %>%
+  as_tibble_col('parent') %>%
+  mutate(releaseYear = c(1972, 1988, 1988, 1989, 1983, 1981, 1983, 1958, 1962, 1983, 1936, 1984, 1990, 1988, NA, 1987, 1978, 1983, 1986, 
+                         1983, 1991, NA, 1989, 1993, 1989, 1990, 1992, 1996, 1997, NA, 1986, NA, NA, 1993, 1989, 1990, 1991, 1949, 1988, 
+                         1964, 1968, NA, 2009, 1986))
+
+# match to the hybrids
+commercialHybrids <- c('HOEGEMEYER 8065RR', 'SYNGENTA NK0760-3111', 'PIONEER 1311 AMXT', 'HOEGEMEYER 7089 AMXT', 'PIONEER P0589 AMXT')
+hybrid.genos <- left_join(hybrid.genos, hybridParents, join_by(P1==parent), keep = FALSE, suffix = c('', ''), 
+                          relationship = 'many-to-one') %>%
+  rename(releaseYearP1 = releaseYear) %>%
+  left_join(hybridParents, join_by(P2==parent), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
+  rename(releaseYearP2 = releaseYear) %>%
+  mutate(youngestParentAge = max(releaseYearP1, releaseYearP2, na.rm = TRUE),
+         oldestParentAge = min(releaseYearP1, releaseYearP2, na.rm = TRUE),
+         meanParentAge = mean(c(releaseYearP1, releaseYearP2), na.rm = TRUE)) %>%
+  filter(!(hybrid %in% commercialHybrids))
+
+summary.allenv <- left_join(summary.allenv, hybrid.genos, join_by(genotype==hybrid), keep = FALSE)
+
+# Plot plasticity vs mean; color by youngestParentAge
+for(i in 1:length(response_vars))
+{
+  response.mu <- paste0(response_vars[i], '.mu')
+  meanLabel <- paste0('Mean ', response_labels[i])
+  response.pl <- paste0(response_vars[i], '.pl')
+  plasticityLabel <- paste0(response_labels[i], ' Linear Plasticity')
+  
+  p <- ggplot(summary.allenv, aes(.data[[response.mu]], .data[[response.pl]], color = youngestParentAge)) + 
+    geom_point() +
+    geom_hline(yintercept = 1) +
+    scale_y_continuous(limits = c(0.45, 1.75)) +
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = 'Youngest Parent Release Year') + 
+    scale_color_viridis_c() +
+    theme(text = element_text(color = 'black', size = 14),
+          axis.text = element_text(color = 'black', size = rel(1)),
+          axis.line = element_line(color = 'black', size = 1),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(), 
+          plot.background = element_blank(), 
+          legend.position = 'right',
+          legend.background = element_rect(color = 'black'))
+  print(p)
+  print(paste0(response_vars[i], ': ', cor(summary.allenv[[response.mu]], summary.allenv[[response.pl]], 
+                                           use = 'complete.obs')))
+  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+}
+
+# Plot plasticity vs mean; color by oldestParentAge
+for(i in 1:length(response_vars))
+{
+  response.mu <- paste0(response_vars[i], '.mu')
+  meanLabel <- paste0('Mean ', response_labels[i])
+  response.pl <- paste0(response_vars[i], '.pl')
+  plasticityLabel <- paste0(response_labels[i], ' Linear Plasticity')
+  
+  p <- ggplot(summary.allenv, aes(.data[[response.mu]], .data[[response.pl]], color = oldestParentAge)) + 
+    geom_point() +
+    geom_hline(yintercept = 1) +
+    scale_y_continuous(limits = c(0.45, 1.75)) +
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = 'Oldest Parent Release Year') + 
+    scale_color_viridis_c() +
+    theme(text = element_text(color = 'black', size = 14),
+          axis.text = element_text(color = 'black', size = rel(1)),
+          axis.line = element_line(color = 'black', size = 1),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(), 
+          plot.background = element_blank(), 
+          legend.position = 'right',
+          legend.background = element_rect(color = 'black'))
+  print(p)
+  print(paste0(response_vars[i], ': ', cor(summary.allenv[[response.mu]], summary.allenv[[response.pl]], 
+                                           use = 'complete.obs')))
+  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+}
+
+
+# Export as csv so we can query GRIN
+# write.csv(hybridParents, '../hybridParents.csv', quote = FALSE, row.names = FALSE)
 # sum(hybrid.genos$BothInPanel)
-
-
+#N209 release year source: https://acsess.onlinelibrary.wiley.com/doi/10.2135/cropsci1997.0011183X003700050057x
+#W606S release year source: https://cornbreeding.wisc.edu/inbreds/ 
 # Which phenotypes are more plastic?
 for(i in response_vars[-1])
 {
