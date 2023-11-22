@@ -1,7 +1,7 @@
 library(tidyverse)
 library(readxl)
 library(grDevices)
-source('src/HybridHIPSAnalysis.R')
+source('src/Functions.R')
 df2022Inbreds <- read.csv('/Users/jensinadavis/Downloads/SAMS_2022_V4.0_INBREDS.csv')
 response_vars <- c('earHeight', 'flagLeafHeight')
 locationsExceptScottsbluff <- c('Lincoln', 'Missouri Valley', 'Ames', 'CrawfordsVille')
@@ -184,3 +184,187 @@ sb2.5OddWide <- plotRepCorr(sb2.5Odd, 'nitrogenTreatment', 'genotypeNew', respon
 sb2.5Even <- sb2.5 %>%
   filter((row %%2)==0|row==13)
 sb2.5EvenWide <- plotRepCorr(sb2.5Even, 'nitrogenTreatment', 'genotypeNew', response_vars, 'location')
+
+
+# Okay, lets add in the ear data so we can see if this problem exists there too
+ears <- read.csv('data/2022 Inbred HIPS Ear Data - Turkus Curated 231117.csv')
+
+yellow <- c("yellow", "pale yellow", "yellow/unevenrows", "yellow ", "dark yellow(ak) then yellow", "light yellow",
+            "dark yellow ", "yelllow", "dark yellow", "yellow  ", "yellow/ red dots", "very light yellow", 
+            "clear yellow", "yellow whit red stripes", "deep yellow", "yellow red stripe")
+white <- c("white ", "white", "white/pink dots", "whilte ", "white  ", "cream", "cream ")
+yellowWhite <- c("white / yellow", "yellow/white", "yellow w white",  "white/yellow", "white w yellow", 
+                 "white/light yellow ", "yellowish white", "yellow w white ak", "white/yellow mix", 
+                 "yellow and white", "yellow/cream", "yellow / white", "yellow, white", "cream/yellow")
+missing <- c("na", "", "na ", "n/a", "ak", "no kernels ", "ak/ mold")
+yellowOrange <- c("yellow/orange", "organish yellow", "yellow/ orange", "yellow/light orange", "orange/yellow",
+                  "yellow-orange")
+yellowWhiteBrown <- c("yellow/white/brown")
+orange <- c("orange", "orange ", "light orange ", "light orange", "light orange/pale", "dark orange")
+yellowPurple <- c("yellow/few purple", "purple/yellow", "yellow/purple", "blue/yellow")
+red <- c("red", "redish")
+striping <- c("white/pink dots", "yellow/ red dots", "yellow whit red stripes", "yellow red stripe")
+yellowBlack <- c("yellow/black", "yellow w black", "black w few yellow", "black/yellow", "black/few yellow ", 
+                 "yellow/ black", "black w yellow")
+yellowBrownOrange <- c("brown/orange/yellow")
+brownBlack <- c("brown/black", "black/ brown")
+yellowBrown <- c("yellow/brown", "cream yellow/ brown", "yellow/ brown", "yellow/brown edges", "dark yellow brown")
+orangeBrown <- c("orange/brown")
+purple <- c("purple", "blue")
+black <- c("black")
+yellowRed <- c("yellow/red", "reddish-yellow", "pale yellow/pinkish", "pinkish-yellow", "yellow, bits of red", 
+               "yellow/ red", "red-yellow", "pink-yellow", "red/yellow", "yellow and red")
+orangeBlack <- c("orange w black", "orange/black", "orange/ black", "red yellow")
+orangeRed <- c("orange/red")
+brown <- c("brown", "light/dark brown", "light brown", "green/brown")
+whiteRed <- c("white/ red")
+whiteBrown <- c("white/ brown", "brown/white", "white/brown")
+purpleBrown <- c("brown/purple")
+yellowBrownBlack <- c("black/brown/yellow")
+
+
+ears <- ears %>%
+  rename(order = Original.Order,
+         greenAtHarvest = Is.a..G..on.the.Row.Band.,
+         primaryEarNumber = Primary.Ear..) %>%
+  mutate(person = str_to_upper(Person),
+         qrCode = str_to_upper(QR.Code),
+         numberPrimaryEars = as.numeric(X..primary.ears),
+         numberSecondaryEars = as.numeric(X..secondary.ears),
+         looseKernels = as.numeric(Loose.kernel.Count),
+         looseKernelMass = case_when(Loose.kernel.weight=='0.0.05' ~ '0.05', 
+                                     Loose.kernel.weight=='4..9' ~ '4.9', 
+                                     .default = Loose.kernel.weight) %>%
+           as.numeric(), 
+         secondaryEarKernels = case_when(Secondary.Ear.Kernel.Count==" # from 7th ear 398" ~ '398',
+                                         Secondary.Ear.Kernel.Count=="11( smallest and uneven row ear)" ~ '11',
+                                         Secondary.Ear.Kernel.Count=='o' ~ '0',
+                                         .default = Secondary.Ear.Kernel.Count) %>%
+           as.numeric(),
+         kernelColor = case_when(Kernel.Color %in% yellow ~ 'yellow',
+                                 Kernel.Color %in% white ~ 'white',
+                                 Kernel.Color %in% yellowWhite ~ 'yellow/white',
+                                 Kernel.Color %in% missing ~ NA,
+                                 Kernel.Color %in% yellowOrange ~ 'yellow/orange',
+                                 Kernel.Color %in% yellowWhiteBrown ~ 'yellow/white/brown',
+                                 Kernel.Color %in% orange ~ 'orange', 
+                                 Kernel.Color %in% yellowPurple ~ 'yellow/purple',
+                                 Kernel.Color %in% red ~ 'red', 
+                                 Kernel.Color %in% yellowBlack ~ 'yellow/black',
+                                 Kernel.Color %in% yellowBrownOrange ~ 'yellow/orange/brown',
+                                 Kernel.Color %in% brownBlack ~ 'brown/black',
+                                 Kernel.Color %in% yellowBrown ~ 'yellow/brown',
+                                 Kernel.Color %in% orangeBlack ~ 'orange/black', 
+                                 Kernel.Color %in% orangeBrown ~ 'orange/brown',
+                                 Kernel.Color %in% purple ~ 'purple',
+                                 Kernel.Color %in% black ~ 'black', 
+                                 Kernel.Color %in% yellowRed ~ 'yellow/red',
+                                 Kernel.Color %in% orangeBlack ~ 'orange/black',
+                                 Kernel.Color %in% orangeRed ~ 'orange/red',
+                                 Kernel.Color %in% brown ~ 'brown',
+                                 Kernel.Color %in% whiteRed ~ 'white/red',
+                                 Kernel.Color %in% whiteBrown ~ 'white/brown',
+                                 Kernel.Color %in% purpleBrown ~ 'purple/brown', 
+                                 Kernel.Color %in% yellowBrownBlack ~ 'yellow/brown/black'),
+         kernelStriping = case_when(Kernel.Color %in% striping ~ TRUE, .default = FALSE),
+         earWidth = as.numeric(Ear.Width), 
+         kernelFillLength = as.numeric(Kernel.Fill.Length), 
+         kernelRowNumber = as.numeric(Kernel.Row.Number),
+         kernelsPerRow = as.numeric(Kernels.per.Row),
+         earMass = as.numeric(Ear.Weight),
+         kernelsPerEar = as.numeric(Kernel.Count),
+         shelledCobWidth = as.numeric(Cob.Width),
+         shelledCobLength = as.numeric(Cob.Length),
+         shelledCobMass = as.numeric(Cob.Weight),
+         hundredKernelMass = as.numeric(X100.Kernel.weight)) %>%
+  unite('notes', c(General.Remarks, Turkus.Notes), sep = '; ', na.rm = TRUE) %>% 
+  select(c(order, greenAtHarvest, primaryEarNumber, person, qrCode, numberPrimaryEars, 
+           numberSecondaryEars, looseKernels, looseKernelMass, secondaryEarKernels, kernelColor, kernelStriping, 
+           earWidth, kernelFillLength, kernelRowNumber, kernelsPerRow, earMass, kernelsPerEar, shelledCobWidth,
+           shelledCobLength, shelledCobMass, hundredKernelMass, notes)) %>%
+  mutate(kernelMassPerEar = earMass - shelledCobMass)
+
+parseMissouriValleyQRs <- function(data)
+{
+  df <- data %>%
+    rowwise() %>%
+    mutate(location = 'Missouri Valley', 
+           block = str_split_i(qrCode, '$', 3) %>%
+             str_remove('REP'),
+           plotNumber = str_split_i(qrCode, '$', 4) %>%
+             str_remove('PLOT') %>%
+             as.numeric() %>%
+             case_when(block==2 ~ . + 400, .default = .),
+           row = str_split_i(qrCode, '$', 5) %>%
+             str_remove('ROW'), 
+           range = str_split_i(qrCode, '$', 6) %>%
+             str_remove('RANGE'),
+           genotype = str_split_i(qrCode, '$', 7))
+  return(df)
+}
+
+parseLincolnQRs <- function(data)
+{
+  df <- data %>%
+    mutate(location = 'Lincoln',
+           block = str_split_i(qrCode, '$', 3) %>%
+             str_remove('REP'), 
+           plotNumber = str_split_i(qrCode, '$', 4) %>%
+             str_remove('PLOT') %>%
+             as.numeric(),
+           row = str_split_i(qrCode, '$', 5) %>%
+             str_remove('ROW'),
+           range = str_split_i(qrCode, '$', 6) %>%
+             str_remove('RANGE'),
+           genotype = str_split_i(qrCode, '$', 7))
+  return(df)
+}
+
+parseScottsbluffQRs <- function(data)
+{
+  df <- data %>%
+    mutate(location = 'Scottsbluff',
+           block = str_split_i(qrCode, '$', 3) %>%
+             str_remove('REP'),
+           plotNumber = str_split_i(qrCode, '$', 4) %>%
+             str_remove('PLOT') %>%
+             as.numeric(),
+           row = str_split_i(qrCode, '$', 5) %>%
+             str_remove('ROW'),
+           range = str_split_i(qrCode, '$', 6) %>%
+             str_remove('RANGE'),
+           genotype = str_split_i(qrCode, '$', 7))
+  return(df)
+}
+
+mv <- ears %>%
+  filter(str_detect(qrCode, 'MV')) %>%
+  parseMissouriValleyQRs()
+lnk <- ears %>%
+  filter(str_detect(qrCode, 'LINCOLN')) %>%
+  parseLincolnQRs()
+sb <- ears %>%
+  filter(str_detect(qrCode, 'SCOTTSBLUFF')) %>%
+  parseScottsbluffQRs()
+
+ears <- bind_rows(mv, lnk, sb)
+earsPlotLevel <- ears %>%
+  group_by(location, plotNumber, qrCode, row, range, genotype, block) %>%
+  summarise(numberPrimaryEars = mean(numberPrimaryEars, na.rm = TRUE),
+            numberSecondaryEars = mean(numberSecondaryEars, na.rm = TRUE), 
+            looseKernels = mean(looseKernels, na.rm = TRUE), 
+            looseKernelMass = mean(looseKernelMass, na.rm = TRUE),
+            secondaryEarKernels = mean(secondaryEarKernels, na.rm = TRUE), 
+            kernelColor = first(kernelColor),
+            kernelStriping = first(kernelStriping),
+            earWidth = mean(earWidth, na.rm = TRUE),
+            kernelFillLength = mean(kernelFillLength, na.rm = TRUE),
+            kernelRowNumber = mean(kernelRowNumber, na.rm = TRUE), 
+            kernelsPerRow = mean(kernelsPerRow, na.rm = TRUE),
+            kernelsPerEar = mean(kernelsPerEar, na.rm = TRUE), 
+            shelledCobWidth = mean(shelledCobWidth, na.rm = TRUE),
+            shelledCobLength = mean(shelledCobLength, na.rm = TRUE),
+            shelledCobMass = mean(shelledCobMass, na.rm = TRUE), 
+            hundredKernelMass = mean(hundredKernelMass, na.rm = TRUE),
+            kernelMassPerEar = mean(kernelMassPerEar, na.rm = TRUE),
+            notes = paste0(notes, collapse = ';'))

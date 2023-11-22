@@ -302,7 +302,7 @@ plotVarCorr(hybrids, flagLeafHeight, earHeight)
 # p.blups <- s$coeff %>%
 #   as_tibble(rownames = 'plotNumber')
 
-# Okay, now let's write a function to get the spatial BLUES for each response on a plot level
+# Okay, now let's write a function to get the spatial BLUPs for each response on a plot level
 # Will fit model by individual location, nitrogen treatment combination
 getSpatialCorrections <- function(data, response)
 {
@@ -1665,6 +1665,36 @@ for(i in 1:length(response_vars))
                                            use = 'complete.obs')))
   #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
 }
+
+# Plot plasticity vs mean; color by meanParentAge
+for(i in 1:length(response_vars))
+{
+  response.mu <- paste0(response_vars[i], '.mu')
+  meanLabel <- paste0('Mean ', response_labels[i])
+  response.pl <- paste0(response_vars[i], '.pl')
+  plasticityLabel <- paste0(response_labels[i], ' Linear Plasticity')
+  
+  p <- ggplot(summary.allenv, aes(.data[[response.mu]], .data[[response.pl]], color = meanParentAge)) + 
+    geom_point() +
+    geom_hline(yintercept = 1) +
+    scale_y_continuous(limits = c(0.45, 1.75)) +
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = 'Mean Parent Release Year') + 
+    scale_color_viridis_c() +
+    theme(text = element_text(color = 'black', size = 14),
+          axis.text = element_text(color = 'black', size = rel(1)),
+          axis.line = element_line(color = 'black', size = 1),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(), 
+          plot.background = element_blank(), 
+          legend.position = 'right',
+          legend.background = element_rect(color = 'black'))
+  print(p)
+  print(paste0(response_vars[i], ': ', cor(summary.allenv[[response.mu]], summary.allenv[[response.pl]], 
+                                           use = 'complete.obs')))
+  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+}
+
 
 
 # Export as csv so we can query GRIN
