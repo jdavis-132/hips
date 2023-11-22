@@ -22,6 +22,22 @@ hybrids <-  hybrids %>%
                                                  !is.na(kernelMassPerEar) & location %in% c('Ames', 'Crawfordsville') ~ kernelMassPerEar/(1 - (meanPercentMoisture/100))),
          moistureCorrectedHundredKernelMass = case_when(!is.na(hundredKernelMass) & !is.na(percentMoisture) ~ hundredKernelMass/(1 - (percentMoisture/100)),
                                                         !is.na(hundredKernelMass) & location %in% c('Ames', 'Crawfordsville') ~ hundredKernelMass/(1 - (meanPercentMoisture/100))))
+# How many non-missing values do we have?
+nonMissingVals <- 0
+totalPlots <- length(hybrids$qrCode)
+vars <- c('anthesisDate', 'silkDate', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'GDDToAnthesis', 'GDDToSilk', 
+          'anthesisSilkingIntervalSilkingGDD', 'earHeight', 'flagLeafHeight', 'plantDensity', 'combineYield', 'yieldPerAcre', 
+          'combineMoisture', 'combineTestWeight', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 'kernelsPerRow', 
+          'kernelRowNumber', 'kernelsPerEar', 'shelledCobMass', 'percentMoisture', 'percentStarch', 'percentProtein', 'percentOil', 
+          'percentFiber', 'percentAsh', 'kernelColor', 'percentLodging', 'totalStandCount')
+hybrids <- hybrids %>%
+  mutate(across(is.character, ~case_when(.=='' ~ NA)))
+for(var in vars)
+{
+  numMissingVals <- as.numeric(sum(is.na(hybrids[[var]])))
+  numNotMissing <- totalPlots - numMissingVals
+  nonMissingVals <- nonMissingVals + numNotMissing
+}
 # Let's look at how yield varies across sublocations
 yieldMap <- ggplot(hybrids, aes(range, row, fill = combineYield, color = 'white')) +
   geom_raster() +
