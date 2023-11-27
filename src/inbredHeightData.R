@@ -1,6 +1,6 @@
 library(tidyverse)
 library(readxl)
-library(grDevices)
+library(cowplot)
 source('src/Functions.R')
 df2022Inbreds <- read.csv('/Users/jensinadavis/Downloads/SAMS_2022_V4.0_INBREDS.csv')
 response_vars <- c('earHeight', 'flagLeafHeight')
@@ -289,17 +289,20 @@ parseMissouriValleyQRs <- function(data)
   df <- data %>%
     rowwise() %>%
     mutate(location = 'Missouri Valley', 
-           block = str_split_i(qrCode, '$', 3) %>%
-             str_remove('REP'),
-           plotNumber = str_split_i(qrCode, '$', 4) %>%
+           block = str_split_i(qrCode, fixed('$'), 3) %>%
+             str_remove('REP') %>%
+             as.numeric(),
+           plotNumber = str_split_i(qrCode, fixed('$'), 4) %>%
              str_remove('PLOT') %>%
              as.numeric() %>%
              case_when(block==2 ~ . + 400, .default = .),
-           row = str_split_i(qrCode, '$', 5) %>%
-             str_remove('ROW'), 
-           range = str_split_i(qrCode, '$', 6) %>%
-             str_remove('RANGE'),
-           genotype = str_split_i(qrCode, '$', 7))
+           row = str_split_i(qrCode, fixed('$'), 5) %>%
+             str_remove('ROW') %>%
+             as.numeric(), 
+           range = str_split_i(qrCode, fixed('$'), 6) %>%
+             str_remove('RANGE') %>%
+             as.numeric(),
+           genotype = str_split_i(qrCode, fixed('$'), 7))
   return(df)
 }
 
@@ -307,16 +310,19 @@ parseLincolnQRs <- function(data)
 {
   df <- data %>%
     mutate(location = 'Lincoln',
-           block = str_split_i(qrCode, '$', 3) %>%
-             str_remove('REP'), 
-           plotNumber = str_split_i(qrCode, '$', 4) %>%
+           block = str_split_i(qrCode, fixed('$'), 3) %>%
+             str_remove('REP') %>%
+             as.numeric(), 
+           plotNumber = str_split_i(qrCode, fixed('$'), 4) %>%
              str_remove('PLOT') %>%
              as.numeric(),
-           row = str_split_i(qrCode, '$', 5) %>%
-             str_remove('ROW'),
-           range = str_split_i(qrCode, '$', 6) %>%
-             str_remove('RANGE'),
-           genotype = str_split_i(qrCode, '$', 7))
+           row = str_split_i(qrCode, fixed('$'), 5) %>%
+             str_remove('ROW') %>%
+             as.numeric(),
+           range = str_split_i(qrCode, fixed('$'), 6) %>%
+             str_remove('RANGE') %>%
+             as.numeric(),
+           genotype = str_split_i(qrCode, fixed('$'), 7))
   return(df)
 }
 
@@ -324,16 +330,19 @@ parseScottsbluffQRs <- function(data)
 {
   df <- data %>%
     mutate(location = 'Scottsbluff',
-           block = str_split_i(qrCode, '$', 3) %>%
-             str_remove('REP'),
-           plotNumber = str_split_i(qrCode, '$', 4) %>%
+           block = str_split_i(qrCode, fixed('$'), 3) %>%
+             str_remove('REP') %>% 
+             as.numeric(),
+           plotNumber = str_split_i(qrCode, fixed('$'), 4) %>%
              str_remove('PLOT') %>%
              as.numeric(),
-           row = str_split_i(qrCode, '$', 5) %>%
-             str_remove('ROW'),
-           range = str_split_i(qrCode, '$', 6) %>%
-             str_remove('RANGE'),
-           genotype = str_split_i(qrCode, '$', 7))
+           row = str_split_i(qrCode, fixed('$'), 5) %>%
+             str_remove('ROW') %>%
+             as.numeric(),
+           range = str_split_i(qrCode, fixed('$'), 6) %>%
+             str_remove('RANGE') %>%
+             as.numeric(),
+           genotype = str_split_i(qrCode, fixed('$'), 7))
   return(df)
 }
 
@@ -368,3 +377,47 @@ earsPlotLevel <- ears %>%
             hundredKernelMass = mean(hundredKernelMass, na.rm = TRUE),
             kernelMassPerEar = mean(kernelMassPerEar, na.rm = TRUE),
             notes = paste0(notes, collapse = ';'))
+
+earPlotsWide <- earsPlotLevel %>%
+  mutate(kernelMassPerEar = case_when(kernelMassPerEar > 200 ~ NA, .default = kernelMassPerEar),
+         hundredKernelMass = case_when(hundredKernelMass > 150 ~ NA, .default = hundredKernelMass),) %>%
+  group_by(location, genotype) %>%
+  mutate(genotypicRep = 1:n()) %>%
+  pivot_wider(id_cols = c(genotype, genotypicRep),
+              names_from = location,
+              values_from = c(numberPrimaryEars, numberSecondaryEars, looseKernelMass, looseKernels, kernelColor, kernelStriping, 
+                              earWidth, kernelFillLength, kernelRowNumber, kernelsPerEar, kernelsPerRow, shelledCobWidth, 
+                              shelledCobLength, shelledCobMass, hundredKernelMass, kernelMassPerEar))
+
+earPhenotypes <- c('earWidth', 'kernelFillLength', 'kernelRowNumber', 'kernelsPerEar', 'kernelsPerRow', 'shelledCobWidth',
+                   'shelledCobLength', 'shelledCobMass', 'hundredKernelMass', 'kernelMassPerEar')
+for(pheno in earPhenotypes)
+{
+  phenoSB <- paste0(pheno, '_Scottsbluff')
+  phenoMV <- paste0(pheno, '_Missouri Valley')
+  phenoLNK <- paste0(pheno, '_Lincoln')
+  
+  mvPlot <- ggplot(earPlotsWide, aes(.data[[phenoMV]], .data[[phenoSB]])) +
+    geom_point() +
+    labs(title = pheno, 
+         subtitle = paste0('r = ', cor(earPlotsWide[[phenoMV]], earPlotsWide[[phenoSB]], use = 'complete.obs')),
+         x = 'Missouri Valley',
+         y = 'Scottsbluff')
+  
+  lnkPlot <- ggplot(earPlotsWide, aes(.data[[phenoLNK]], .data[[phenoSB]])) +
+    geom_point() +
+    labs(title = pheno, 
+         subtitle = paste0('r = ', cor(earPlotsWide[[phenoLNK]], earPlotsWide[[phenoSB]], use = 'complete.obs')),
+         x = 'Lincoln',
+         y = 'Scottsbluff')
+  
+  mvLNKPlot <- ggplot(earPlotsWide, aes(.data[[phenoMV]], .data[[phenoLNK]])) +
+    geom_point() +
+    labs(title = pheno, 
+         subtitle = paste0('r = ', cor(earPlotsWide[[phenoMV]], earPlotsWide[[phenoLNK]], use = 'complete.obs')),
+         x = 'Missouri Valley',
+         y = 'Lincoln')
+  
+  combinedPlot <- plot_grid(mvLNKPlot, mvPlot, lnkPlot, nrow = 1)
+  print(combinedPlot)
+}
