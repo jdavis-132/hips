@@ -290,6 +290,11 @@ parseMissouriValleyQRs <- function(data)
   df <- data %>%
     rowwise() %>%
     mutate(location = 'Missouri Valley', 
+           nitrogenTreatment = 'Medium',
+           poundsOfNitrogenPerAcre = 175,
+           irrigationProvided = 0, 
+           sublocation = 'Missouri Valley',
+           plantingDate = '4/29/2022',
            block = str_split_i(qrCode, fixed('$'), 3) %>%
              str_remove('REP') %>%
              as.numeric(),
@@ -311,6 +316,11 @@ parseLincolnQRs <- function(data)
 {
   df <- data %>%
     mutate(location = 'Lincoln',
+           sublocation = 'Lincoln',
+           nitrogenTreatment = 'Medium',
+           poundsOfNitrogenPerAcre = 150,
+           irrigationProvided = 0,
+           plantingDate = '5/5/2022',
            block = str_split_i(qrCode, fixed('$'), 3) %>%
              str_remove('REP') %>%
              as.numeric(), 
@@ -331,6 +341,11 @@ parseScottsbluffQRs <- function(data)
 {
   df <- data %>%
     mutate(location = 'Scottsbluff',
+           sublocation = 'Scottsbluff',
+           nitrogenTreatment = 'High', 
+           poundsOfNitrogenPerAcre = 250, 
+           irrigationProvided = 16.9, 
+           plantingDate = '5/19/2022'
            block = str_split_i(qrCode, fixed('$'), 3) %>%
              str_remove('REP') %>% 
              as.numeric(),
@@ -518,7 +533,52 @@ sbWide <- plotRepCorr(sb, 'nitrogenTreatment', 'genotype', c('daysToAnthesis', '
 
 inbreds4.5Wide <- plotRepCorr(inbreds4.5, 'nitrogenTreatment', 'genotype', c('earHeight'), 'location')
 
-inbreds4.6 <- read_csv("~/Downloads/SAMS_2022_V4.6_INBREDS .csv") %>%
-  filter(earHeight < 400)
+inbreds4.6 <- read_csv("~/Downloads/SAMS_2022_V4.6_INBREDS .csv")
 
 inbreds4.6Wide <- plotRepCorr(inbreds4.6, 'nitrogenTreatment', 'genotype', c(earPhenotypes, 'earHeight'), 'location')
+
+# Read in IA inbred field data
+ia_inb <- read_excel("data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx", 
+                     sheet = "RawData (2-Row)", col_types = c("skip", 
+                                                              "skip", "skip", "skip", "text", "skip", 
+                                                              "text", "skip", "skip", "skip", "text", 
+                                                              "skip", "text", "numeric", "numeric", 
+                                                              "numeric", "numeric", "numeric", 
+                                                              "numeric", "skip", "skip", "skip", 
+                                                              "skip", "skip", "numeric", "skip", 
+                                                              "skip", "skip", "skip", "date", "skip", 
+                                                              "skip", "numeric", "skip", 'skip', 
+                                                              "skip", "skip", "skip"))
+# Save original column names and change 
+orig_colnames_ia_inb <- colnames(ia_inb)
+colnames(ia_inb) <- c('experiment', 'check', 'genotype', 'notes', 'plotNumber', 'latitude', 'longitude', 'row', 'range', 'block', 'plantDensity', 'plantingDate', 'totalStandCount')
+# Filter to MV
+# Move check to notes and drop
+# And add metadata
+ia_inb <- mv_inb %>%
+  rowwise() %>%
+  mutate(check = case_when(!is.na(check) ~ 'Check'),
+         genotype = str_to_upper(genotype),
+         location = case_when(experiment=='LC_2211' ~ 'Missouri Valley',
+                              experiment %in% c('LC_2231', 'LC_2232', 'LC_2233') ~ 'Ames',
+                              experiment %in% c('LC_2351', 'LC_2352', 'LC_2353') ~ 'Crawfordsville'),
+         sublocation = case_when(experiment=='LC_2211' ~ 'Missouri Valley',
+                                 experiment %in% c('LC_2231', 'LC_2232') ~ 'Ames B1',
+                                 experiment=='LC_2233' ~ 'Ames E1',
+                                 experiment %in% c('LC_2351', 'LC_2352') ~ 'Crawfordsville A',
+                                 experiment %in% c('LC_2353') ~ 'Crawfordsville B'),
+         irrigationProvided = 0,
+         nitrogenTreatment = case_when(experiment %in% c('LC_2352', 'LC_2233') ~ 'Low',
+                                       experiment %in% c('LC_2211', 'LC_2353', 'LC_2232') ~ 'Medium',
+                                       experiment %in% c('LC_2231', 'LC_2351') ~ 'High'), 
+         poundsOfNitrogenPerAcre = case_when(experiment %in% c('LC_2352', 'LC_2233') ~ 75,
+                                             experiment %in% c('LC_2353', 'LC_2232') ~ 150,
+                                             experiment=='LC_2211' ~ 175,
+                                             experiment=='LC_2251' ~ 225,
+                                             experiment=='LC_2231' ~ 250), 
+         plantingDate = case_when(experiment=='LC_2211' ~ '4/29/2022', 
+                                  experiment %in% c('LC_2231', 'LC_2232') ~ '5/23/2022', 
+                                  experiment=='LC_2233' ~ '',
+                                  experiment %in% c('LC_2351', 'LC_2352', 'LC_2353') ~ 'Crawfordsville')) %>%
+  unite('notes', c(notes, check), sep = ';', na.rm = TRUE) %>%
+  select(c(experiment, notes, genotype, plotNumber, row, range, block, plantDensity, plantingDate))
