@@ -584,14 +584,11 @@ ia_inb <- ia_inb %>%
   select(c(experiment, notes, genotype, plotNumber, row, range, block, plantDensity, plantingDate, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, qrCode))
 
 inbreds <- full_join(earsPlotLevel, ia_inb, join_by(location, row, range), keep = FALSE, suffix = c('.ears', '.ia'))
-checkGenotypeAlignment <- inbreds %>%
-  select(location, genotype.ears, genotype.ia, plotNumber.ears, plotNumber.ia, row, range) %>%
-  rowwise() %>%
-  mutate(genotypeMatch = genotype.ears==genotype.ia)
 inbreds <- inbreds %>%
   rowwise() %>%
   mutate(plotNumber = case_when(location %in% c('Scottsbluff', 'Lincoln', 'Missouri Valley') ~ plotNumber.ears,
-                                location %in% c('Ames', 'Crawfordsville') ~ str_split_i(qrCode.ia, '-', 3)),
+                                location %in% c('Ames', 'Crawfordsville') ~ str_split_i(qrCode.ia, '-', 3) %>%
+                                  as.numeric()),
          qrCode = case_when(location %in% c('Scottsbluff', 'Lincoln', 'Missouri Valley') ~ qrCode.ears, 
                             location %in% c('Ames', 'Crawfordsville') ~ qrCode.ia), 
          genotype = case_when(location %in% c('Scottsbluff', 'Lincoln', 'Missouri Valley') ~ genotype.ears, 
@@ -602,6 +599,42 @@ inbreds <- inbreds %>%
                            (sublocation %in% c('Ames B1', 'Crawfordsville B') & nitrogenTreatment=='Medium' & block.ia==2)|
                              (sublocation %in% c('Ames E1', 'Crawfordsville A') & nitrogenTreatment=='Low' & block.ia==2) ~ 2,
                            (sublocation %in% c('Ames B1', 'Crawfordsville A') & nitrogenTreatment=='High' & block.ia==1) ~ 3,
-                           (sublocation %in% c('Ames B1', 'Crawfordsville A') & nitrogenTreatment=='High' & rep==2) ~ 4)) %>%
+                           (sublocation %in% c('Ames B1', 'Crawfordsville A') & nitrogenTreatment=='High' & block.ia==2) ~ 4)) %>%
   unite('notes', c(notes.ears, notes.ia), sep = ';', na.rm = TRUE) %>%
-  
+  select(location, plotNumber, qrCode, row, range, genotype, block, numberPrimaryEars, numberSecondaryEars, looseKernels, 
+         looseKernelMass, secondaryEarKernels, kernelColor, kernelStriping, earWidth, kernelFillLength, kernelRowNumber, kernelsPerRow,
+         kernelsPerEar, shelledCobWidth, shelledCobLength, shelledCobMass, hundredKernelMass, kernelMassPerEar, notes, experiment,
+         plantDensity, plantingDate, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre)
+
+# Missouri Valley height data
+mv.plantData.inb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx',
+                               sheet = '2211',
+                               col_names = c('row', 'range', 'notes', 'flagLeafHeight', 'earHeight', 'genotype'),
+                               col_types = c('skip', 'numeric', 'numeric', 'skip', 'skip', 'text', 'numeric', 'numeric', 'text', 'skip'),
+                               skip = 1)
+mv.plantData.inb <- mv.plantData.inb %>%
+  filter(is.na(notes)) %>%
+  rowwise() %>%
+  mutate(flagLeafHt = case_when(flagLeafHeight=='n/a' ~ NA, .default = flagLeafHeight),
+         earHeight = case_when(earHeight=='n/a' ~ NA, .default = earHeight),
+         genotype = str_to_upper(genotype),
+         location = 'Missouri Valley',
+         sublocation = 'Missouri Valley',
+         nitrogenTreatment = 'Medium',
+         irrigationProvided = 0,
+         poundsOfNitrogenPerAcre = 175)
+
+inbreds <- full_join(inbreds, mv.plantData.inb, join_by(location, row, range), keep = FALSE, suffix = c('', '.mv'))
+inbreds <- inbreds %>%
+  select(!ends_with('.mv'))
+
+ac <- read.table('outData/AmesCrawfordsville2022InbredEarsHeights.tsv', header = TRUE, sep = '\t')
+ac <- ac %>%
+  rowwise() %>%
+  mutate(experiment = case_when(location=='Crawfordsville' & nitrogenTreatment=='High' ~ 'LC_2351',
+                                location=='Crawfordsville' & nitrogenTreatment=='Low' ~ 'LC_2352',
+                                location=='Crawfordsville' & nitrogenTreatment=='Medium' ~ 'LC_2353',
+                                location=='Ames' & nitrogenTreatment=='High' ~ 'LC_2231',
+                                location=='Ames' & nitrogenTreatment=='Medium' ~ 'LC_2232',
+                                location=='Ames' & nitrogenTreatment=='Low' ~ 'LC_2233'))
+inbreds2 <- full_join(inbreds, ac, join_by(location, row, range, experiment), keep = FALSE, suffix = c('', '.ac'))

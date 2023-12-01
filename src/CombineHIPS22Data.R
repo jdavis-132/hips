@@ -2744,6 +2744,13 @@ ac.df <- ac.df %>%
          nLvl = max(nLvl, nLvl.seed)) %>%
   select(!ends_with('.seed'))
 
+# Export Ames, Crawfordsville inbred ear and height data
+ac.inbreds <- filter(ac.df, population=='Inbred')
+acInbredColNames <- c('range', 'row', 'qrCode', 'notes', 'flagLeafHeight', 'earHeight', 'rep', 'plotNumber', 'genotype', 'location',
+                          'nitrogenTreatment', 'field', 'irrigation', 'population', 'kernelRowNumber', 'earLength', 'earWidth',
+                          'earWeight', 'shelledCobLength', 'shelledCobWidth', 'shelledCobWeight', 'kernelsPerEar', 'kernelMassPerEar')
+write.table(ac.inbreds, 'outData/AmesCrawfordsville2022InbredEarsHeights.tsv', quote = FALSE, sep = '\t', row.names = FALSE, 
+            col.names = acInbredColNames)
 
 # Integrate combine data for Ames & Crawfordsville
 ac.yield.hyb <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx', 
