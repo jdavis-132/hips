@@ -345,7 +345,7 @@ parseScottsbluffQRs <- function(data)
            nitrogenTreatment = 'High', 
            poundsOfNitrogenPerAcre = 250, 
            irrigationProvided = 16.9, 
-           plantingDate = '5/19/2022'
+           plantingDate = '5/19/2022',
            block = str_split_i(qrCode, fixed('$'), 3) %>%
              str_remove('REP') %>% 
              as.numeric(),
@@ -541,7 +541,7 @@ inbreds4.6Wide <- plotRepCorr(inbreds4.6, 'nitrogenTreatment', 'genotype', c(ear
 ia_inb <- read_excel("data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx", 
                      sheet = "RawData (2-Row)", col_types = c("skip", 
                                                               "skip", "skip", "skip", "text", "skip", 
-                                                              "text", "skip", "skip", "skip", "text", 
+                                                              "text", "skip", "text", "skip", "text", 
                                                               "skip", "text", "numeric", "numeric", 
                                                               "numeric", "numeric", "numeric", 
                                                               "numeric", "skip", "skip", "skip", 
@@ -551,11 +551,11 @@ ia_inb <- read_excel("data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx",
                                                               "skip", "skip", "skip"))
 # Save original column names and change 
 orig_colnames_ia_inb <- colnames(ia_inb)
-colnames(ia_inb) <- c('experiment', 'check', 'genotype', 'notes', 'plotNumber', 'latitude', 'longitude', 'row', 'range', 'block', 'plantDensity', 'plantingDate', 'totalStandCount')
+colnames(ia_inb) <- c('experiment', 'check', 'qrCode', 'genotype', 'notes', 'plotNumber', 'latitude', 'longitude', 'row', 'range', 'block', 'plantDensity', 'plantingDate', 'totalStandCount')
 # Filter to MV
 # Move check to notes and drop
 # And add metadata
-ia_inb <- mv_inb %>%
+ia_inb <- ia_inb %>%
   rowwise() %>%
   mutate(check = case_when(!is.na(check) ~ 'Check'),
          genotype = str_to_upper(genotype),
@@ -578,7 +578,30 @@ ia_inb <- mv_inb %>%
                                              experiment=='LC_2231' ~ 250), 
          plantingDate = case_when(experiment=='LC_2211' ~ '4/29/2022', 
                                   experiment %in% c('LC_2231', 'LC_2232') ~ '5/23/2022', 
-                                  experiment=='LC_2233' ~ '',
-                                  experiment %in% c('LC_2351', 'LC_2352', 'LC_2353') ~ 'Crawfordsville')) %>%
+                                  experiment=='LC_2233' ~ '5/22/2023',
+                                  experiment %in% c('LC_2351', 'LC_2352', 'LC_2353') ~ '5/11/2022')) %>%
   unite('notes', c(notes, check), sep = ';', na.rm = TRUE) %>%
-  select(c(experiment, notes, genotype, plotNumber, row, range, block, plantDensity, plantingDate))
+  select(c(experiment, notes, genotype, plotNumber, row, range, block, plantDensity, plantingDate, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, qrCode))
+
+inbreds <- full_join(earsPlotLevel, ia_inb, join_by(location, row, range), keep = FALSE, suffix = c('.ears', '.ia'))
+checkGenotypeAlignment <- inbreds %>%
+  select(location, genotype.ears, genotype.ia, plotNumber.ears, plotNumber.ia, row, range) %>%
+  rowwise() %>%
+  mutate(genotypeMatch = genotype.ears==genotype.ia)
+inbreds <- inbreds %>%
+  rowwise() %>%
+  mutate(plotNumber = case_when(location %in% c('Scottsbluff', 'Lincoln', 'Missouri Valley') ~ plotNumber.ears,
+                                location %in% c('Ames', 'Crawfordsville') ~ str_split_i(qrCode.ia, '-', 3)),
+         qrCode = case_when(location %in% c('Scottsbluff', 'Lincoln', 'Missouri Valley') ~ qrCode.ears, 
+                            location %in% c('Ames', 'Crawfordsville') ~ qrCode.ia), 
+         genotype = case_when(location %in% c('Scottsbluff', 'Lincoln', 'Missouri Valley') ~ genotype.ears, 
+                              location %in% c('Ames', 'Crawfordsville') ~ genotype.ia),
+         block = case_when(location %in% c('Scottsbluff', 'Lincoln', 'Missouri Valley') ~ block.ears,
+                           (sublocation %in% c('Ames B1', 'Crawfordsville B') & nitrogenTreatment=='Medium' & block.ia==1)|
+                             (sublocation %in% c('Ames E1', 'Crawfordsville A') & nitrogenTreatment=='Low' & block.ia==1) ~ 1,
+                           (sublocation %in% c('Ames B1', 'Crawfordsville B') & nitrogenTreatment=='Medium' & block.ia==2)|
+                             (sublocation %in% c('Ames E1', 'Crawfordsville A') & nitrogenTreatment=='Low' & block.ia==2) ~ 2,
+                           (sublocation %in% c('Ames B1', 'Crawfordsville A') & nitrogenTreatment=='High' & block.ia==1) ~ 3,
+                           (sublocation %in% c('Ames B1', 'Crawfordsville A') & nitrogenTreatment=='High' & rep==2) ~ 4)) %>%
+  unite('notes', c(notes.ears, notes.ia), sep = ';', na.rm = TRUE) %>%
+  
