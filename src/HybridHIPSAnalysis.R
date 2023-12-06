@@ -1620,7 +1620,7 @@ for(i in 1:length(response_vars))
     geom_point() +
     geom_hline(yintercept = 1) +
     scale_y_continuous(limits = c(0.45, 1.75)) +
-    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = 'Youngest Parent Release Year') + 
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Youngest Parent Release Year', width = 1)) + 
     scale_color_viridis_c() +
     theme(text = element_text(color = 'black', size = 14),
           axis.text = element_text(color = 'black', size = rel(1)),
@@ -1634,7 +1634,7 @@ for(i in 1:length(response_vars))
   print(p)
   print(paste0(response_vars[i], ': ', cor(summary.allenv[[response.mu]], summary.allenv[[response.pl]], 
                                            use = 'complete.obs')))
-  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+  ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMeanYoungestParent.png'), plot = p)
 }
 
 # Plot plasticity vs mean; color by oldestParentAge
@@ -1649,7 +1649,7 @@ for(i in 1:length(response_vars))
     geom_point() +
     geom_hline(yintercept = 1) +
     scale_y_continuous(limits = c(0.45, 1.75)) +
-    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = 'Oldest Parent Release Year') + 
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Oldest Parent Release Year', width = 1)) + 
     scale_color_viridis_c() +
     theme(text = element_text(color = 'black', size = 14),
           axis.text = element_text(color = 'black', size = rel(1)),
@@ -1663,7 +1663,7 @@ for(i in 1:length(response_vars))
   print(p)
   print(paste0(response_vars[i], ': ', cor(summary.allenv[[response.mu]], summary.allenv[[response.pl]], 
                                            use = 'complete.obs')))
-  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+  ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMeanOldestParent.png'), plot = p)
 }
 
 # Plot plasticity vs mean; color by meanParentAge
@@ -1678,7 +1678,7 @@ for(i in 1:length(response_vars))
     geom_point() +
     geom_hline(yintercept = 1) +
     scale_y_continuous(limits = c(0.45, 1.75)) +
-    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = 'Mean Parent Release Year') + 
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Mean Parent Release Year', width = 1)) + 
     scale_color_viridis_c() +
     theme(text = element_text(color = 'black', size = 14),
           axis.text = element_text(color = 'black', size = rel(1)),
@@ -1692,7 +1692,7 @@ for(i in 1:length(response_vars))
   print(p)
   print(paste0(response_vars[i], ': ', cor(summary.allenv[[response.mu]], summary.allenv[[response.pl]], 
                                            use = 'complete.obs')))
-  #ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMean.png'), plot = p)
+  ggsave(paste0('analysis/', response_vars[i], 'PlasticityAcrossLocationsVsMeanMeanParent.png'), plot = p)
 }
 
 
