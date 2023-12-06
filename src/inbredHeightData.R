@@ -533,9 +533,9 @@ sbWide <- plotRepCorr(sb, 'nitrogenTreatment', 'genotype', c('daysToAnthesis', '
 
 inbreds4.5Wide <- plotRepCorr(inbreds4.5, 'nitrogenTreatment', 'genotype', c('earHeight'), 'location')
 
-inbreds4.6 <- read_csv("~/Downloads/SAMS_2022_V4.6_INBREDS .csv")
+inbreds4.7 <- read_csv("~/Downloads/SAMS_2022_V4.7_INBREDS .csv")
 
-inbreds4.6Wide <- plotRepCorr(inbreds4.6, 'nitrogenTreatment', 'genotype', c(earPhenotypes, 'earHeight'), 'location')
+inbreds4.7Wide <- plotRepCorr(inbreds4.7, 'nitrogenTreatment', 'genotype', c(earPhenotypes, 'earHeight'), 'location')
 
 # Read in IA inbred field data
 ia_inb <- read_excel("data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx", 

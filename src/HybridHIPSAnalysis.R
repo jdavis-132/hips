@@ -22,6 +22,9 @@ hybrids <-  hybrids %>%
                                                  !is.na(kernelMassPerEar) & location %in% c('Ames', 'Crawfordsville') ~ kernelMassPerEar/(1 - (meanPercentMoisture/100))),
          moistureCorrectedHundredKernelMass = case_when(!is.na(hundredKernelMass) & !is.na(percentMoisture) ~ hundredKernelMass/(1 - (percentMoisture/100)),
                                                         !is.na(hundredKernelMass) & location %in% c('Ames', 'Crawfordsville') ~ hundredKernelMass/(1 - (meanPercentMoisture/100))))
+hybridsWide <- hybrids %>%
+  # filter(location=='Scottsbluff') %>%
+  plotRepCorr('nitrogenTreatment', 'genotype', 'earHeight', 'location')
 # How many non-missing values do we have?
 nonMissingVals <- 0
 totalPlots <- length(hybrids$qrCode)
@@ -1129,6 +1132,7 @@ for(i in 1:length(response_vars))
 # dp_phenos <- c('combineMoisture', 'combineTestWeight','combineYield')
 # response_vars.sb <- response_vars[c(1:5, 7:25)]
 # # Look at scottsbluff
+hybrids3.2 <- 
 # sb <- filter(hybrids, location=='Scottsbluff' & genotype!='BORDER') %>%
 #   pivot_longer(all_of(response_vars.sb), names_to = 'var', values_to = 'val') %>%
 #   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')),
@@ -1136,28 +1140,28 @@ for(i in 1:length(response_vars))
 #                             var %in% c(rm_phenos, paste0(rm_phenos, '.sp')) ~ 'Ramesh',
 #                             var %in% c(dp_phenos, paste0(dp_phenos, '.sp')) ~ 'Dipak')) %>%
 #   select(genotype, var, nitrogenTreatment, source, val)
-# 
+#
 # plot.raw <- sb %>%
 #   group_by(genotype, var, nitrogenTreatment, source) %>%
 #   summarise(val = mean(val)) %>%
-#   ggplot(aes(nitrogenTreatment, val)) + 
-#   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
+#   ggplot(aes(nitrogenTreatment, val)) +
+#   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) +
 #   geom_line(color = 'darkgrey') +
 #   facet_wrap(vars(var), scales = 'free_y') +
 #   labs(title = 'Mean of Raw Phenotype Values', x = 'Nitrogen Level')
 # plot.raw
-# 
+#
 # plot.sp <- filter(sb, str_detect(var, '.sp')) %>%
 #   group_by(genotype, var, nitrogenTreatment, source) %>%
 #   summarise(val = mean(val)) %>%
-#   ggplot(aes(nitrogenTreatment, val)) + 
-#   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
+#   ggplot(aes(nitrogenTreatment, val)) +
+#   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) +
 #   geom_line(color = 'darkgrey') +
 #   facet_wrap(vars(var), scales = 'free_y') +
 #   labs(title = 'Mean of Spatially-Corrected Phenotype Values', x = 'Nitrogen Level')
 # plot.sp
-# 
-# # Check correlations of genotypic reps within a treatment 
+#
+# # Check correlations of genotypic reps within a treatment
 # ## Pivot
 # hybrids.wide <- hybrids.vp %>%
 #   filter(nitrogenTreatment!='Border' & !is.na(genotype)) %>%
@@ -1172,9 +1176,9 @@ for(i in 1:length(response_vars))
 # {
 #   rep1 <- paste0(i, '.1')
 #   rep2 <- paste0(i, '.2')
-#   
-#   p <- ggplot(hybrids.wide, aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) + 
-#     geom_point() + 
+#
+#   p <- ggplot(hybrids.wide, aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) +
+#     geom_point() +
 #     facet_wrap(vars(location))
 #   print(p)
 # }
@@ -1183,12 +1187,12 @@ for(i in 1:length(response_vars))
 # {
 #   rep1 <- paste0(i, '.1')
 #   rep2 <- paste0(i, '.2')
-#   
+#
 #   p <- hybrids.wide %>%
 #     filter(location=='North Platte1') %>%
-#     ggplot(aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) + 
-#     geom_point() + 
-#     facet_wrap(vars(nitrogenTreatment)) + 
+#     ggplot(aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) +
+#     geom_point() +
+#     facet_wrap(vars(nitrogenTreatment)) +
 #     labs(subtitle = paste0('R = ', cor(np1.hips[[rep1]], np1.hips[[rep2]], use = 'complete.obs')))
 #   print(p)
 # }
@@ -1198,18 +1202,18 @@ for(i in 1:length(response_vars))
 # # Test theory that the row numbers inc W to E in Scottsbluff
 # sb <- hybrids %>%
 #   filter(location=='Scottsbluff') %>%
-#   select(!c(contains('combine'), contains('harvest'), contains('Ht'), contains('GDD'), 
+#   select(!c(contains('combine'), contains('harvest'), contains('Ht'), contains('GDD'),
 #             contains('anthesis'), contains('silk'), contains('anthesisSilkingInterval'), contains('.sp')))
 # sb.combine2 <- sb_combine %>%
 #   rowwise() %>%
 #   mutate(row = case_when(row %in% 8:14 ~ row + 3,
-#                          row > 14 ~ row + 5, 
+#                          row > 14 ~ row + 5,
 #                          .default = row),
 #          range = range + 2)
-# 
-# sb.data2 <- full_join(sb.combine2, sb_h_ft, join_by(plot, location, sublocation, irrigationProvided, population), 
+#
+# sb.data2 <- full_join(sb.combine2, sb_h_ft, join_by(plot, location, sublocation, irrigationProvided, population),
 #                       suffix = c('', ''), keep = FALSE)
-# sb.data2 <- full_join(sb.data2, sb_h_ht, join_by(plot, location, sublocation, irrigationProvided, population), 
+# sb.data2 <- full_join(sb.data2, sb_h_ht, join_by(plot, location, sublocation, irrigationProvided, population),
 #                       suffix = c('', ''), keep = FALSE)
 # sb.test <- full_join(sb, sb.data2, join_by(range, row, location, sublocation, irrigationProvided, population))
 # sb.test <- sb.test %>%
@@ -1221,17 +1225,17 @@ for(i in 1:length(response_vars))
 #   group_by(genotype, nitrogenTreatment, location) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(c(earFillLength, earWidth, earLength, shelledCobWidth, shelledCobMass, kernelsPerEar, kernelMass, 
+#   pivot_longer(c(earFillLength, earWidth, earLength, shelledCobWidth, shelledCobMass, kernelsPerEar, kernelMass,
 #                  kernelsPerRow, kernelRowNumber, hundredKernelMass, percentStarch, percentProtein, percentOil, percentFiber,
-#                  percentAsh, percentMoisture, moistureCorrectedKernelMassPerEar, moistureCorrectedHundredKernelMass, combineYield, combineMoisture, 
-#                  combineTestWeight, earHeight, flagLeafHeight), 
+#                  percentAsh, percentMoisture, moistureCorrectedKernelMassPerEar, moistureCorrectedHundredKernelMass, combineYield, combineMoisture,
+#                  combineTestWeight, earHeight, flagLeafHeight),
 #                names_to = 'var', values_to = 'val') %>%
 #   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
 #   pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
-# sb.test_phenos <- c('earFillLength', 'earWidth', 'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelsPerEar', 'kernelMass', 
-#                     'kernelsPerRow', 'kernelRowNumber', 'hundredKernelMass', 'percentStarch', 'percentProtein', 
+# sb.test_phenos <- c('earFillLength', 'earWidth', 'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelsPerEar', 'kernelMass',
+#                     'kernelsPerRow', 'kernelRowNumber', 'hundredKernelMass', 'percentStarch', 'percentProtein',
 #                     'percentOil', 'percentFiber', 'percentAsh', 'percentMoisture', 'moistureCorrectedKernelMassPerEar',
-#                     'moistureCorrectedHundredKernelMass', 'combineYield', 'combineMoisture', 
+#                     'moistureCorrectedHundredKernelMass', 'combineYield', 'combineMoisture',
 #                     'combineTestWeight', 'earHeight', 'flagLeafHeight')
 # for(i in sb.test_phenos)
 # {
@@ -1243,7 +1247,7 @@ for(i in 1:length(response_vars))
 #     labs(title = 'Scottsbluff Corrected')
 #   print(p)
 # }
-# 
+#
 # # check the qrs for sb have the correct genotype
 # sb.index <- read_excel('data/Scottsbluff Hybrid HIPS - Summary.xlsx', sheet = 'Index (Original)')
 # sb.index <- sb.index[, c(1, 5, 7)]
@@ -1254,10 +1258,10 @@ for(i in 1:length(response_vars))
 # sb.index <- full_join(sb.index, sb, join_by(plot), keep = FALSE, suffix = c('.index', '.qr')) %>%
 #   select(c(plot, genotype.qr, genotype.index)) %>%
 #   filter(genotype.qr!='BORDER')
-# sb.index <- sb.index %>% 
+# sb.index <- sb.index %>%
 #   mutate(genotype.index = str_to_upper(genotype.index),
-#          match = case_when(genotype.index==genotype.qr ~ TRUE, 
-#                            .default = FALSE)) 
+#          match = case_when(genotype.index==genotype.qr ~ TRUE,
+#                            .default = FALSE))
 # # the qrs match the index we have from lisa
 # # check if the sublocation was planted starting in the SW corner but labeled from the SE corner
 # # then reassign qrs to pair plot numbers correctly (and thus genotypes correctly)
@@ -1288,15 +1292,15 @@ for(i in 1:length(response_vars))
 #   filter(!is.na(plot)) %>%
 #   select(!c(genotype, qr))
 # sb.qrs <- sb %>%
-#   select(qr, genotype, plot) %>% 
+#   select(qr, genotype, plot) %>%
 #   filter(!is.na(plot))
-# sb.sw <- full_join(sb.sw, sb.qrs, join_by(plot), keep = FALSE, suffix = c('', '')) 
-# 
+# sb.sw <- full_join(sb.sw, sb.qrs, join_by(plot), keep = FALSE, suffix = c('', ''))
+#
 # sb.sw.repcorr <- sb.sw %>%
 #   group_by(genotype, nitrogenTreatment, location) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(any_of(unl_phenos), 
+#   pivot_longer(any_of(unl_phenos),
 #                names_to = 'var', values_to = 'val') %>%
 #   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
 #   filter(!is.na(val)) %>%
@@ -1306,19 +1310,19 @@ for(i in 1:length(response_vars))
 #   rep1 <- paste0(i, '.1')
 #   print(i)
 #   rep2 <- paste0(i, '.2')
-#   
+#
 #   p <- ggplot(sb.sw.repcorr, aes(.data[[rep1]], .data[[rep2]], color = nitrogenTreatment)) +
-#     geom_point() + 
+#     geom_point() +
 #     facet_wrap(vars(nitrogenTreatment)) +
 #     labs(title = 'Scottsbluff SW Plant Start')
 #   print(p)
-#   
+#
 #   print(cor(sb.sw.repcorr[[rep1]], sb.sw.repcorr[[rep2]], use = 'complete.obs'))
 # }
-# 
+#
 # # Check correlation of traits collected at UNL for sites other than SB + MV
 # corr.df <- filter(hybrids.wide, location!='Scottsbluff' & location!='Missouri Valley')
-# 
+#
 # for(i in unl_phenos)
 # {
 #   print(i)
@@ -1326,9 +1330,9 @@ for(i in 1:length(response_vars))
 #   rep2 <- paste0(i, '.2')
 #   print(cor(corr.df[[rep1]], corr.df[[rep2]], use = 'complete.obs'))
 # }
-# 
+#
 # np1.df <- filter(hybrids.wide, location=='North Platte1')
-# 
+#
 # for(i in unl_phenos)
 # {
 #   print(i)
@@ -1336,7 +1340,7 @@ for(i in 1:length(response_vars))
 #   rep2 <- paste0(i, '.2')
 #   print(cor(sb.repcorr[[rep1]], sb.repcorr[[rep2]], use = 'complete.obs'))
 # }
-# 
+#
 # sb.combine <- sb_combine %>%
 #   rowwise() %>%
 #   mutate(plot = case_when(population=='Hybrid' & !c(plot %in% c(1021:1025)) & row==26 ~ plot + 490,
@@ -1368,7 +1372,7 @@ for(i in 1:length(response_vars))
 #                           population=='Hybrid' & row==1 & range==27 ~ 1025,
 #                           population=='Hybrid' & row==20 & range==23 ~ 1361,
 #                           population=='Hybrid' & row==20 & range==24 ~ 1362,
-#                           population=='Hybrid' & row==20 & range==25 ~ 1363, 
+#                           population=='Hybrid' & row==20 & range==25 ~ 1363,
 #                           population=='Hybrid' & row==20 & range==26 ~ 1364,
 #                           population=='Hybrid' & row==20 & range==27 ~ 1365,
 #                           population=='Hybrid' & row==11 & range==23 ~ 1191,
@@ -1380,14 +1384,14 @@ for(i in 1:length(response_vars))
 #                           population=='Hybrid' & row==17 & range %in% 23:27 ~ NA,
 #                           population=='Hybrid' & row==7 & range %in% 23:27 ~ NA,
 #                           .default = plot))
-# 
+#
 # sb.sw.all <- full_join(sb.sw, sb_combine, join_by(plot), suffix = c('', '.yield'), keep = FALSE) %>%
 #   select(!ends_with('.yield'))
 # sb.sw.all <- full_join(sb.sw.all, sb_h_ft, join_by(plot), suffix = c('', '.ft'), keep = FALSE) %>%
 #   select(!ends_with('.ft'))
 # sb.sw.all <- full_join(sb.sw.all, sb_h_ht, join_by(plot), suffix = c('', '.ht'), keep = FALSE) %>%
 #   select(!ends_with('.ht'))
-# 
+#
 # sb.sw.all.vars <- c(response_vars.sb[c(1:16, 20:23)], 'combineYield', 'combineMoisture', 'combineTestWeight')
 # sb.sw.long <- sb.sw.all %>%
 #   pivot_longer(any_of(sb.sw.all.vars), names_to = 'var', values_to = 'val') %>%
@@ -1398,22 +1402,22 @@ for(i in 1:length(response_vars))
 #   group_by(genotype, var, nitrogenTreatment) %>%
 #   mutate(rep = 1:n()) %>%
 #   select(genotype, var, nitrogenTreatment, source, val, rep)
-# 
+#
 # plot.raw <- sb.sw.long %>%
 #   filter(!is.na(nitrogenTreatment)) %>%
 #   group_by(genotype, var, nitrogenTreatment, source) %>%
 #   summarise(val = mean(val)) %>%
-#   ggplot(aes(nitrogenTreatment, val)) + 
-#   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) + 
+#   ggplot(aes(nitrogenTreatment, val)) +
+#   geom_violin(aes(fill = source), draw_quantiles = c(0.25, 0.5, 0.75), na.rm = TRUE) +
 #   geom_line(color = 'darkgrey') +
 #   facet_wrap(vars(var), scales = 'free_y') +
 #   labs(title = 'Mean of Raw Phenotype Values', x = 'Nitrogen Level')
 # plot.raw
-# 
-# sb.sw.wide <- pivot_wider(sb.sw.long, 
-#                           id_cols = c(nitrogenTreatment, genotype), 
-#                           names_from = c(var, rep), 
-#                           values_from = val, 
+#
+# sb.sw.wide <- pivot_wider(sb.sw.long,
+#                           id_cols = c(nitrogenTreatment, genotype),
+#                           names_from = c(var, rep),
+#                           values_from = val,
 #                           names_sep = '.')
 # for(i in sb.sw.all.vars)
 # {
@@ -1426,19 +1430,19 @@ for(i in 1:length(response_vars))
 #   print(i)
 #   print(cor(sb.sw.wide[[rep1]], sb.sw.wide[[rep2]], use = 'complete.obs'))
 # }
-# 
+#
 # plotRepCorr(sb.sw.all, 'nitrogenTreatment', 'genotype', sb.sw.all.vars, 'location')
-# 
+#
 # np1.df <- hybrids.vp %>%
 #   filter(nitrogenTreatment!='Border' & !is.na(genotype) & location=='North Platte1') %>%
 #   group_by(genotype, nitrogenTreatment, location) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(c(combineYield, combineMoisture, combineTestWeight, earHeight, flagLeafHeight), 
+#   pivot_longer(c(combineYield, combineMoisture, combineTestWeight, earHeight, flagLeafHeight),
 #                names_to = 'var', values_to = 'val') %>%
 #   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
 #   pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
-#   
+#
 # for(i in c('combineYield', 'combineMoisture', 'combineTestWeight', 'earHeight', 'flagLeafHeight'))
 # {
 #   print(i)
@@ -1446,11 +1450,11 @@ for(i in 1:length(response_vars))
 #   rep2 <- paste0(i, '.2')
 #   print(cor(sb.sw.wide[[rep1]], sb.sw.wide[[rep2]], use = 'complete.obs'))
 # }
-# 
+#
 # # Now onto figuring out what is up with the MV data
 # ## Let's look at the height data, but not flip the reps-- maybe the sublocation was planted with rep2 and rep1's locationations flipped & Lisa knew but forgot to mention
-# mv.plantData.hyb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx', 
-#                                sheet = '4211', 
+# mv.plantData.hyb <- read_excel('data/Plant_data_MO_Valley_2022.xlsx',
+#                                sheet = '4211',
 #                                col_names = c('row', 'range', 'flagLeafHeight', 'earHeight', 'rep', 'plot', 'genotype'),
 #                                col_types = c('skip', 'skip', 'numeric', 'numeric', 'skip', 'skip', 'numeric', 'numeric', 'numeric', 'numeric', 'skip', 'text'),
 #                                skip = 1)
@@ -1468,13 +1472,13 @@ for(i in 1:length(response_vars))
 #          flagLeafHeight = case_when(flagLeafHeight=='n/a - solar' ~ NA, .default = flagLeafHeight),
 #          earHeight = case_when(earHeight=='n/a - solar' ~ NA, .default = earHeight)) %>%
 #   fixGenos(hips1.5_genoFixKey)
-# 
+#
 # # Pivot wide
 # mv.ht.wide <- mv.plantData.hyb %>%
 #   group_by(genotype) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(c(earHeight, flagLeafHeight), 
+#   pivot_longer(c(earHeight, flagLeafHeight),
 #                names_to = 'var', values_to = 'val') %>%
 #   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
 #   pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
@@ -1498,16 +1502,16 @@ for(i in 1:length(response_vars))
 #          rep = rep.ht) %>%
 #   select(!c(contains('.unl'), contains('.ht'))) %>%
 #   filter(!is.na(row)|!is.na(range))
-# 
+#
 # mv.unl.ht.wide <- mv.unl.ht %>%
 #   group_by(genotype) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(any_of(unl_phenos), 
+#   pivot_longer(any_of(unl_phenos),
 #                names_to = 'var', values_to = 'val') %>%
 #   select(location, genotype, rep, nitrogenTreatment, val, var) %>%
 #   pivot_wider(id_cols = c(location, nitrogenTreatment, genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
-# 
+#
 # for(i in unl_phenos)
 # {
 #   rep1 <- paste0(i, '.1')
@@ -1518,7 +1522,7 @@ for(i in 1:length(response_vars))
 #   print(i)
 #   print(cor(mv.unl.ht.wide[[rep1]], mv.unl.ht.wide[[rep2]], use = 'complete.obs'))
 # }
-# 
+#
 # for (i in unl_phenos)
 # {
 #   rep1 <- paste0(i, '.1')
@@ -1527,7 +1531,7 @@ for(i in 1:length(response_vars))
 #   df <- hybrids.wide %>%
 #     filter(location=='Missouri Valley')
 #   print(cor(df[[rep1]], df[[rep2]], use = 'complete.obs'))
-# } 
+# }
 # # Some really good correlations between genotypic reps & some really bad ones -- is this something wrong or is it a feature of this data?
 # # Okay, now what if we bind the combine data in by range and row
 # mv.all <- full_join(mv.unl.ht, mv_hyb, join_by(range, row)) %>%
@@ -1537,7 +1541,7 @@ for(i in 1:length(response_vars))
 #   group_by(genotype) %>%
 #   mutate(rep = 1:n()) %>%
 #   ungroup() %>%
-#   pivot_longer(any_of(c(dp_phenos, 'earHeight', 'flagLeafHeight', unl_phenos)), 
+#   pivot_longer(any_of(c(dp_phenos, 'earHeight', 'flagLeafHeight', unl_phenos)),
 #                names_to = 'var', values_to = 'val') %>%
 #   select(genotype, val, var, rep) %>%
 #   pivot_wider(id_cols = c(genotype), names_from = c(var, rep), values_from = val, names_sep = '.')
@@ -1547,16 +1551,16 @@ for(i in 1:length(response_vars))
 #   rep1 <- paste0(i, '.1')
 #   rep2 <- paste0(i, '.2')
 #   p <- ggplot(mv.all.wide, aes(.data[[rep1]], .data[[rep2]])) +
-#     geom_point() + 
+#     geom_point() +
 #     labs(title = 'Missouri Valley Corrected', subtitle = cor(mv.all.wide[[rep1]], mv.all.wide[[rep2]], use = 'complete.obs'))
 #   print(p)
 #   print(i)
 #   print(cor(mv.all.wide[[rep1]], mv.all.wide[[rep2]], use = 'complete.obs'))
 # }
-# 
+#
 # # how was the combine info correct but not the rest? this is my own curiosity
 # mv.c.qr <- full_join(mv, mv_hyb, join_by(range, row), keep = FALSE, suffix = c('.unl', '.c'))
-# 
+#
 # ames.hyb <- filter(hybrids, location=='Ames')
 # ames.hyb.genoLvl <- ames.hyb %>%
 #   group_by(genotype, nitrogenTreatment) %>%
