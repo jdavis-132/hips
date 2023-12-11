@@ -804,15 +804,15 @@ locationTreatment.df <- locationTreatment.df %>%
          nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')), 
          location = factor(location, levels = c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville')))
 
-for(i in 16)
+for(i in 19)
 {
   response.pl <- paste0(response_vars[i], '.pl')
   response.sp <- paste0(response_vars[i], '.sp')
-  high.plasticity <- pl.allenv %>%
+  high.plasticity <- summary.allenv %>%
     arrange(desc(.data[[response.pl]]))
   high.plasticity.genos <- high.plasticity$genotype[1:20]
   
-  low.plasticity <- pl.allenv %>%
+  low.plasticity <- summary.allenv %>%
     arrange(.data[[response.pl]])
   low.plasticity.genos <- low.plasticity$genotype[1:20]
   
@@ -843,7 +843,7 @@ for(i in 16)
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, color = 'white'),
           axis.line = element_line(color = 'white', linewidth = 1),  
           legend.position = 'none',
-          plot.background = element_rect(fill = 'transparent', color = NA),
+          plot.background = element_rect(fill = 'black', color = NA),
           panel.background = element_rect(fill = 'transparent', color = NA),
           panel.grid = element_blank(),
           text = element_text(size = 14, color = 'white'),
