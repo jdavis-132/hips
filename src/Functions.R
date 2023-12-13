@@ -257,3 +257,14 @@ getCumulativeGDDs <- function(start, end, weather, location)
   cumulativeGDDs <- sum(weather.df$GDD)
   return(cumulativeGDDs)
 }
+
+# Function to check for duplicates, given a vector of grouping variables in the dataframe
+getDuplicates <- function(data, ...)
+{
+  duplicates <- data %>%
+    group_by(...) %>%
+    mutate(n = n()) %>%
+    filter(n > 1)
+  
+  return(duplicates)
+}

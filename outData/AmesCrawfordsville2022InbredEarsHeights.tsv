@@ -1,6 +1,4 @@
 range	row	qrCode	notes	flagLeafHeight	earHeight	rep	plotNumber	genotype	location	nitrogenTreatment	field	irrigation	population	kernelRowNumber	earLength	earWidth	earWeight	shelledCobLength	shelledCobWidth	shelledCobWeight	kernelsPerEar	kernelMassPerEar
-16	21	NA	toss - filler;Notes - seed spillage note from shelling, counting, or weighing **specify which**	204	104	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-16	22	NA	toss - filler;Notes - seed spillage note from shelling, counting, or weighing **specify which**	193	81	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
 4	17	22-A-1572699	collect	88	35	NA	1572699	29MIBZ2	Ames	High	B1	Dryland	Inbred	13	15.3235	3.78475	84.45	15.1476666666667	2.41533333333333	19.2333333333333	256	58.3833333333333
 5	25	22-A-1572700	collect	105	29	NA	1572700	F42	Ames	High	B1	Dryland	Inbred	19.6666666666667	10.1731666666667	4.05916666666667	72.0333333333333	10.3308	2.719	13.98	255.6	51.06
 6	24	22-A-1593501	collect	125	56	NA	1593501	LH54	Ames	High	B1	Dryland	Inbred	10	19.2658333333333	3.685	101.633333333333	20.093	2.0982	22.48	215.4	75.96
@@ -753,8 +751,6 @@ range	row	qrCode	notes	flagLeafHeight	earHeight	rep	plotNumber	genotype	location
 60	23	22-A-1594248	collect	192	87	NA	1594248	B73	Ames	High	B1	Dryland	Inbred	16.6666666666667	15.0595	4.737	151.75	14.825	2.8318	24.24	516.6	124
 59	28	22-A-1594249	NA	188	89	NA	1594249	B73	Ames	High	B1	Dryland	Inbred	16.6666666666667	13.5471666666667	4.4355	116.916666666667	13.5162	2.788	21.14	400.4	93.98
 60	28	22-A-1594250	NA	198	89	NA	1594250	MO17 FILLER	Ames	High	B1	Dryland	Inbred	16.6666666666667	14.4265	4.64066666666667	138.55	14.3346	2.8164	25.22	428.8	109.18
-31	29	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	76	16	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-60	29	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	209	111	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
 4	59	22-A-1594251	collect	107	35	NA	1594251	29MIBZ2	Ames	Medium	B1	Dryland	Inbred	13.3333333333333	14.6703333333333	3.71366666666667	70.4333333333333	14.796	2.3362	17.16	238.6	59.18
 4	50	22-A-1594252	collect	118	30	NA	1594252	F42	Ames	NA	B1	Dryland	Inbred	17	10.7578333333333	4.27116666666667	68.7833333333333	10.9444	2.6572	14.72	225.4	55.42
 3	58	22-A-1594253	collect;smooth cob - ovule issue	94	36	NA	1594253	LH54	Ames	Medium	B1	Dryland	Inbred	9.33333333333333	17.8055	3.54116666666667	64.45	17.6206	2.1512	19.26	138.8	45.84
@@ -984,7 +980,7 @@ range	row	qrCode	notes	flagLeafHeight	earHeight	rep	plotNumber	genotype	location
 18	58	22-A-1594477	x - collect data, but analyze team may need to assess photos	164	85	NA	1594477	DE811	Ames	NA	B1	Dryland	Inbred	15.2	14.0076	3.7918	68.98	13.64275	2.25675	12.95	238.25	56.625
 17	52	22-A-1594478	collect	158	85	NA	1594478	KY21	Ames	NA	B1	Dryland	Inbred	10	13.9295	4.318	69.5	14.712	2.77	22	156	46.3
 15	48	22-A-1594479	set aside;Severe bend in ear. String used to measure ear length	138	54	NA	1594479	MO1W	Ames	NA	B1	Dryland	Inbred	15.2	11.1992	4.2982	56.54	9.9525	2.7985	14.4	187.25	39.875
-21	58	22-A-1594480	x - collect data, but analyze team may need to assess photos	163	65	NA	1594480	IC I740	Ames	NA	B1	Dryland	Inbred	14	12.8941666666667	3.95783333333333	77.3833333333333	13.035	2.453	19.48	242.25	65.625
+21	58	22-A-1594480	x - collect data, but analyze team may need to assess photos	163	65	NA	1594480	IC I740	Ames	NA	B1	Dryland	Inbred	14	12.8941666666667	3.95783333333333	77.3833333333333	13.035	2.453	19.48	218.4	59.34
 24	50	22-A-1594481	x - collect data, but analyze team may need to assess photos	159	98	NA	1594481	NQ508	Ames	Medium	B1	Dryland	Inbred	12.6666666666667	11.1988333333333	3.88866666666667	79.0666666666667	11.134	2.39	14.8	225.2	64.02
 23	56	22-A-1594482	x - collect data, but analyze team may need to assess photos	119	37	NA	1594482	H84	Ames	NA	B1	Dryland	Inbred	17	15.05925	4.298	131.55	15.0443333333333	2.48433333333333	26.7	332.666666666667	100.7
 16	50	22-A-1594483	NA	164	68	NA	1594483	KY228	Ames	NA	B1	Dryland	Inbred	13	16.7735	4.3145	160.9	13.467	2.311	12.2	366	93.9
@@ -1059,7 +1055,7 @@ range	row	qrCode	notes	flagLeafHeight	earHeight	rep	plotNumber	genotype	location
 27	58	22-A-1594552	x - collect data, but analyze team may need to assess photos	106	53	NA	1594552	NC356	Ames	NA	B1	Dryland	Inbred	12	8.446	3.06233333333333	27.1666666666667	8.4395	2.1025	5.6	95	21.25
 28	52	22-A-1594553	collect	160	76	NA	1594553	MO44	Ames	NA	B1	Dryland	Inbred	13.3333333333333	11.886	2.843	28.8666666666667	11.481	2.0555	11.55	40.5	8
 28	54	22-A-1594554	NA	156	80	NA	1594554	K4	Ames	NA	B1	Dryland	Inbred	16	11.652	3.43	51.1	NA	NA	NA	NA	NA
-28	57	22-A-1594555	NA	121	62	NA	1594555	TZI25	Ames	NA	B1	Dryland	Inbred	12.3333333333333	16.211	3.67533333333333	83.4833333333333	16.6852	2.3972	20.28	275.75	72.175
+28	57	22-A-1594555	NA	121	62	NA	1594555	TZI25	Ames	NA	B1	Dryland	Inbred	12.3333333333333	16.211	3.67533333333333	83.4833333333333	16.6852	2.3972	20.28	251.6	66.86
 27	51	22-A-1594556	x - collect data, but analyze team may need to assess photos	194	113	NA	1594556	T8	Ames	NA	B1	Dryland	Inbred	15	16.8233333333333	4.24916666666667	146.266666666667	16.6964	2.3604	20.74	388.6	125.76
 28	59	22-A-1594557	x- set aside	132	73	NA	1594557	MO45	Ames	NA	B1	Dryland	Inbred	13.5	14.911	3.535	46	NA	NA	NA	NA	NA
 26	49	22-A-1594558	x - collect data, but analyze team may need to assess photos	154	73	NA	1594558	MS71	Ames	Medium	B1	Dryland	Inbred	17	13.78875	4.164	113.825	13.6816666666667	2.309	18.0666666666667	360	95.3
@@ -1507,8 +1503,6 @@ range	row	qrCode	notes	flagLeafHeight	earHeight	rep	plotNumber	genotype	location
 60	56	22-A-1595000	NA	136	58	NA	1595000	B73 OR MO17 FILLER	Ames	NA	B1	Dryland	Inbred	10.8	16.8976	3.5714	92.52	17.80725	1.96025	14.725	275.666666666667	83.1666666666667
 60	48	22-A-1595001	collect	150	59	NA	1595001	B73 OR MO17 FILLER	Ames	NA	B1	Dryland	Inbred	10.6666666666667	18.8066666666667	3.76733333333333	114.716666666667	18.7808	2.064	17.16	307.6	96.96
 60	57	22-A-1595002	collect	142	53	NA	1595002	B73 OR MO17 FILLER	Ames	NA	B1	Dryland	Inbred	10.3333333333333	15.6021666666667	3.436	77.1666666666667	16.3918	2.0956	13.92	224.8	67.26
-31	59	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	113	29	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-60	59	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	154	83	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
 2	7	22-A-1584117	NA	NA	19	NA	1584117	29MIBZ2	Ames	NA	E1	Dryland	Inbred	12.6666666666667	16.8183333333333	3.99366666666667	105	16.9295	2.639	21.05	314.5	88.5
 3	14	22-A-1584118	collect	118	39	NA	1584118	F42	Ames	NA	E1	Dryland	Inbred	17.1666666666667	12.4028333333333	4.17316666666667	82.1333333333333	12.49125	2.7045	18.45	240.8	59.06
 4	9	22-A-1584119	collect	90	34	NA	1584119	LH54	Ames	NA	E1	Dryland	Inbred	10	18.0596666666667	3.3175	63.9333333333333	17.7532	1.984	13.26	193.4	50.8
@@ -2261,15 +2255,6 @@ range	row	qrCode	notes	flagLeafHeight	earHeight	rep	plotNumber	genotype	location
 48	16	22-A-1593466	collect	139	53	NA	1593466	B73 OR MO17 FILLER	Ames	NA	E1	Dryland	Inbred	10	17.582	3.60266666666667	87.6666666666667	17.3476	2.1346	12.78	229.6	64.46
 48	15	22-A-1593467	collect	130	57	NA	1593467	B73 OR MO17 FILLER	Ames	NA	E1	Dryland	Inbred	10	17.348	3.60283333333333	86.6	17.192	2.0692	12.6	240.4	67.4
 49	13	22-A-1593468	collect	143	54	NA	1593468	B73 OR MO17 FILLER	Ames	NA	E1	Dryland	Inbred	10	20.179	3.8325	108.35	20.997	2.295	19.9	235	83.3
-25	2	NA	toss - fillerpartly green;Notes - seed spillage note from shelling, counting, or weighing **specify which**	179	88	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-25	3	NA	toss - fillerpartly green;Notes - seed spillage note from shelling, counting, or weighing **specify which**	172	92	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-25	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	172	84	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-25	7	NA	toss - fillerpartly green;Notes - seed spillage note from shelling, counting, or weighing **specify which**	169	92	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-25	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	175	87	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-49	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	177	77	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-25	4	NA	toss - fillerpartly green;Notes - seed spillage note from shelling, counting, or weighing **specify which**	172	95	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-25	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	166	91	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-25	8	NA	toss - fillerpartly green;Notes - seed spillage note from shelling, counting, or weighing **specify which**	162	82	NA	NA	NA	Ames	Medium	B1	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
 2	20	22-C-1581761	NA	149	67	NA	1581761	29MIBZ2	Crawfordsville	NA	A	Dryland	Inbred	13.3333333333333	13.6888571428571	3.61242857142857	76.7142857142857	14.05525	2.2705	15.4	NA	NA
 2	19	22-C-1581762	NA	159	64	NA	1581762	F42	Crawfordsville	NA	A	Dryland	Inbred	16.6666666666667	11.9896	3.6748	71.62	13.083	2.465	18.5	NA	NA
 5	10	22-C-1581763	NA	129	56	NA	1581763	LH54	Crawfordsville	High	A	Dryland	Inbred	10.3333333333333	17.0593333333333	3.77966666666667	113.183333333333	16.831	2.2172	16.7	267.4	91.96
@@ -3022,109 +3007,6 @@ range	row	qrCode	notes	flagLeafHeight	earHeight	rep	plotNumber	genotype	location
 45	14	22-C-1595810	collect	186	94	NA	1595810	B73	Crawfordsville	NA	A	Dryland	Inbred	18.3333333333333	12.2861666666667	4.53933333333333	116.85	NA	NA	NA	NA	NA
 45	11	22-C-1595811	NA	184	88	NA	1595811	B73	Crawfordsville	High	A	Dryland	Inbred	17	12.3335	5.82283333333333	103.233333333333	11.906	2.6566	17.68	349.2	77.92
 45	9	22-C-1595812	NA	196	100	NA	1595812	B73	Crawfordsville	High	A	Dryland	Inbred	17	12.7131666666667	4.44283333333333	117.666666666667	12.588	2.7488	20.94	380.6	89.878
-2	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-3	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-4	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-5	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-6	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-7	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-8	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-9	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-10	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-11	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-12	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-13	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	2	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-2	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-3	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-4	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-5	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-6	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-7	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-8	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-9	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-10	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-11	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-12	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-13	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	3	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-2	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-3	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-4	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-5	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-6	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-7	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-8	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-9	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-10	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-11	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-12	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-13	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	4	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-2	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-3	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-4	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-5	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-6	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-7	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-8	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-9	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-10	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-11	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-12	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-13	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	5	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-2	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-3	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-4	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-5	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-6	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-7	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-8	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-9	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-10	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-11	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-12	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-13	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	6	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-2	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-3	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-4	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-5	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-6	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-7	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-8	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-9	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-10	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-11	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-12	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-13	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	7	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-2	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-3	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-4	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-5	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-6	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-7	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-8	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-9	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-10	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-11	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-12	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-13	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	8	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-2	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-3	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-4	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-5	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-6	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-7	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-8	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-9	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-10	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-11	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-12	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-13	9	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
 4	31	22-C-1595813	NA	131	58	NA	1595813	29MIBZ2	Crawfordsville	NA	A	Dryland	Inbred	14.6666666666667	14.5868333333333	3.9595	98.0666666666667	14.4632	2.5296	17.62	310	73.698
 3	31	22-C-1595814	NA	128	54	NA	1595814	F42	Crawfordsville	NA	A	Dryland	Inbred	18	11.4371666666667	4.25916666666667	91.3833333333333	11.2606	2.6952	15.38	350.4	71.024
 4	26	22-C-1595815	collect;smooth cob - ovule issue	133	70	NA	1595815	LH54	Crawfordsville	NA	A	Dryland	Inbred	10.6666666666667	15.6004	3.1125	63.3	14.493	1.976	15.5	225.4	73.722
@@ -3877,19 +3759,6 @@ range	row	qrCode	notes	flagLeafHeight	earHeight	rep	plotNumber	genotype	location
 45	26	22-C-1596562	collect	164	92	NA	1596562	B73 OR MO17 FILLER	Crawfordsville	Low	A	Dryland	Inbred	11.3333333333333	14.3563333333333	3.58283333333333	76.25	13.84	2.0708	10.7	219.4	57.96
 46	23	22-C-1596563	set aside	162	79	NA	1596563	B73 OR MO17 FILLER	Crawfordsville	Low	A	Dryland	Inbred	12.4	16.726	3.7872	116.58	16.81575	2.203	13.675	377.25	99.2
 45	27	22-C-1596564	OP	167	76	NA	1596564	B73 OR MO17 FILLER	Crawfordsville	Low	A	Dryland	Inbred	10.6666666666667	15.426	3.6065	81.5333333333333	14.744	1.9756	11.78	213.4	60.34
-46	27	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	28	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	29	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	30	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	31	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	32	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	33	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	34	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	35	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	36	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	37	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	38	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-46	39	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
 3	15	22-C-1596565	NA	142	59	NA	1596565	29MIBZ2	Crawfordsville	Medium	B	Dryland	Inbred	12.8	12.8548	3.8324	72.44	12.0675	2.228	12.95	186	47.275
 3	17	22-C-1596566	collect	150	57	NA	1596566	F42	Crawfordsville	Medium	B	Dryland	Inbred	17.6666666666667	12.9038333333333	4.26483333333333	103.8	12.4148	2.632	19.24	377.6	80.62
 3	23	22-C-1596567	collect data, but analyze team mat need to assess photos	148	69	NA	1596567	LH54	Crawfordsville	Medium	B	Dryland	Inbred	10.6666666666667	16.9833333333333	3.7025	97.7833333333333	16.5534	2.086	14.36	256.2	78.26
@@ -4642,16 +4511,5 @@ range	row	qrCode	notes	flagLeafHeight	earHeight	rep	plotNumber	genotype	location
 77	24	22-C-1597314	NA	155	82	NA	1597314	B73 OR MO17 FILLER	Crawfordsville	Medium	B	Dryland	Inbred	10.3333333333333	15.9358333333333	3.547	89.85	15.4774	2.0166	11	235.2	68.44
 78	24	22-C-1597315	NA	155	65	NA	1597315	B73 OR MO17 FILLER	Crawfordsville	Medium	B	Dryland	Inbred	11.3333333333333	16.5138333333333	3.5955	95.25	16.3378	2.067	11.06	305	79.1
 77	23	22-C-1597316	NA	164	76	NA	1597316	B73 OR MO17 FILLER	Crawfordsville	Medium	B	Dryland	Inbred	11	18.26025	3.655	117.575	17.956	2.13233333333333	14.3666666666667	336.666666666667	97.6
-40	15	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	B	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-78	15	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	B	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-40	16	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	B	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-78	16	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	B	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-40	17	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	B	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-78	17	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	B	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-40	18	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	B	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
-78	18	NA	Notes - seed spillage note from shelling, counting, or weighing **specify which**	NA	NA	NA	NA	NA	Crawfordsville	Medium	B	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	56.175
 NA	NA	22-C-1696626	collect	NA	NA	NA	1696626	NA	Crawfordsville	NA	B	Dryland	Inbred	16	NA	NA	NA	NA	NA	NA	NA	NA
 NA	NA	22-C-1896626	NA	NA	NA	NA	1896626	NA	Crawfordsville	NA	B	Dryland	Inbred	18	NA	NA	NA	NA	NA	NA	NA	NA
-NA	NA	0000 22-A-1594555	NA	NA	NA	NA	1594555	NA	Ames	NA	NA	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	155	45.6
-NA	NA	022-A-1594480	NA	NA	NA	NA	1594480	NA	Ames	NA	NA	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	123	34.2
-NA	NA	C-2351-006	NA	NA	NA	NA	6	NA	Crawfordsville	NA	A	Dryland	Inbred	NA	NA	NA	NA	NA	NA	NA	NA	NA

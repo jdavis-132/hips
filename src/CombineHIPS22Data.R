@@ -2644,7 +2644,8 @@ ac.ears <- ac.ears %>%
   mutate(qr = case_when(str_detect(qr, '2-') & !str_detect(qr, '22-') ~ str_replace(qr, '2-', '22-'), .default = qr))
 # And remove observations in plant data we can't id (with out a range, row, or qr)
 plantData.ac <- plantData.ac %>%
-  filter(!is.na(qr)|!is.na(range)|!is.na(row))
+  filter(!is.na(qr)|!is.na(range)|!is.na(row)) %>%
+  filter(!is.na(genotype))
 
 ac.df <- full_join(plantData.ac, ac.ears, join_by(qr), suffix = c('', '.ear'), keep = FALSE)
 
@@ -2718,6 +2719,10 @@ seed.df <- seed.df %>%
   rowwise() %>%
   mutate(kernelMass = case_when(!is.na(kernelMass.redo) ~ kernelMass.redo, .default = kernelMass),
          qr = str_c(str_split_i(qr, '-', 1), str_split_i(qr, '-', 2), str_split_i(qr, '-', 3), sep = '-')) %>%
+  mutate(qr = case_when(qr=='0000 22-A-1594555' ~ '22-A-1594555',
+                        qr=='022-A-1594480' ~ '22-A-1594480',
+                        qr=='C-2351-006' ~ NA,
+                        .default = qr)) %>%
   group_by(qr) %>%
   summarise(kernelsPerEar = mean(kernelsPerEar, na.rm = TRUE), 
             kernelMass = mean(kernelMass, na.rm = TRUE),
@@ -2745,7 +2750,7 @@ ac.df <- ac.df %>%
   select(!ends_with('.seed'))
 
 # Export Ames, Crawfordsville inbred ear and height data
-ac.inbreds <- filter(ac.df, population=='Inbred')
+ac.inbreds <- filter(ac.df, population=='Inbred' & !is.na(qr))
 acInbredColNames <- c('range', 'row', 'qrCode', 'notes', 'flagLeafHeight', 'earHeight', 'rep', 'plotNumber', 'genotype', 'location',
                           'nitrogenTreatment', 'field', 'irrigation', 'population', 'kernelRowNumber', 'earLength', 'earWidth',
                           'earWeight', 'shelledCobLength', 'shelledCobWidth', 'shelledCobWeight', 'kernelsPerEar', 'kernelMassPerEar')
