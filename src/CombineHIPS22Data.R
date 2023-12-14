@@ -2750,11 +2750,10 @@ ac.df <- ac.df %>%
   select(!ends_with('.seed'))
 
 # Export Ames, Crawfordsville inbred ear and height data
-ac.inbreds <- filter(ac.df, population=='Inbred' & !is.na(qr))
+ac.inbreds <- filter(plantData.ac, population=='Inbred' & !is.na(qr))
 acInbredColNames <- c('range', 'row', 'qrCode', 'notes', 'flagLeafHeight', 'earHeight', 'rep', 'plotNumber', 'genotype', 'location',
-                          'nitrogenTreatment', 'field', 'irrigation', 'population', 'kernelRowNumber', 'earLength', 'earWidth',
-                          'earWeight', 'shelledCobLength', 'shelledCobWidth', 'shelledCobWeight', 'kernelsPerEar', 'kernelMassPerEar')
-write.table(ac.inbreds, 'outData/AmesCrawfordsville2022InbredEarsHeights.tsv', quote = FALSE, sep = '\t', row.names = FALSE, 
+                          'nitrogenTreatment', 'field', 'irrigation', 'population')
+write.table(ac.inbreds, 'outData/AmesCrawfordsville2022InbredsHeights.tsv', quote = FALSE, sep = '\t', row.names = FALSE, 
             col.names = acInbredColNames)
 
 # Integrate combine data for Ames & Crawfordsville
