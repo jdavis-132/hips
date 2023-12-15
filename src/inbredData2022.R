@@ -835,7 +835,7 @@ inbreds <- inbreds5 %>%
 responseVars <- c('numberPrimaryEars', 'numberSecondaryEars', 'secondaryEarKernels', 'earWidth', 'kernelFillLength', 'kernelRowNumber',
                   'kernelsPerRow', 'kernelsPerEar', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass', 'kernelMassPerEar',
                   'plantDensity', 'totalStandCount', 'flagLeafHeight', 'earHeight', 'earLength')
-inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
+# inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
 
 inbreds <- inbreds %>%
   mutate(earLength =  earLength * 0.1, 
@@ -847,11 +847,11 @@ inbreds <- mutate(inbreds, across(where(is.numeric), ~case_when(. < 0 ~ NA, .def
 inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
 
 
-outliers <- list()
-for (i in responseVars)
-{
-  outliers[[i]] <- idOutliers(inbreds, i)
-}
+# outliers <- list()
+# for (i in responseVars)
+# {
+#   outliers[[i]] <- idOutliers(inbreds, i)
+# }
 
 # Histograms
 for(i in responseVars)
