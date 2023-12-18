@@ -3241,7 +3241,12 @@ getCumulativeGDDs <- function(start, end, weather, location)
   {
     return(NA)
   }
-  weather.df <- filter(weather, loc==location & date %in% seq(min(start, end), max(start, end), 'days'))
+  start <- as.POSIXct(start, format = '%F')
+  end <- as.POSIXct(end, format = '%F')
+  # dates <- seq(min(start, end), max(start, end), 'days')
+  location <- as.character(location)
+  weather.df <- filter(weather, loc==location)
+  weather.df <- filter(weather.df, (start <= date) & (end >= date))
   cumulativeGDDs <- sum(weather.df$GDD)
   return(cumulativeGDDs)
 }

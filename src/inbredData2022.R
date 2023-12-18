@@ -3,6 +3,7 @@ library(readxl)
 library(cowplot)
 library(lubridate)
 source('src/Functions.R')
+source('src/WrangleWeatherData.R')
 # df2022Inbreds <- read.csv('/Users/jensinadavis/Downloads/SAMS_2022_V4.0_INBREDS.csv')
 # response_vars <- c('earHeight', 'flagLeafHeight')
 # locationsExceptScottsbluff <- c('Lincoln', 'Missouri Valley', 'Ames', 'CrawfordsVille')
@@ -405,137 +406,137 @@ earPlotsWide <- earsPlotLevel %>%
                               earWidth, kernelFillLength, kernelRowNumber, kernelsPerEar, kernelsPerRow, shelledCobWidth, 
                               shelledCobLength, shelledCobMass, hundredKernelMass, kernelMassPerEar))
 
-earPhenotypes <- c('earWidth', 'kernelRowNumber', 'kernelsPerEar', 'kernelsPerRow', 'shelledCobWidth',
-                   'shelledCobMass', 'hundredKernelMass', 'kernelMassPerEar')
-for(pheno in earPhenotypes)
-{
-  phenoSB <- paste0(pheno, '_Scottsbluff')
-  phenoMV <- paste0(pheno, '_Missouri Valley')
-  phenoLNK <- paste0(pheno, '_Lincoln')
-  
-  mvPlot <- ggplot(earPlotsWide, aes(.data[[phenoMV]], .data[[phenoSB]])) +
-    geom_point() +
-    labs(title = pheno, 
-         subtitle = paste0('r = ', cor(earPlotsWide[[phenoMV]], earPlotsWide[[phenoSB]], use = 'complete.obs')),
-         x = 'Missouri Valley',
-         y = 'Scottsbluff')
-  
-  lnkPlot <- ggplot(earPlotsWide, aes(.data[[phenoLNK]], .data[[phenoSB]])) +
-    geom_point() +
-    labs(title = pheno, 
-         subtitle = paste0('r = ', cor(earPlotsWide[[phenoLNK]], earPlotsWide[[phenoSB]], use = 'complete.obs')),
-         x = 'Lincoln',
-         y = 'Scottsbluff')
-  
-  mvLNKPlot <- ggplot(earPlotsWide, aes(.data[[phenoMV]], .data[[phenoLNK]])) +
-    geom_point() +
-    labs(title = pheno, 
-         subtitle = paste0('r = ', cor(earPlotsWide[[phenoMV]], earPlotsWide[[phenoLNK]], use = 'complete.obs')),
-         x = 'Missouri Valley',
-         y = 'Lincoln')
-  
-  combinedPlot <- plot_grid(mvLNKPlot, mvPlot, lnkPlot, nrow = 1)
-  print(combinedPlot)
-}
-
-# Do we need to drop the FT data??
-# Read in v4.5
-# inbreds4.5 <- read.csv("~/Downloads/SAMS_2022_V4.5_INBREDS .csv")
-# inbreds4.5 <- inbreds4.5 %>%
-#   rowwise() %>%
-#   mutate(plantingDate = case_when(location=='Scottsbluff' ~ '5/19/2022', .default = plantingDate), 
-#          plantingMonth = str_split_i(plantingDate, fixed('/'), 1) %>%
-#            as.integer(),
-#          plantingDay = str_split_i(plantingDate, fixed('/'), 2) %>%
-#            as.integer(),
-#          anthesisMonth = str_split_i(anthesisDate, fixed('/'), 1) %>%
-#            as.integer(), 
-#          anthesisDay = str_split_i(anthesisDate, fixed('/'), 2) %>%
-#            as.integer(),
-#          silkMonth = str_split_i(silkDate, fixed('/'), 1) %>%
-#            as.integer(),
-#          silkDay = str_split_i(silkDate, fixed('/'), 2) %>%
-#            as.integer())
-# inbreds4.5 <- inbreds4.5 %>%
-#   rowwise() %>%
-#   mutate(daysToAnthesis = as.integer(difftime(make_date(year = 2022, month = anthesisMonth, day = anthesisDay), make_date(year = 2022, month = plantingMonth, day = plantingDay), units = 'days')),
-#          daysToSilk = as.integer(difftime(make_date(year = 2022, month = silkMonth, day = silkDay), make_date(year = 2022, month = plantingMonth, day = plantingDay), units = 'days'))) %>%
-#   mutate(daysToSilk = case_when(daysToSilk < 0 ~ NA, .default = daysToSilk))
+# earPhenotypes <- c('earWidth', 'kernelRowNumber', 'kernelsPerEar', 'kernelsPerRow', 'shelledCobWidth',
+#                    'shelledCobMass', 'hundredKernelMass', 'kernelMassPerEar')
+# for(pheno in earPhenotypes)
+# {
+#   phenoSB <- paste0(pheno, '_Scottsbluff')
+#   phenoMV <- paste0(pheno, '_Missouri Valley')
+#   phenoLNK <- paste0(pheno, '_Lincoln')
+#   
+#   mvPlot <- ggplot(earPlotsWide, aes(.data[[phenoMV]], .data[[phenoSB]])) +
+#     geom_point() +
+#     labs(title = pheno, 
+#          subtitle = paste0('r = ', cor(earPlotsWide[[phenoMV]], earPlotsWide[[phenoSB]], use = 'complete.obs')),
+#          x = 'Missouri Valley',
+#          y = 'Scottsbluff')
+#   
+#   lnkPlot <- ggplot(earPlotsWide, aes(.data[[phenoLNK]], .data[[phenoSB]])) +
+#     geom_point() +
+#     labs(title = pheno, 
+#          subtitle = paste0('r = ', cor(earPlotsWide[[phenoLNK]], earPlotsWide[[phenoSB]], use = 'complete.obs')),
+#          x = 'Lincoln',
+#          y = 'Scottsbluff')
+#   
+#   mvLNKPlot <- ggplot(earPlotsWide, aes(.data[[phenoMV]], .data[[phenoLNK]])) +
+#     geom_point() +
+#     labs(title = pheno, 
+#          subtitle = paste0('r = ', cor(earPlotsWide[[phenoMV]], earPlotsWide[[phenoLNK]], use = 'complete.obs')),
+#          x = 'Missouri Valley',
+#          y = 'Lincoln')
+#   
+#   combinedPlot <- plot_grid(mvLNKPlot, mvPlot, lnkPlot, nrow = 1)
+#   print(combinedPlot)
+# }
 # 
-# ftWide <- inbreds4.5 %>%
+# # Do we need to drop the FT data??
+# # Read in v4.5
+# # inbreds4.5 <- read.csv("~/Downloads/SAMS_2022_V4.5_INBREDS .csv")
+# # inbreds4.5 <- inbreds4.5 %>%
+# #   rowwise() %>%
+# #   mutate(plantingDate = case_when(location=='Scottsbluff' ~ '5/19/2022', .default = plantingDate), 
+# #          plantingMonth = str_split_i(plantingDate, fixed('/'), 1) %>%
+# #            as.integer(),
+# #          plantingDay = str_split_i(plantingDate, fixed('/'), 2) %>%
+# #            as.integer(),
+# #          anthesisMonth = str_split_i(anthesisDate, fixed('/'), 1) %>%
+# #            as.integer(), 
+# #          anthesisDay = str_split_i(anthesisDate, fixed('/'), 2) %>%
+# #            as.integer(),
+# #          silkMonth = str_split_i(silkDate, fixed('/'), 1) %>%
+# #            as.integer(),
+# #          silkDay = str_split_i(silkDate, fixed('/'), 2) %>%
+# #            as.integer())
+# # inbreds4.5 <- inbreds4.5 %>%
+# #   rowwise() %>%
+# #   mutate(daysToAnthesis = as.integer(difftime(make_date(year = 2022, month = anthesisMonth, day = anthesisDay), make_date(year = 2022, month = plantingMonth, day = plantingDay), units = 'days')),
+# #          daysToSilk = as.integer(difftime(make_date(year = 2022, month = silkMonth, day = silkDay), make_date(year = 2022, month = plantingMonth, day = plantingDay), units = 'days'))) %>%
+# #   mutate(daysToSilk = case_when(daysToSilk < 0 ~ NA, .default = daysToSilk))
+# # 
+# # ftWide <- inbreds4.5 %>%
+# #   group_by(location, genotype) %>%
+# #   mutate(genotypicRep = 1:n()) %>%
+# #   pivot_wider(id_cols = c(genotype, genotypicRep),
+# #               names_from = location,
+# #               values_from = c(daysToAnthesis, daysToSilk))
+# 
+# for(pheno in c('daysToAnthesis', 'daysToSilk'))
+# {
+#   phenoSB <- paste0(pheno, '_Scottsbluff')
+#   phenoLNK <- paste0(pheno, '_Lincoln')
+# 
+#   lnkPlot <- ggplot(ftWide, aes(.data[[phenoLNK]], .data[[phenoSB]])) +
+#     geom_point() +
+#     labs(title = pheno, 
+#          subtitle = paste0('r = ', cor(ftWide[[phenoLNK]], ftWide[[phenoSB]], use = 'complete.obs')),
+#          x = 'Lincoln',
+#          y = 'Scottsbluff')
+#   print(lnkPlot)
+# }
+# 
+# # Let's check how the correlation between locations in the hybrids for comparison
+# hybrids <- read.csv('outData/HIPS_2022_V3.5_HYBRIDS.csv')
+# hybridsWide <- hybrids %>%
 #   group_by(location, genotype) %>%
 #   mutate(genotypicRep = 1:n()) %>%
 #   pivot_wider(id_cols = c(genotype, genotypicRep),
-#               names_from = location,
+#               names_from = location, 
 #               values_from = c(daysToAnthesis, daysToSilk))
-
-for(pheno in c('daysToAnthesis', 'daysToSilk'))
-{
-  phenoSB <- paste0(pheno, '_Scottsbluff')
-  phenoLNK <- paste0(pheno, '_Lincoln')
-
-  lnkPlot <- ggplot(ftWide, aes(.data[[phenoLNK]], .data[[phenoSB]])) +
-    geom_point() +
-    labs(title = pheno, 
-         subtitle = paste0('r = ', cor(ftWide[[phenoLNK]], ftWide[[phenoSB]], use = 'complete.obs')),
-         x = 'Lincoln',
-         y = 'Scottsbluff')
-  print(lnkPlot)
-}
-
-# Let's check how the correlation between locations in the hybrids for comparison
-hybrids <- read.csv('outData/HIPS_2022_V3.5_HYBRIDS.csv')
-hybridsWide <- hybrids %>%
-  group_by(location, genotype) %>%
-  mutate(genotypicRep = 1:n()) %>%
-  pivot_wider(id_cols = c(genotype, genotypicRep),
-              names_from = location, 
-              values_from = c(daysToAnthesis, daysToSilk))
-
-for(pheno in c('daysToAnthesis', 'daysToSilk'))
-{
-  phenoSB <- paste0(pheno, '_Scottsbluff')
-  phenoNP1 <- paste0(pheno, '_North Platte1')
-  phenoLNK <- paste0(pheno, '_Lincoln')
-  
-  np1SBPlot <- ggplot(hybridsWide, aes(.data[[phenoNP1]], .data[[phenoSB]])) +
-    geom_point() +
-    labs(title = pheno, 
-         subtitle = paste0('r = ', cor(hybridsWide[[phenoNP1]], hybridsWide[[phenoSB]], use = 'complete.obs')),
-         x = 'North Platte1',
-         y = 'Scottsbluff')
-  
-  lnkSBPlot <- ggplot(hybridsWide, aes(.data[[phenoLNK]], .data[[phenoSB]])) +
-    geom_point() +
-    labs(title = pheno, 
-         subtitle = paste0('r = ', cor(hybridsWide[[phenoLNK]], hybridsWide[[phenoSB]], use = 'complete.obs')),
-         x = 'Lincoln',
-         y = 'Scottsbluff')
-  
-  np1LNKPlot <- ggplot(hybridsWide, aes(.data[[phenoNP1]], .data[[phenoLNK]])) +
-    geom_point() +
-    labs(title = pheno, 
-         subtitle = paste0('r = ', cor(hybridsWide[[phenoNP1]], hybridsWide[[phenoLNK]], use = 'complete.obs')),
-         x = 'North Platte1',
-         y = 'Lincoln')
-  
-  combinedPlot <- plot_grid(np1LNKPlot, np1SBPlot, np1LNKPlot, nrow = 1)
-  print(combinedPlot)
-}
-
-sbLNK <- inbreds4.5 %>%
-  filter(location %in% c('Scottsbluff', 'Lincoln'))
-sbLNKWide <- plotRepCorr(sbLNK, 'nitrogenTreatment', 'genotype', c('daysToAnthesis', 'daysToSilk'), 'location')
-
-sb <- inbreds4.5 %>%
-  filter(location=='Scottsbluff')
-sbWide <- plotRepCorr(sb, 'nitrogenTreatment', 'genotype', c('daysToAnthesis', 'daysToSilk'), 'location')
-
-inbreds4.5Wide <- plotRepCorr(inbreds4.5, 'nitrogenTreatment', 'genotype', c('earHeight'), 'location')
-
-inbreds4.7 <- read_csv("~/Downloads/SAMS_2022_V4.7_INBREDS .csv")
-
-inbreds4.7Wide <- plotRepCorr(inbreds4.7, 'nitrogenTreatment', 'genotype', c(earPhenotypes, 'earHeight'), 'location')
+# 
+# for(pheno in c('daysToAnthesis', 'daysToSilk'))
+# {
+#   phenoSB <- paste0(pheno, '_Scottsbluff')
+#   phenoNP1 <- paste0(pheno, '_North Platte1')
+#   phenoLNK <- paste0(pheno, '_Lincoln')
+#   
+#   np1SBPlot <- ggplot(hybridsWide, aes(.data[[phenoNP1]], .data[[phenoSB]])) +
+#     geom_point() +
+#     labs(title = pheno, 
+#          subtitle = paste0('r = ', cor(hybridsWide[[phenoNP1]], hybridsWide[[phenoSB]], use = 'complete.obs')),
+#          x = 'North Platte1',
+#          y = 'Scottsbluff')
+#   
+#   lnkSBPlot <- ggplot(hybridsWide, aes(.data[[phenoLNK]], .data[[phenoSB]])) +
+#     geom_point() +
+#     labs(title = pheno, 
+#          subtitle = paste0('r = ', cor(hybridsWide[[phenoLNK]], hybridsWide[[phenoSB]], use = 'complete.obs')),
+#          x = 'Lincoln',
+#          y = 'Scottsbluff')
+#   
+#   np1LNKPlot <- ggplot(hybridsWide, aes(.data[[phenoNP1]], .data[[phenoLNK]])) +
+#     geom_point() +
+#     labs(title = pheno, 
+#          subtitle = paste0('r = ', cor(hybridsWide[[phenoNP1]], hybridsWide[[phenoLNK]], use = 'complete.obs')),
+#          x = 'North Platte1',
+#          y = 'Lincoln')
+#   
+#   combinedPlot <- plot_grid(np1LNKPlot, np1SBPlot, np1LNKPlot, nrow = 1)
+#   print(combinedPlot)
+# }
+# 
+# sbLNK <- inbreds4.5 %>%
+#   filter(location %in% c('Scottsbluff', 'Lincoln'))
+# sbLNKWide <- plotRepCorr(sbLNK, 'nitrogenTreatment', 'genotype', c('daysToAnthesis', 'daysToSilk'), 'location')
+# 
+# sb <- inbreds4.5 %>%
+#   filter(location=='Scottsbluff')
+# sbWide <- plotRepCorr(sb, 'nitrogenTreatment', 'genotype', c('daysToAnthesis', 'daysToSilk'), 'location')
+# 
+# inbreds4.5Wide <- plotRepCorr(inbreds4.5, 'nitrogenTreatment', 'genotype', c('earHeight'), 'location')
+# 
+# inbreds4.7 <- read_csv("~/Downloads/SAMS_2022_V4.7_INBREDS .csv")
+# 
+# inbreds4.7Wide <- plotRepCorr(inbreds4.7, 'nitrogenTreatment', 'genotype', c(earPhenotypes, 'earHeight'), 'location')
 
 # Read in IA inbred field data
 ia_inb <- read_excel("data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx", 
@@ -876,9 +877,55 @@ inbreds <- inbreds %>%
                                      location=='Lincoln' & plotNumber==2223 ~ mean(c(22.19, 19.05, 22.86, 24.22, 23.2))*0.1,
                                      .default = shelledCobWidth),
          earLength = case_when(location=='Missouri Valley' & plotNumber==215 ~ earLength*10, 
-                               earLength > 30, 
+                               earLength > 30 ~ NA, 
                                .default = earLength),
          plotLength = 7.5,
          plantDensity = (totalStandCount/2)*(7.5/17)*1000,
-         hundredKernelMass = case_when(is.na(hundredKernelMass) ~ (kernelsPerEar/kernelMassPerEar)*100,
+         hundredKernelMass = case_when(is.na(hundredKernelMass) ~ (kernelMassPerEar/kernelsPerEar)*100,
                                        .default = hundredKernelMass))
+inbreds <- inbreds %>%
+  mutate(plantingDate = mdy(plantingDate),
+         daysToAnthesis = difftime(anthesisDate, plantingDate, units = 'days') %>%
+           as.integer(),
+         daysToSilk = difftime(silkDate, plantingDate, units = 'days') %>%
+           as.integer(),
+         anthesisSilkingInterval = daysToSilk - daysToAnthesis)
+inbreds <- inbreds %>%
+  rowwise() %>%
+  mutate(GDDToAnthesis = case_when(location=='Lincoln' ~ getCumulativeGDDs(plantingDate, anthesisDate, weather.daily, location), 
+                                   .default = NA),
+         GDDToSilk = case_when(location=='Lincoln' ~ getCumulativeGDDs(plantingDate, silkDate, weather.daily, location), 
+                               .default = NA))
+inbreds <- mutate(inbreds, 
+                  anthesisSilkingIntervalGDD = GDDToSilk - GDDToAnthesis,
+                  hundredKernelMass = case_when(hundredKernelMass <= 0 ~ NA, .default = hundredKernelMass))
+
+responseVars <- c(responseVars, 'daysToAnthesis', 'GDDToAnthesis', 'daysToSilk', 'GDDToSilk', 'anthesisSilkingInterval', 'anthesisSilkingIntervalGDD')
+
+inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
+
+
+# outliers <- list()
+# for (i in responseVars)
+# {
+#   outliers[[i]] <- idOutliers(inbreds, i)
+# }
+
+# Histograms
+for(i in responseVars)
+{
+  p <- ggplot(inbreds, aes(.data[[i]])) +
+    geom_histogram() +
+    facet_grid(vars(location))
+  print(p)
+}
+
+inbreds <- inbreds %>%
+  mutate(hundredKernelMass = case_when(hundredKernelMass > 50 ~ NA, .default = hundredKernelMass))
+inbreds <- inbreds %>% 
+  mutate(earWidth = case_when(earWidth > 10 ~ NA, .default = earWidth))
+
+inbreds <- inbreds %>%
+  mutate(across(where(is.character), ~str_replace_all(., ',', ';')))
+# Export v3.5
+write.table(inbreds, 'outData/HIPS_2022_V3.5_INBREDS.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
