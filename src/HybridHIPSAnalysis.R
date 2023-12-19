@@ -1581,17 +1581,17 @@ hybrids3.2 <-
 
 # mapResponse(mv.all, 'combineYield')
 
-# # How many hybrids do we have both parents for? -- 18
-# inbreds <- filter(hips, population=='Inbred')
-# inbreds.genos <- unique(inbreds$genotype)
+# How many hybrids do we have both parents for? -- 18
+inbreds <- filter(hips, population=='Inbred')
+inbreds.genos <- unique(inbreds$genotype)
 hybrid.genos <- tibble(hybrid = unique(hybrids$genotype))
 hybrid.genos <- hybrid.genos %>%
   rowwise() %>%
   mutate(P1 = str_split_i(hybrid, ' X ', 1),
-         P2 = str_split_i(hybrid, ' X ', 2))
-         # P1InPanel = P1 %in% inbreds.genos,
-         # P2InPanel = P2 %in% inbreds.genos,
-         # BothInPanel = case_when(P1InPanel & P2InPanel ~ TRUE, .default = FALSE))
+         P2 = str_split_i(hybrid, ' X ', 2),
+         P1InPanel = P1 %in% inbreds.genos,
+         P2InPanel = P2 %in% inbreds.genos,
+         BothInPanel = case_when(P1InPanel & P2InPanel ~ TRUE, .default = FALSE))
 hybridParents <- unique(c(hybrid.genos$P1, hybrid.genos$P2)) %>%
   as_tibble_col('parent') %>%
   mutate(releaseYear = c(1972, 1988, 1988, 1989, 1983, 1981, 1983, 1958, 1962, 1983, 1936, 1984, 1990, 1988, NA, 1987, 1978, 1983, 1986, 

@@ -777,6 +777,7 @@ lnkStandCt <- read_excel('data/2022 SAM Stand Counts - Summary.xlsx',
   mutate(location = 'Lincoln')
 inbreds4 <- full_join(inbreds3, lnkStandCt, join_by(location, plotNumber), suffix = c('', '.lnk'), keep = FALSE)
 inbreds4 <- inbreds4 %>%
+  rowwise() %>%
   mutate(totalStandCount = max(totalStandCount, totalStandCount.lnk, na.rm = TRUE)) %>%
   select(!ends_with('.lnk'))
 
@@ -949,3 +950,94 @@ for(i in responseVars)
     facet_grid(vars(location))
   print(p)
 }
+
+inbreds <- inbreds %>%
+  rowwise() %>%
+  mutate(anthesisSilkingInterval = case_when(anthesisSilkingInterval < -10 | anthesisSilkingInterval > 20 ~ NA,
+                                             .default = anthesisSilkingInterval),
+         anthesisSilkingIntervalGDD = case_when(anthesisSilkingIntervalGDD < -250 | anthesisSilkingIntervalGDD > 500 ~ NA, 
+                                                .default = anthesisSilkingIntervalGDD),
+         daysToSilk = case_when(daysToSilk > 110 ~ NA, .default = daysToSilk),
+         earHeight = case_when(location=='Crawfordsville' & (earHeight < 12 | earHeight > 175) ~ NA, .default = earHeight),
+         earLength = case_when((location=='Ames' & earLength > 25) | 
+                                 (location=='Crawfordsville' & (earLength < 5 | earLength > 21)) | 
+                                 (location=='Missouri Valley' & earLength > 20) ~ NA, 
+                               .default = earLength),
+         earWidth = case_when((location %in% c('Ames', 'Crawfordsville') & earWidth > 5.5) | 
+                                (location=='Lincoln' & (earWidth < 2 | earWidth > 4.25)) |
+                                (location=='Missouri Valley' & earWidth > 5) ~ NA, 
+                              .default = earWidth),
+         flagLeafHeight = case_when((flagLeafHeight > 250) | 
+                                      (location=='Ames' & flagLeafHeight < 45) | 
+                                      (location=='Lincoln' & flagLeafHeight < 50) | 
+                                      (location=='Missouri Valley' & (flagLeafHeight < 50 | flagLeafHeight > 225)) ~ NA,
+                                    .default = flagLeafHeight), 
+         GDDToSilk = case_when(GDDToSilk > 2200 ~ NA, .default = GDDToSilk),
+         hundredKernelMass = case_when((location=='Crawfordsville' & (hundredKernelMass < 10 | hundredKernelMass > 37.5)) |
+                                         (location=='Lincoln' & hundredKernelMass > 31) |
+                                         (location=='Scottsbluff' & hundredKernelMass > 32) ~ NA, 
+                                       .default = hundredKernelMass),
+         kernelFillLength = case_when((location=='Lincoln' & (kernelFillLength < 2.5 | kernelFillLength > 17)) |
+                                        (location=='Missouri Valley' & kernelFillLength > 20) |
+                                        (location=='Scottsbluff' & kernelFillLength > 18) ~ NA, 
+                                      .default = kernelFillLength),
+         kernelMassPerEar = case_when((location=='Ames' & kernelMassPerEar > 155) | 
+                                        (location=='Crawfordsville' & kernelMassPerEar > 150) | 
+                                        (location=='Lincoln' & kernelMassPerEar > 100) |
+                                        (location=='Missouri Valley' & kernelMassPerEar > 135) |
+                                        (location=='Scottsbluff' & kernelMassPerEar > 148) ~ NA,
+                                      .default = kernelMassPerEar),
+         kernelRowNumber = case_when((location=='Crawfordsville' & kernelRowNumber < 8) | 
+                                       (location=='Lincoln' & kernelRowNumber < 5) | 
+                                       (location=='Missouri Valley' & kernelRowNumber < 6) | 
+                                       (location=='Scottsbluff' & kernelRowNumber > 18) ~ NA,
+                                     .default = kernelRowNumber),
+         kernelsPerEar = case_when((location=='Ames' & kernelsPerEar > 630) |
+                                     (location=='Crawfordsville' & kernelsPerEar > 625) |
+                                     (location=='Lincoln' & kernelsPerEar > 500) | 
+                                     (location=='Missouri Valley' & kernelsPerEar > 525) |
+                                     (location=='Scottsbluff' & kernelsPerEar > 600) ~ NA, 
+                                   .default = kernelsPerEar),
+         kernelsPerRow = case_when(kernelsPerRow > 40 | (location=='Lincoln' & kernelsPerRow > 37) ~ NA, .default = kernelsPerRow),
+         shelledCobMass = case_when(shelledCobMass > 40 |
+                                      (location=='Crawfordsville' & shelledCobMass > 35) | 
+                                      (location=='Lincoln' & shelledCobMass > 25) | 
+                                      (location=='Missouri Valley' & shelledCobMass > 31) ~ NA,
+                                    .default = shelledCobMass),
+         shelledCobMass = case_when((location=='Crawfordsville' & shelledCobWidth < 1) |
+                                      (location=='Lincoln' & (shelledCobWidth < 0.75 | shelledCobWidth > 3)) |
+                                      (location=='Scottsbluff' & (shelledCobWidth < 1.25 | shelledCobWidth > 3.5)) ~ NA, 
+                                    .default = shelledCobWidth))
+inbreds <- inbreds %>%
+  mutate(earWidth = round(earWidth, digits = 3),
+         earFillLength = round(kernelFillLength, digits = 3),
+         kernelRowNumber = round(kernelRowNumber, digits = 1),
+         kernelsPerRow = round(kernelsPerRow, digits = 1),
+         kernelsPerEar = round(kernelsPerEar, digits = 0),
+         shelledCobWidth = round(shelledCobWidth, digits = 3),
+         shelledCobMass = round(shelledCobMass, digits = 3),
+         hundredKernelMass = round(hundredKernelMass, digits = 3),
+         kernelMassPerEar = round(kernelMassPerEar, digits = 1),
+         plantDensity = round(plantDensity, digits = 0),
+         plantingDate = as.character(plantingDate),
+         earHeight = round(earHeight, digits = 0),
+         flagLeafHeight = round(flagLeafHeight, digits = 0),
+         earLength = round(earLength, digits = 3),
+         anthesisDate = as.character(anthesisDate),
+         silkDate = as.character(silkDate), 
+         GDDToAnthesis = round(GDDToAnthesis, digits = 2),
+         GDDToSilk = round(GDDToSilk, digits = 2),
+         anthesisSilkingIntervalGDD = round(anthesisSilkingIntervalGDD, digits = 2)) %>%
+  select(qrCode, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range,
+         plotNumber, genotype, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, GDDToAnthesis, GDDToSilk,
+         anthesisSilkingIntervalGDD, earHeight, flagLeafHeight, plantDensity, earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber,
+         kernelsPerEar, hundredKernelMass, kernelMassPerEar, shelledCobMass, kernelColor, notes) %>%
+  arrange(location, sublocation, block, plotNumber)
+
+# Export v4.8
+write.table(inbreds, 'outData/HIPS_2022_V4.8_INBREDS.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
+responseVars <- c(c('earWidth', 'earFillLength', 'kernelRowNumber',
+                    'kernelsPerRow', 'kernelsPerEar', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass', 'kernelMassPerEar',
+                    'plantDensity', 'totalStandCount', 'flagLeafHeight', 'earHeight', 'earLength', 'daysToAnthesis', 'GDDToAnthesis', 'daysToSilk', 'GDDToSilk', 'anthesisSilkingInterval', 'anthesisSilkingIntervalGDD'))
+
+inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
