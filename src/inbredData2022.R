@@ -843,7 +843,7 @@ inbreds <- inbreds %>%
          shelledCobWidth = shelledCobWidth * 0.1,
          earWidth = earWidth * 0.1,
          kernelFillLength = kernelFillLength * 0.1)
-inbreds <- mutate(inbreds, across(where(is.numeric), ~case_when(. < 0 ~ NA, .default = .)))
+inbreds <- mutate(inbreds, across(where(is.numeric), ~case_when(. <= 0 ~ NA, .default = .)))
 
 inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
 
@@ -874,11 +874,13 @@ inbreds <- inbreds %>%
          shelledCobWidth = case_when(location=='Missouri Valley' & plotNumber==215 ~ shelledCobWidth*10, 
                                      qrCode=='22-C-1595838' ~ 21.44*0.1,
                                      location=='Lincoln' & plotNumber==1041 ~ mean(c(22.87, 24, 23.21, 22.92, 23.36))*0.1,
-                                     location=='Lincoln' & plotNumber==2223 ~ mean(c(22.19, 19.05, 22.86, 24.22, 23.2))*0.1,
+                                     location=='Lincoln' & plotNumber==2223 ~ mean(c(22.19, 19.05, 22.86, 24.22, 23.2, 19.62))*0.1,
                                      .default = shelledCobWidth),
          earLength = case_when(location=='Missouri Valley' & plotNumber==215 ~ earLength*10, 
                                earLength > 30 ~ NA, 
                                .default = earLength),
+         kernelsPerEar = case_when(location=='Scottsbluff' & plotNumber==162 ~ NA, .default = kernelsPerEar),
+         kernelRowNumber = case_when(location=='Scottsbluff' & plotNumber==677 ~ mean(c(10, 12, 13, 13, 13)), .default = kernelRowNumber),
          plotLength = 7.5,
          plantDensity = (totalStandCount/2)*(7.5/17)*1000,
          hundredKernelMass = case_when(is.na(hundredKernelMass) ~ (kernelMassPerEar/kernelsPerEar)*100,
@@ -929,3 +931,21 @@ inbreds <- inbreds %>%
   mutate(across(where(is.character), ~str_replace_all(., ',', ';')))
 # Export v3.5
 write.table(inbreds, 'outData/HIPS_2022_V3.5_INBREDS.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
+
+inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
+
+
+# outliers <- list()
+# for (i in responseVars)
+# {
+#   outliers[[i]] <- idOutliers(inbreds, i)
+# }
+
+# Histograms
+for(i in responseVars)
+{
+  p <- ggplot(inbreds, aes(.data[[i]])) +
+    geom_histogram() +
+    facet_grid(vars(location))
+  print(p)
+}

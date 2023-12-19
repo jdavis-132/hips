@@ -48,6 +48,7 @@ plotRepCorr <- function(data, treatmentVar, genotype, phenotypes, facet)
       geom_point() + 
       facet_wrap(vars(all_of(.data[[facet]])))
     print(p)
+    ggsave(paste0('analysis/repCorrelationByLocationInbreds', i, '.png'))
   }
   return(df.wide)
 }
