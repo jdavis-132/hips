@@ -62,3 +62,4 @@ combinedIndex <- tibble(modifiedRow = rep(1:28, each = 30),
                                               borderS, 1466:1490, borderN,
                                               borderS, 1491:1510, fill, borderN, 
                                               rep('BORDER', 2*30)))
+write.csv(combinedIndex, 'data/ScottsbluffCombinedIndex.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
