@@ -269,3 +269,51 @@ getDuplicates <- function(data, ...)
   
   return(duplicates)
 }
+
+# Function to change parsed genotypes based on a key with the first column as the original genotypes and the second column with the genotype they should be 
+fixGenos <- function(data, givenKey)
+{
+  key <- givenKey
+  df_ok <- filter(data, !(genotype %in% key$orig))
+  print(unique(df_ok$genotype))
+  df_fix <- filter(data, genotype %in% key$orig)
+  print(unique(df_fix$genotype))
+  df_fix <- full_join(df_fix, key, join_by(genotype == orig), keep = FALSE, relationship = 'many-to-one')
+  df_fix %>% select(starts_with('correct')) %>% print()
+  df_fix <- df_fix %>%
+    rowwise() %>%
+    mutate(genotype = correct) %>%
+    select(!starts_with('correct'))
+  df <- bind_rows(df_ok, df_fix)
+  return (df)
+}
+
+# Create key
+hips1.5genos_fix <- c("HOEGEMEYER 7089 AMX", "SYNGENTA NK0760-311", "PIONEER P0589 AMX", "SYNGENTA NK0760-31", "SYNGENTA NK0760-3", "HOEGEMEYER 7089 A", 
+                      "HOEGEMEYER 7089 AM", "PIONEER P0589 AM", "HOEGEMEYER 7089", "SYNGENTA NK0760-", "HOEGEMEYER 8065R", "PIONEER 1311 AMX",
+                      "COMMERCIAL HYBRID 5", "COMMERCIAL HYBRID 4", "COMMERCIAL HYBRID 3", "COMMERCIAL HYBRID 2", "COMMERCIAL HYBRID 1", "", "MO17 FILLER", 
+                      '4N506 X 3IIH!6', 'PHP02 X PHJ894')
+hips1.5genos_correct <- c("HOEGEMEYER 7089 AMXT", 'SYNGENTA NK0760-3111', "PIONEER P0589 AMXT", rep('SYNGENTA NK0760-3111', 2), rep("HOEGEMEYER 7089 AMXT", 2), 
+                          "PIONEER P0589 AMXT", "HOEGEMEYER 7089 AMXT", 'SYNGENTA NK0760-3111', "HOEGEMEYER 8065RR", "PIONEER 1311 AMXT", 
+                          'SYNGENTA NK0760-3111', 'HOEGEMEYER 7089 AMXT', 'HOEGEMEYER 8065RR', 'PIONEER P0589 AMXT', 'PIONEER 1311 AMXT', NA, 'MO17', 
+                          '4N506 X 3IIH6', 'PHP02 X PHJ89')
+hips1.5_genoFixKey <- tibble(orig = hips1.5genos_fix, correct = hips1.5genos_correct)
+
+# NP uses this formula: accounts for moisture and converts to standard bushels (56 lbs at 15.5% moisture)
+# This is a pretty standard formula; equivalent to those given by UW-Madison and other Extension sources 
+# Does not account for differences in test weight
+buPerAc15.5 <- function(harvestWeightLbs, harvestMoisture, plotLen)
+{
+  if (is.na(harvestWeightLbs) | is.na(harvestMoisture) | is.na(plotLen))
+  {
+    return (NA)
+  }
+  else
+  {
+    dryMatter <- harvestWeightLbs*(100 - harvestMoisture)/100
+    stdMoistureBu <- dryMatter/47.32 # At 15.5% moisture, there are 47.32 lbs dry matter in a bushel with a test weight of 56 lbs
+    portionAc <- 43560/(5*plotLen) # sq ft/ac divided by square feet per harvested plot area: 2 rows with 30" spacing = 5' x plot length in ft
+    buPerAc <- stdMoistureBu*portionAc
+    return(buPerAc)
+  }
+}
