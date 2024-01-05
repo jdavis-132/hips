@@ -25,7 +25,7 @@ hybridsFinalWide <- hybridsFinal %>%
   pivot_wider(id_cols = c(genotype, nitrogenTreatment, location, anonymizedLocation), names_from = c(phenotype, genotypeRepNum), values_from = value, names_sep = '.')
  
 repCorrelationFixedSB <- hybridsFinalWide %>%
-  filter(location %in% c('Scottsbluff', 'Lincoln', 'Ames')) %>%
+  filter(location %in% c('Scottsbluff', 'North Platte1', 'Lincoln')) %>%
   group_by(location) %>%
   mutate(correlation = cor(kernelRowNumber.1, kernelRowNumber.2, use = 'complete.obs') %>%
            round(digits = 3) %>%
@@ -48,7 +48,7 @@ repCorrelationFixedSB <- hybridsFinalWide %>%
 repCorrelationFixedSB
 
 repCorrelationFixedMVEar <- hybridsFinalWide %>%
-  filter(location %in% c('North Platte1', 'Missouri Valley', 'Crawfordsville')) %>%
+  filter(location %in% c('North Platte1', 'Lincoln', 'Missouri Valley')) %>%
   group_by(location) %>%
   mutate(correlation = cor(kernelRowNumber.1, kernelRowNumber.2, use = 'complete.obs') %>%
            round(digits = 3) %>%
@@ -71,7 +71,7 @@ repCorrelationFixedMVEar <- hybridsFinalWide %>%
 repCorrelationFixedMVEar
 
 repCorrelationFixedMVYield <- hybridsFinalWide %>%
-  filter(location %in% c('North Platte1', 'Missouri Valley', 'Crawfordsville')) %>%
+  filter(location %in% c('North Platte1', 'Lincoln', 'Missouri Valley')) %>%
   group_by(location) %>%
   mutate(correlation = cor(yieldPerAcre.1, yieldPerAcre.2, use = 'complete.obs') %>%
            round(digits = 3) %>%
@@ -666,7 +666,7 @@ inbredsWithSBWide <- inbredsWithSB %>%
   group_by(genotype, location, nitrogenTreatment) %>%
   mutate(genotypeRepNum = 1:n()) %>%
   ungroup() %>%
-  pivot_longer(c(earHeight, daysToAnthesis), names_to = 'phenotype', values_to = 'value') %>%
+  pivot_longer(c(earHeight, daysToAnthesis, kernelRowNumber), names_to = 'phenotype', values_to = 'value') %>%
   pivot_wider(id_cols = c(genotype, nitrogenTreatment, location, anonymizedLocation), names_from = c(phenotype, genotypeRepNum), values_from = value, names_sep = '.')
 
 sbHeightCorrelations <- inbredsWithSBWide %>%
@@ -686,5 +686,125 @@ sbHeightCorrelations <- inbredsWithSBWide %>%
         panel.background = element_blank())
 sbHeightCorrelations
 
-inbredsWideByLocation <- inbredsWithSB %>%
-  pivot_longer()
+sbKRNCorrelations <- inbredsWithSBWide %>%
+  filter(location %in% c('Scottsbluff', 'Lincoln', 'Ames')) %>%
+  ggplot(aes(kernelRowNumber.1, kernelRowNumber.2, color = nitrogenTreatment)) + 
+  geom_point() +
+  facet_grid(cols = vars(anonymizedLocation)) +
+  scale_color_manual(values = nitrogenColors) +
+  labs(x = 'Kernel Row Number, Replicate 1', y = 'Kernel Row Number, Replicate 2', color = 'Nitrogen Treatment') +
+  theme(text = element_text(color = 'black', size = 14),
+        axis.text = element_text(color = 'black', size = 14),
+        axis.text.x = element_text(color = 'black', size = 14, angle = 45),
+        strip.text = element_text(color = 'black', size = 14),
+        line = element_line(color = 'black', linewidth = 1),
+        legend.position = 'top',
+        plot.background = element_blank(),
+        panel.background = element_blank())
+sbKRNCorrelations
+
+
+np2Violins <- hybridsFinal %>%
+  filter(location=='North Platte2') %>%
+  group_by(nitrogenTreatment, genotype, plotNumber) %>%
+  pivot_longer(c(percentProtein, yieldPerAcre), names_to = 'phenotype', values_to = 'value') %>%
+  rowwise() %>%
+  mutate(label = case_when(phenotype=='percentProtein' ~ 'Protein (%)',
+                           phenotype=='yieldPerAcre' ~ 'Yield (Bushels/Acre)')) %>%
+  ggplot(aes(nitrogenTreatment, value, fill = nitrogenTreatment)) +
+    geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), color = 'black') +
+    facet_wrap(vars(label), scales = 'free_y') +
+    scale_fill_manual(values = nitrogenColors) +
+    labs(x = 'Nitrogen Treatment', y = '', fill = 'Nitrogen Treatment') +
+    theme(text = element_text(color = 'black', size = 14), 
+          axis.text = element_text(color = 'black', size = 14),
+          axis.text.x = element_text(color = 'black', size = 14),
+          strip.text = element_text(color = 'black', size = 14), 
+          line = element_line(color = 'black', linewidth = 1),
+          legend.position = 'top',
+          plot.background = element_blank(),
+          panel.background = element_blank())
+np2Violins
+
+sbViolinsFinal <- hybridsFinal %>%
+  filter(location=='Scottsbluff') %>%
+  group_by(nitrogenTreatment, genotype, plotNumber) %>%
+  pivot_longer(c(percentProtein, yieldPerAcre), names_to = 'phenotype', values_to = 'value') %>%
+  rowwise() %>%
+  mutate(label = case_when(phenotype=='percentProtein' ~ 'Protein (%)',
+                           phenotype=='yieldPerAcre' ~ 'Yield (Bushels/Acre)')) %>%
+  ggplot(aes(nitrogenTreatment, value, fill = nitrogenTreatment)) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), color = 'black') +
+  facet_wrap(vars(label), scales = 'free_y') +
+  scale_fill_manual(values = nitrogenColors) +
+  labs(x = 'Nitrogen Treatment', y = '', fill = 'Nitrogen Treatment') +
+  theme(text = element_text(color = 'black', size = 14), 
+        axis.text = element_text(color = 'black', size = 14),
+        axis.text.x = element_text(color = 'black', size = 14),
+        strip.text = element_text(color = 'black', size = 14), 
+        line = element_line(color = 'black', linewidth = 1),
+        legend.position = 'top',
+        plot.background = element_blank(),
+        panel.background = element_blank())
+sbViolinsFinal
+
+bigPhyllotaxyData <- read_excel('../../../Downloads/angles_three_days_6cm.xlsx', skip = 1)
+
+bigPhyllotaxyData <- bigPhyllotaxyData %>%
+  filter((`Accuracy reconstruction` > 0.7) & as.logical(`Topology skeleton`)) %>%
+  rename(phi0 = phi...7,
+         phi1 = phi...10, 
+         phi2 = phi...13,
+         phi3 = phi...16) %>%
+  mutate(dataset = 'Dataset 1') %>%
+  pivot_longer(c(phi0, phi1, phi2, phi3), names_to = 'angle', values_to = 'value') %>%
+  select(angle, value, dataset)
+
+validationPhyllotaxy <- read_excel('../../../Downloads/validation_plants_theta.xlsx', skip = 1)
+validationPhyllotaxy1 <- validationPhyllotaxy %>%
+  rename(phi0 = Phi...6,
+         phi1 = Phi...9,
+         phi2 = Phi...12,
+         phi3 = Phi...15) %>%
+  mutate(dataset = 'Dataset 2') %>%
+  pivot_longer(c(phi0, phi1, phi2, phi3), names_to = 'angle', values_to = 'value') %>%
+  select(angle, value, dataset)
+
+phyllotaxyData1 <- bind_rows(bigPhyllotaxyData, validationPhyllotaxy1)
+
+phyllotaxyHist <- ggplot(phyllotaxyData1, aes(dataset, value, fill = dataset)) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), color = 'black') + 
+  scale_fill_manual(values = moma.colors('VanGogh', 2)) + 
+  labs(x = '', y = expression(phi), fill = '') + 
+  theme(text = element_text(color = 'black', size = 14), 
+        axis.text = element_text(color = 'black', size = 14),
+        axis.text.x = element_text(color = 'black', size = 14),
+        line = element_line(color = 'black', linewidth = 1),
+        legend.position = 'top',
+        plot.background = element_blank(),
+        panel.background = element_blank())
+phyllotaxyHist
+
+validationPhyllotaxy2 <- validationPhyllotaxy %>%
+  rename(phi0 = Theta...7,
+         phi1 = Theta...10,
+         phi2 = Theta...13,
+         phi3 = Theta...16) %>%
+  mutate(dataset = 'Dataset 2') %>%
+  pivot_longer(c(phi0, phi1, phi2, phi3), names_to = 'angle', values_to = 'value') %>%
+  select(angle, value, dataset)
+
+phyllotaxyData2 <- bind_rows(bigPhyllotaxyData, validationPhyllotaxy2)
+
+phyllotaxyHist2 <- ggplot(phyllotaxyData2, aes(dataset, value, fill = dataset)) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), color = 'black') + 
+  scale_fill_manual(values = moma.colors('VanGogh', 2)) + 
+  labs(x = '', y = expression(phi), fill = '') + 
+  theme(text = element_text(color = 'black', size = 14), 
+        axis.text = element_text(color = 'black', size = 14),
+        axis.text.x = element_text(color = 'black', size = 14),
+        line = element_line(color = 'black', linewidth = 1),
+        legend.position = 'top',
+        plot.background = element_blank(),
+        panel.background = element_blank())
+phyllotaxyHist2
