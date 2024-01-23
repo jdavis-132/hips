@@ -1,4 +1,6 @@
 library(tidyverse)
+library(readxl)
+library(lubridate)
 source('src/Functions.R')
 
 iaFieldDataHyb <- read_excel('data/2023/2023_yield_ICIA_v3.xlsx', 
@@ -80,3 +82,68 @@ lnkHeight <- lnkHeight %>%
 
 lnkData <- full_join(lnkYieldData, lnkHeight, join_by(plotNumber), suffix = c('', ''), keep = FALSE) %>%
   select(!earsMissingFromCenterRows)
+
+lnkFT <- read_excel('data/2023/hybrids/Hybrid Hips flowering NOTEs 2023  (1).xlsx', 
+                    sheet = 'Sheet1', 
+                    skip = 1, 
+                    col_types = c(rep(c(rep('numeric', 3), 'date', 'skip', 'date', 'skip', 'text'), 2), 'skip'),
+                    col_names = c('plotNumber_A', 'row_A', 'range_A', 'anthesisDate_A', 'silkDate_A', 'notes_A', 'plotNumber_B', 'row_B', 'range_B', 
+                                  'anthesisDate_B', 'silkDate_B', 'notes_B'))
+lnkFTA <- lnkFT %>% 
+  select(contains('_A')) %>%
+  rename_with(.fn = ~str_split_i(., '_', 1))
+
+lnkFTB <- lnkFT %>% 
+  select(contains('_B')) %>%
+  rename_with(.fn = ~str_split_i(., '_', 1))
+
+lnkFT <- bind_rows(lnkFTA, lnkFTB)
+
+lnkFT <- lnkFT %>%
+  rowwise() %>%
+  mutate(notes = str_replace(notes, 'ST', 'thick stem') %>%
+           str_replace('CC', 'compact canopy') %>%
+           str_replace('LF', 'late tasseling') %>%
+           str_replace('LS', 'late silking') %>%
+           str_replace('T, ', 'Tall') %>%
+           str_replace(', T', 'Tall') %>%
+           str_replace_all(',', ';'),
+         location = 'Lincoln')
+
+lnkData <- full_join(lnkData, lnkFT, join_by(plotNumber), keep = FALSE, suffix = c('.yield', '')) %>%
+  select(!ends_with('.yield')) %>%
+  filter(!is.na(plotNumber))
+
+lnkIndex <- read_excel('data/2023/Summary of HIPS 2023 Maps for Fields Visited by J Schanble Lab.xlsm',
+                       sheet = 'Lincoln Hybrids - Index',
+                       skip = 1,
+                       col_types = c('text', 'skip', 'numeric', 'text', rep('skip', 2), rep('numeric', 2), 'text', 'numeric', rep('text', 3), rep('skip', 8)),
+                       col_names = c('qrCode', 'plotNumber', 'location', 'row', 'range', 'poundsOfNitrogenPerAcre', 'rep', 'genotype', 'notes', 'ERNumber'))
+
+lnkIndex <- lnkIndex %>%
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode), 
+         irrigationProvided = 0, 
+         poundsOfNitrogenPerAcre = str_remove(poundsOfNitrogenPerAcre, 'N') %>%
+           as.numeric(),
+         nitrogenTreatment = case_when(poundsOfNitrogenPerAcre < 100 ~ 'Low', 
+                                       poundsOfNitrogenPerAcre > 100 & poundsOfNitrogenPerAcre < 200 ~ 'Medium', 
+                                       poundsOfNitrogenPerAcre > 200 ~ 'High'),
+         block = case_when(nitrogenTreatment=='Low' & rep==1 ~ 1,
+                           nitrogenTreatment=='Low' & rep==2 ~ 2,
+                           nitrogenTreatment=='Medium' & rep==1 ~ 3,
+                           nitrogenTreatment=='Medium' & rep==2 ~ 4,
+                           nitrogenTreatment=='High' & rep==1 ~ 5,
+                           nitrogenTreatment=='High' & rep==2 ~ 6), 
+         genotype = str_to_upper(genotype))
+lnk <- full_join(lnkData, lnkIndex, join_by(plotNumber), suffix = c('', '.idx'), keep = FALSE)
+
+lnk <- lnk %>%
+  rowwise() %>% 
+  mutate(location = location.idx, 
+         row = row.idx, 
+         range = range.idx) %>% 
+  unite('notes', notes, notes.idx, sep = ';', remove = TRUE, na.rm = TRUE) %>%
+  select(!c(rep, ends_with('.idx')))
+
+

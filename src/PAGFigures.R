@@ -808,3 +808,21 @@ phyllotaxyHist2 <- ggplot(phyllotaxyData2, aes(dataset, value, fill = dataset)) 
         plot.background = element_blank(),
         panel.background = element_blank())
 phyllotaxyHist2
+
+
+# How many non-missing vals do we have in the inbreds 2022?
+nonMissingVals <- 0
+totalPlots <- length(inbreds$qrCode)
+vars <- c('anthesisDate', 'silkDate', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'GDDToAnthesis', 'GDDToSilk', 
+          'anthesisSilkingIntervalSilkingGDD', 'earHeight', 'flagLeafHeight', 'plantDensity', 'combineYield', 'yieldPerAcre', 
+          'combineMoisture', 'combineTestWeight', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 'kernelsPerRow', 
+          'kernelRowNumber', 'kernelsPerEar', 'hundredKernelMass' , 'shelledCobMass', 'kernelMassPerEar', 
+          'kernelColor', 'totalStandCount')
+inbreds <- inbreds %>%
+  mutate(across(is.character, ~case_when(.=='' ~ NA)))
+for(var in vars)
+{
+  numMissingVals <- as.numeric(sum(is.na(inbreds[[var]])))
+  numNotMissing <- totalPlots - numMissingVals
+  nonMissingVals <- nonMissingVals + numNotMissing
+}
