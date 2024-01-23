@@ -146,4 +146,22 @@ lnk <- lnk %>%
   unite('notes', notes, notes.idx, sep = ';', remove = TRUE, na.rm = TRUE) %>%
   select(!c(rep, ends_with('.idx')))
 
+npIndex <- read_excel('data/2023/Summary of HIPS 2023 Maps for Fields Visited by J Schanble Lab.xlsm', 
+                      sheet = 'North Platte Hybrids - Index', 
+                      skip = 1, 
+                      col_types = c('text', rep('numeric', 3), 'text', 'numeric', rep('text', 2), rep('skip', 2), 'text', rep('skip', 8)), 
+                      col_names = c('qrCode', 'plotNumber', 'row', 'range', 'genotype', 'rep', 'poundsOfNitrogenPerAcre',
+                                    'irrigationTreatment', 'notes')) %>%
+  filter(!is.na(plotNumber)) %>%
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode), 
+         genotype = str_to_upper(genotype), 
+         poundsOfNitrogenPerAcre = str_remove(poundsOfNitrogenPerAcre, 'N') %>%
+           as.numeric(), 
+         nitrogenTreatment = case_when(poundsOfNitrogenPerAcre < 100 ~ 'Low', 
+                                       poundsOfNitrogenPerAcre > 100 & poundsOfNitrogenPerAcre < 200 ~ 'Medium', 
+                                       poundsOfNitrogenPerAcre > 200 ~ 'High'))
 
+np <- full_join(npIndex, npFieldData, join_by(plotNumber, row, range, genotype), suffix = c('', '.field'), keep = FALSE)
+
+mvHybFieldData <- filter(iaFieldDataHyb, location == 'Missouri ')
