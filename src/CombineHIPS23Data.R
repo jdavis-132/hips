@@ -6,16 +6,18 @@ source('src/Functions.R')
 iaFieldDataHyb <- read_excel('data/2023/2023_yield_ICIA_v3.xlsx', 
                              sheet = '4-row plots', 
                              skip = 1,
-                             col_types = c('numeric', rep('skip', 2), 'text', 'skip', 'text', 'numeric', 'skip', 'text', rep('skip', 2), 
+                             col_types = c('numeric', rep('skip', 2), 'text', 'skip', 'text', 'numeric', 'text', 'text', rep('skip', 2), 
                                            rep('date', 2), 'text', rep('skip', 2), 'numeric', rep('skip', 5), rep('numeric', 9), 'skip', 
                                            rep('text', 5), rep('numeric', 2), 'skip'),
-                             col_names = c('pedigreeID', 'location', 'qrCode', 'poundsOfNitrogenPerAcre', 'genotype', 'plantingDate', 
-                                           'harvestDate', 'experiment', 'rep', 'row', 'range', 'seedsPlanted', 'plantDensity', 'rootLodging',
-                                           'stalkLodging', 'combineYield', 'combineTestWeight', 'combineMoisture', 'plotDiscarded', 
-                                           'notes', 'tattooSensor', 'nitrogenSensor', 'solarPanel', 'flagLeafHeight', 'earHeight'))
+                             col_names = c('pedigreeID', 'location', 'qrCode', 'poundsOfNitrogenPerAcre', 'pedigree', 'genotype',
+                                           'plantingDate', 'harvestDate', 'experiment', 'rep', 'row', 'range', 'seedsPlanted', 
+                                           'plantDensity', 'rootLodging', 'stalkLodging', 'combineYield', 'combineTestWeight',
+                                           'combineMoisture', 'plotDiscarded', 'notes', 'tattooSensor', 'nitrogenSensor', 'solarPanel',
+                                           'flagLeafHeight', 'earHeight'))
 iaFieldDataHyb <- iaFieldDataHyb %>%
   rowwise() %>%
-  mutate(plotNumber = str_split_i(qrCode, '-', 3), 
+  mutate(plotNumber = str_split_i(qrCode, '-', 3) %>%
+           as.numeric(), 
          nitrogenTreatment = case_when(poundsOfNitrogenPerAcre < 100 ~ 'Low', 
                                        poundsOfNitrogenPerAcre > 100 & poundsOfNitrogenPerAcre < 200 ~ 'Medium', 
                                        poundsOfNitrogenPerAcre > 200 ~ 'High'),
@@ -28,23 +30,25 @@ iaFieldDataHyb <- iaFieldDataHyb %>%
          yieldPerAcre = case_when(!is.na(solarPanel) ~ NA, .default = yieldPerAcre),
          irrigationProvided = 0,
          plotLength = 17.5, 
-         genotype = str_to_upper(genotype)) %>%
+         genotype = case_when(genotype=='0' ~ pedigree, .default = genotype) %>%
+           str_to_upper()) %>%
   filter(is.na(plotDiscarded)) %>%
   unite('notes', tattooSensor, nitrogenSensor, solarPanel, notes, sep = fixed(';'), na.rm = TRUE, remove = TRUE)
 
 npFieldData <- read_excel('data/2023/hybrids/2023 Schnable hips_data_v2.xlsx',
                           sheet = 'Data', 
                           skip = 5, 
-                          col_types = c('skip', 'numeric', rep('skip', 2), 'text', rep('skip', 2), 'text', rep('numeric', 2), rep('skip', 2),
-                                        rep('numeric', 2), rep('date', 2), 'skip', rep('numeric', 5), 'text', rep('skip', 3), rep('numeric', 3),
-                                        'skip'),
-                          col_names = c('plotNumber', 'genotype', 'irrigationTreatment', 'range', 'row', 'totalStandCount', 'plantDensity',
-                                        'anthesisDate', 'silkDate', 'earHeight', 'tasselHeight', 'stalkLodging', 'rootLodging', 'greenSnap',
-                                        'harvestDate', 'combineYield', 'combineMoisture', 'combineTestWeight'))
+                          col_types = c('skip', 'numeric', 'skip', 'text', 'text', rep('skip', 2), 'text', rep('numeric', 2), rep('skip', 2),
+                                        rep('numeric', 2), rep('date', 2), 'skip', rep('numeric', 5), 'text', rep('skip', 3), 
+                                        rep('numeric', 3), 'skip'),
+                          col_names = c('plotNumber', 'pedigree', 'genotype', 'irrigationTreatment', 'range', 'row', 'totalStandCount',
+                                        'plantDensity', 'anthesisDate', 'silkDate', 'earHeight', 'tasselHeight', 'stalkLodging',
+                                        'rootLodging', 'greenSnap', 'harvestDate', 'combineYield', 'combineMoisture', 'combineTestWeight'))
 npFieldData <- npFieldData %>%
   filter(genotype!='filler') %>%
   rowwise() %>%
-  mutate(genotype = str_to_upper(genotype), 
+  mutate(genotype = case_when(genotype=='0' ~ pedigree, .default = genotype) %>%
+           str_to_upper(), 
          earHeight = earHeight*100,
          tasselHeight = tasselHeight*100, 
          percentLodging = sum(stalkLodging, rootLodging, greenSnap, na.rm = TRUE)/totalStandCount,
@@ -61,7 +65,9 @@ lnkYieldData <- lnkYieldData %>%
          yieldPerAcre = buPerAc15.5(combineYield, combineMoisture, 17.5),
          plotLength = 17.5) %>%
   mutate(yieldPerAcre = case_when(earsMissingFromCenterRows > 0 ~ NA, .default = yieldPerAcre),
-         combineYield = case_when(earsMissingFromCenterRows > 0 ~ NA, .default = combineYield))
+         combineYield = case_when(earsMissingFromCenterRows > 0 ~ NA, .default = combineYield), 
+         harvestDate = str_split_i(harvestDate, ' ', 1) %>%
+           mdy())
 
 lnkHeight <- read.csv('data/2023/hybrids/2023HIBHIPS_plat_height.csv')
 lnkHeight <- lnkHeight %>%
@@ -142,7 +148,8 @@ lnk <- lnk %>%
   rowwise() %>% 
   mutate(location = location.idx, 
          row = row.idx, 
-         range = range.idx) %>% 
+         range = range.idx, 
+         harvestDate = mdy(harvestDate)) %>% 
   unite('notes', notes, notes.idx, sep = ';', remove = TRUE, na.rm = TRUE) %>%
   select(!c(rep, ends_with('.idx')))
 
@@ -162,6 +169,36 @@ npIndex <- read_excel('data/2023/Summary of HIPS 2023 Maps for Fields Visited by
                                        poundsOfNitrogenPerAcre > 100 & poundsOfNitrogenPerAcre < 200 ~ 'Medium', 
                                        poundsOfNitrogenPerAcre > 200 ~ 'High'))
 
-np <- full_join(npIndex, npFieldData, join_by(plotNumber, row, range, genotype), suffix = c('', '.field'), keep = FALSE)
+np <- full_join(npIndex, npFieldData, join_by(plotNumber, genotype), suffix = c('', '.field'), keep = FALSE)
 
-mvHybFieldData <- filter(iaFieldDataHyb, location == 'Missouri ')
+np <- np %>%
+  mutate(location = 'North Platte') %>%
+  select(!c(pedigree, ends_with('.field')))
+
+mvHybFieldData <- filter(iaFieldDataHyb, location=='Missouri Valley')
+acFieldData <- filter(iaFieldDataHyb, location!='Missouri Valley')
+
+mvIndex <- read_excel('data/2023/Summary of HIPS 2023 Maps for Fields Visited by J Schanble Lab.xlsm', 
+                      sheet = 'Missouri Valley Hybrids - Index', 
+                      skip = 1, 
+                      col_types = c(rep('skip', 2), 'text', rep('numeric', 3), 'skip', 'numeric', 'skip', 'skip', 'text', 'skip', 'text', 
+                                    rep('skip', 4)), 
+                      col_names = c('qrCode', 'plotNumber', 'row', 'range', 'block', 'location', 'experiment'))
+mv <- full_join(mvHybFieldData, mvIndex, join_by(location, row, range, experiment), suffix = c('', '.idx'), keep = FALSE)
+
+mv <- mv %>%
+  rowwise() %>%
+  mutate(qrCode = qrCode.idx, 
+         plotNumber = plotNumber.idx) %>%
+  select(pedigreeID, location, qrCode, poundsOfNitrogenPerAcre, genotype, plantingDate, harvestDate, experiment, row, range, seedsPlanted,
+         plantDensity, rootLodging, stalkLodging, combineYield, combineTestWeight, combineMoisture, notes, flagLeafHeight, earHeight,
+         plotNumber, nitrogenTreatment, percentLodging, yieldPerAcre, irrigationProvided, plotLength, block)
+
+fieldData <- bind_rows(acFieldData, mv, lnk, np)
+
+# fieldData <- fieldData %>%
+#   filter(!(genotype %in% c('FILLER', 'SOLAR PANEL', NA))) %>%
+#   rowwise() %>%
+#   mutate(plantingDate = case_when(location=='Lincoln' ~ mdy('05-16-2023'), 
+#                                   .default = plantingDate),
+#          harvestDate = case_when())
