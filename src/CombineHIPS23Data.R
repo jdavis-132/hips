@@ -194,11 +194,61 @@ mv <- mv %>%
          plantDensity, rootLodging, stalkLodging, combineYield, combineTestWeight, combineMoisture, notes, flagLeafHeight, earHeight,
          plotNumber, nitrogenTreatment, percentLodging, yieldPerAcre, irrigationProvided, plotLength, block)
 
-fieldData <- bind_rows(acFieldData, mv, lnk, np)
+sbIndex <- read_excel('data/2023/Summary of HIPS 2023 Maps for Fields Visited by J Schanble Lab.xlsm', 
+                      sheet = 'Scottsbluff Hybrids - Index', 
+                      skip = 1, 
+                      col_types = c(rep('skip', 2), 'text', rep('numeric', 3), 'text', 'numeric', 'text', 'skip', 'text', rep('skip', 3)), 
+                      col_names = c('qrCode', 'plotNumber', 'row', 'range', 'genotype', 'rep', 'poundsOfNitrogenPerAcre', 'location')) %>%
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode), 
+         plotNumber = case_when(poundsOfNitrogenPerAcre=='150N' ~ plotNumber + 300,
+                                poundsOfNitrogenPerAcre=='225N' ~ plotNumber + 600, 
+                                .default = plotNumber), 
+         genotype = str_to_upper(genotype), 
+         poundsOfNitrogenPerAcre = str_remove(poundsOfNitrogenPerAcre, 'N') %>%
+           as.numeric())
+
+sbFieldData <- read_excel('data/2023/hybrids/Scottsbluff Hybrid HIPS 2023 - Data.xlsx', 
+                          sheet = 'Data23', 
+                          skip = 1,
+                          col_types = rep('numeric', 18), 
+                          col_names = c(paste0(c('plotNumber', 'plantHeight', 'earHeight', 'combineYield', 'combineMoisture',
+                                                 'combineTestWeight'), '.Low'),
+                                        paste0(c('plotNumber', 'plantHeight', 'earHeight', 'combineYield', 'combineMoisture',
+                                                 'combineTestWeight'), '.Medium'), 
+                                        paste0(c('plotNumber', 'plantHeight', 'earHeight', 'combineYield', 'combineMoisture',
+                                                 'combineTestWeight'), '.High'))) %>%
+  rowwise() %>%
+  mutate(plotNumber.Medium = plotNumber.Medium + 300, 
+         plotNumber.High = plotNumber.High + 600) 
+
+sbLow <- select(sbFieldData, ends_with('.Low')) %>%
+  rename_with(~str_remove(., '.Low')) %>%
+  mutate(nitrogenTreatment = 'Low')
+
+sbMedium <- select(sbFieldData, ends_with('.Medium')) %>%
+  rename_with(~str_remove(., '.Medium')) %>%
+  mutate(nitrogenTreatment = 'Medium')
+
+sbHigh <- select(sbFieldData, ends_with('.High')) %>%
+  rename_with(~str_remove(.,'.High')) %>%
+  mutate(nitrogenTreatment = 'High')
+
+sbFieldData <- bind_rows(sbLow, sbMedium, sbHigh) %>%
+  filter(!is.na(plotNumber))
+
+sb <- full_join(sbIndex, sbFieldData, join_by(plotNumber), keep = FALSE, suffix = c('', '')) %>%
+  rowwise() %>%
+  mutate(block = case_when(nitrogenTreatment=='Low' & rep==1 ~ 1))
+
+fieldData <- bind_rows(acFieldData, mv, lnk, np, sb)
 
 # fieldData <- fieldData %>%
 #   filter(!(genotype %in% c('FILLER', 'SOLAR PANEL', NA))) %>%
 #   rowwise() %>%
-#   mutate(plantingDate = case_when(location=='Lincoln' ~ mdy('05-16-2023'), 
+#   mutate(plantingDate = case_when(location=='Lincoln' ~ mdy('05-16-2023'),
+#                                   location=='North Platte' ~ mdy('05-10-2023'),
 #                                   .default = plantingDate),
-#          harvestDate = case_when())
+#          harvestDate = case_when(location=='Missouri Valley' ~ mdy('09-25-2023'),
+#                                  location=='Lincoln' ~ mdy('10-23-2023'), 
+#                                  location=='North Platte' ~ mdy('')))
