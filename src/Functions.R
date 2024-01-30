@@ -1,5 +1,6 @@
 library(tidyverse)
 library(SpATS)
+
 # Returns a data frame filtered to rows of data that have values for trait 
 # that are less than quantile 1 - 1.5*iqr or greater than quantile 3 + 1.5*iqr
 # data is a data frame
@@ -317,3 +318,54 @@ buPerAc15.5 <- function(harvestWeightLbs, harvestMoisture, plotLen)
     return(buPerAc)
   }
 }
+
+# First, a function to calculate GDDs for a single day in fahrenheit
+getGDDs <- function(minTemp, maxTemp)
+{
+  cropMinTemp <- 50
+  cropMaxTemp <- 86
+  min <- minTemp
+  max <- maxTemp
+  
+  # Reassign min and max if they are outside the bounds of the crop's min and max temps for growth
+  if(min <= cropMinTemp)
+  {
+    min <- cropMinTemp
+  }
+  
+  if(max <= cropMinTemp)
+  {
+    max <- cropMinTemp
+  }
+  
+  if(max >= cropMaxTemp)
+  {
+    max <- cropMaxTemp
+  }
+  
+  if(min >= cropMaxTemp)
+  {
+    min <- cropMaxTemp
+  }
+  GDD <- (min + max)/2 - cropMinTemp
+  return(GDD)
+}
+
+# Function to calculate GDDs between 2 dates
+getCumulativeGDDs <- function(start, end, weather, location)
+{
+  if(is.na(start) | is.na(end))
+  {
+    return(NA)
+  }
+  start <- as.POSIXct(start, format = '%F')
+  end <- as.POSIXct(end, format = '%F')
+  # dates <- seq(min(start, end), max(start, end), 'days')
+  location <- as.character(location)
+  weather.df <- filter(weather, location==location)
+  weather.df <- filter(weather.df, (start <= date) & (end >= date))
+  cumulativeGDDs <- sum(weather.df$GDD)
+  return(cumulativeGDDs)
+}  
+
+

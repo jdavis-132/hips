@@ -239,16 +239,62 @@ sbFieldData <- bind_rows(sbLow, sbMedium, sbHigh) %>%
 
 sb <- full_join(sbIndex, sbFieldData, join_by(plotNumber), keep = FALSE, suffix = c('', '')) %>%
   rowwise() %>%
-  mutate(block = case_when(nitrogenTreatment=='Low' & rep==1 ~ 1))
+  mutate(block = case_when(nitrogenTreatment=='Low' ~ rep, 
+                           nitrogenTreatment=='Medium' & rep==1 ~ 3,
+                           nitrogenTreatment=='Medium' & rep==2 ~ 4, 
+                           nitrogenTreatment=='High' & rep==1 ~ 5,
+                           nitrogenTreatment=='High' & rep==2 ~ 6), 
+         plantHeight = cm(plantHeight), 
+         earHeight = cm(earHeight), 
+         combineMoisture = case_when(combineMoisture==0 ~ NA, .default = combineMoisture),
+         combineTestWeight = case_when(combineTestWeight==0 ~ NA, .default = combineTestWeight), 
+         yieldPerAcre = buPerAc15.5(combineYield, combineMoisture, 17.5), 
+         plotLength = 17.5, 
+         plantingDate = mdy('05-24-2023'))
 
 fieldData <- bind_rows(acFieldData, mv, lnk, np, sb)
 
-# fieldData <- fieldData %>%
-#   filter(!(genotype %in% c('FILLER', 'SOLAR PANEL', NA))) %>%
-#   rowwise() %>%
-#   mutate(plantingDate = case_when(location=='Lincoln' ~ mdy('05-16-2023'),
-#                                   location=='North Platte' ~ mdy('05-10-2023'),
-#                                   .default = plantingDate),
-#          harvestDate = case_when(location=='Missouri Valley' ~ mdy('09-25-2023'),
-#                                  location=='Lincoln' ~ mdy('10-23-2023'), 
-#                                  location=='North Platte' ~ mdy('')))
+pedigreeIDKey <- fieldData %>%
+  select(pedigreeID, genotype) %>%
+  group_by(pedigreeID) %>%
+  summarise(genotype = max(genotype, na.rm = TRUE)) %>%
+  filter(!is.na(pedigreeID) & !is.na(genotype))
+
+fieldData <- fieldData %>%
+  filter(!(genotype %in% c('FILLER', 'SOLAR PANEL', 'FILL', NA))) %>%
+  rowwise() %>%
+  mutate(plantingDate = case_when(location=='Lincoln' ~ mdy('05-16-2023'),
+                                  location=='North Platte' ~ mdy('05-10-2023'),
+                                  location=='Missouri Valley' ~ mdy('05-02-2023'),
+                                  .default = plantingDate),
+         harvestDate = case_when(location=='Missouri Valley' ~ mdy('09-25-2023'),
+                                 location=='Lincoln' ~ mdy('10-23-2023'), 
+                                 .default = harvestDate), 
+         pedigreeID = case_when(is.na(pedigreeID) ~ pedigreeIDKey$pedigreeID[pedigreeIDKey$genotype==genotype], .default = pedigreeID), 
+         sublocation = location, 
+         poundsOfNitrogenPerAcre = case_when(location=='Missouri Valley' ~ 160, .default = poundsOfNitrogenPerAcre), 
+         nitrogenTreatment = case_when(poundsOfNitrogenPerAcre < 100 ~ 'Low', 
+                                       poundsOfNitrogenPerAcre > 200 ~ 'High', 
+                                       .default = 'Medium'),
+         irrigationProvided = case_when(location=='Missouri Valley' ~ 0,
+                                        location=='North Platte' ~ 4.5,
+                                        .default = irrigationProvided), 
+         plotLength = case_when(is.na(plotLength) ~ 17.5, .default = plotLength),
+         qrCode = str_to_upper(qrCode),
+         rep = case_when(is.na(rep) ~ as.numeric(str_split_i(qrCode, fixed('$'), 6)), .default = rep),
+         block = case_when(location=='North Platte' ~ 1,
+                           nitrogenTreatment=='Low'| location=='Missouri Valley' ~ rep, 
+                           nitrogenTreatment=='Medium' ~ rep + 2, 
+                           nitrogenTreatment=='High' ~ rep + 4),
+         daysToAnthesis = difftime(as.Date(anthesisDate), as.Date(plantingDate)) %>%
+           as.integer(),
+         daysToSilk = difftime(as.Date(silkDate), as.Date(plantingDate)) %>%
+           as.integer(),
+         anthesisSilkingInterval = difftime(as.Date(silkDate), as.Date(anthesisDate)) %>%
+           as.integer(),
+         flagLeafHeight = case_when(location=='North Platte' ~ tasselHeight, .default = flagLeafHeight)) %>%
+  select(!c(pedigree, rep, seedsPlanted, rootLodging, stalkLodging, plotDiscarded, tasselHeight, greenSnap)) %>%
+  filter(!str_detect(qrCode, 'INBRED'))
+
+# Wrangle 2023 weather data to calculate GDDs
+
