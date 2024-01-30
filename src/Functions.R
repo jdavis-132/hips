@@ -1,5 +1,6 @@
 library(tidyverse)
 library(SpATS)
+library(viridis)
 
 # Returns a data frame filtered to rows of data that have values for trait 
 # that are less than quantile 1 - 1.5*iqr or greater than quantile 3 + 1.5*iqr
@@ -18,6 +19,20 @@ idOutliers <- function(data, trait)
   df_filt <- filter(df, trait<lowCutoff|trait>highCutoff) %>%
     select(!trait)
   return(df_filt)
+}
+
+# Now let's make this into a function to make maps for every response variable:
+mapResponse <- function(data, trait)
+{
+  plot <- ggplot(data, aes(range, row, fill = .data[[trait]], color = 'white')) + 
+    geom_raster() +
+    facet_wrap(vars(location, sublocation)) + 
+    scale_x_continuous(breaks = 0:40) +
+    scale_y_continuous(breaks = 0:40) +
+    scale_fill_viridis(option = 'turbo', direction = -1) +
+    theme_minimal() + 
+    theme(axis.text = element_text(angle = 45))
+  print(plot)
 }
 
 # Returns a pivoted data frame with a column for each observation of each phenotype of a genotype within a treatment 

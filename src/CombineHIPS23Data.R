@@ -1,6 +1,7 @@
 library(tidyverse)
 library(readxl)
 library(lubridate)
+library(daymetr)
 source('src/Functions.R')
 
 iaFieldDataHyb <- read_excel('data/2023/2023_yield_ICIA_v3.xlsx', 
@@ -297,4 +298,67 @@ fieldData <- fieldData %>%
   filter(!str_detect(qrCode, 'INBRED'))
 
 # Wrangle 2023 weather data to calculate GDDs
+# ON HOLD: need DAYMET to impute weather data & not released for 2023 yet: 2022 data was released 2023-03-10
+# weather.cf <- read_excel('data/2023/2023 Weather Stations/HIPS_Crawordsville_2023.xlsx', 
+#                  sheet = 'Weather Data',
+#                  skip = 2, 
+#                  col_types = c('date', rep('skip', 6), 'numeric', rep('skip', 10)), 
+#                  col_names = c('date', 'temp'))
+# weather.cf <- weather.cf %>%
+#   rowwise() %>%
+#   mutate(date = floor_date(date, 'days')) %>%
+#   group_by(date) %>%
+#   summarise(maxTemp = max(temp, na.rm = TRUE), 
+#             minTemp = min(temp, na.rm = TRUE), 
+#             GDD = getGDDs(minTemp, maxTemp), 
+#             location = 'Crawfordsville')
+# season.cf <- tibble(date = seq(as.Date('2023-05-04'), as.Date('2023-10-02'), by = 'days'))
+# impute.cf <- full_join(weather.cf, season.cf, join_by(date), keep = FALSE, suffix = c('', '')) %>%
+#   filter(is.na(maxTemp))
+# lat.cf <- mean(41.19504636, 41.19399869)
+# lon.cf <- mean(-91.47757465, -91.48059795)
+# daymet.cf <- download_daymet(site = 'Crawfordsville', lat = lat.cf, lon = lon.cf, start = 2023, end = 2023)
+# daymet.cf <- daymet.cf$data %>%
+#   filter(year==2023)
 
+# QC traits
+phenotypes <- c('plantDensity', 'combineYield', 'combineTestWeight', 'combineMoisture', 'flagLeafHeight', 'earHeight', 'percentLodging', 
+                'yieldPerAcre', 'totalStandCount', 'plantHeight', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval')
+
+plotRepCorr(fieldData, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
+
+# Remove outliers 
+fieldData <- fieldData %>%
+  rowwise() %>%
+  mutate(anthesisDate = case_when(location=='North Platte' & plotNumber==146 ~ NA, .default = anthesisDate),
+         daysToAnthesis = case_when(location=='North Platte' & plotNumber==146 ~ NA, .default = daysToAnthesis),
+         silkDate = case_when(location=='North Platte' & plotNumber==349 ~ NA, .default = silkDate), 
+         daysToSilk = case_when(location=='North Platte' & plotNumber==349 ~ NA, .default = daysToSilk), 
+         anthesisSilkingInterval = case_when(location=='North Platte' & plotNumber %in% c(146, 349) ~ NA, 
+                                             .default = anthesisSilkingInterval), 
+         plantHeight = case_when(plantHeight > 500 ~ NA, .default = plantHeight),
+         totalStandCount = case_when(totalStandCount > 100 ~ NA, .default = totalStandCount))
+
+# sbLong <- scottsbluff %>%
+#   pivot_longer(any_of(sbPhenos), names_to = 'phenotype', values_to = 'val') %>%
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')))
+# sbViolins <- ggplot(sbLong, aes(nitrogenTreatment, val, fill = nitrogenTreatment)) +
+#   geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) +
+#   facet_wrap(vars(phenotype), nrow = 2, scales = 'free')
+# sbViolins
+
+nitrogenResponseViolins <- fieldData %>%
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
+  ggplot(aes(nitrogenTreatment, yieldPerAcre, fill = nitrogenTreatment)) +
+    geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) + 
+    facet_wrap(vars(location), nrow = 2) + 
+    labs(title = '2023')
+nitrogenResponseViolins
+
+nitrogenResponseViolins <- hybrids %>%
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
+  ggplot(aes(nitrogenTreatment, yieldPerAcre, fill = nitrogenTreatment)) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  facet_wrap(vars(location), nrow = 2) + 
+  labs(title = '2022')
+nitrogenResponseViolins
