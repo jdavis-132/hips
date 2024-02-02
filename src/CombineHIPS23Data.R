@@ -2,6 +2,7 @@ library(tidyverse)
 library(readxl)
 library(lubridate)
 library(daymetr)
+library(cowplot)
 source('src/Functions.R')
 
 iaFieldDataHyb <- read_excel('data/2023/2023_yield_ICIA_v3.xlsx', 
@@ -114,12 +115,21 @@ lnkFT <- lnkFT %>%
            str_replace('LS', 'late silking') %>%
            str_replace('T, ', 'Tall') %>%
            str_replace(', T', 'Tall') %>%
+           str_replace('DLO', 'different leaf orientation') %>%
+           str_replace('BL', 'broad leaves') %>%
+           str_replace('EL', 'elongated leaves') %>%
+           str_replace('LY', 'low yielding') %>%
            str_replace_all(',', ';'),
          location = 'Lincoln')
 
 lnkData <- full_join(lnkData, lnkFT, join_by(plotNumber), keep = FALSE, suffix = c('.yield', '')) %>%
   select(!ends_with('.yield')) %>%
   filter(!is.na(plotNumber))
+
+lnkStandCt <- read.csv('data/2023/hybrids/2023HYB_HIPS_standing_count.csv')
+colnames(lnkStandCt) <- c('field', 'range', 'plotNumber', 'totalStandCount')
+lnkStandCt <- select(lnkStandCt, c(plotNumber, totalStandCount))
+lnkData <- full_join(lnkData, lnkStandCt, join_by(plotNumber), keep = FALSE, suffix = c('', ''))
 
 lnkIndex <- read_excel('data/2023/Summary of HIPS 2023 Maps for Fields Visited by J Schanble Lab.xlsm',
                        sheet = 'Lincoln Hybrids - Index',
@@ -338,7 +348,7 @@ fieldData <- fieldData %>%
                                              .default = anthesisSilkingInterval), 
          plantHeight = case_when(plantHeight > 500 ~ NA, .default = plantHeight),
          totalStandCount = case_when(totalStandCount > 100 ~ NA, .default = totalStandCount))
-
+plotRepCorr(fieldData, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 # sbLong <- scottsbluff %>%
 #   pivot_longer(any_of(sbPhenos), names_to = 'phenotype', values_to = 'val') %>%
 #   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')))
@@ -362,3 +372,102 @@ nitrogenResponseViolins <- hybrids %>%
   facet_wrap(vars(location), nrow = 2) + 
   labs(title = '2022')
 nitrogenResponseViolins
+
+
+sbTestFieldData <- scottsbluff %>% 
+  rowwise() %>%
+  mutate(plotNumberSW = case_when(row==22 ~ plotNumber - 745,
+                                  row==21 ~ plotNumber - 687,
+                                  row==20 ~ plotNumber - 629, 
+                                  row==19 ~ plotNumber - 571,
+                                  row==18 ~ plotNumber - 513,
+                                  row==17 ~ plotNumber - 455, 
+                                  row==15 ~ plotNumber - 203, 
+                                  row==14 ~ plotNumber - 145, 
+                                  row==13 ~ plotNumber - 87,
+                                  row==12 ~ plotNumber - 29, 
+                                  row==11 ~ plotNumber + 29,
+                                  row==10 ~ plotNumber + 87, 
+                                  row==9 ~ plotNumber + 145, 
+                                  row==8 ~ plotNumber + 203,
+                                  row==6 ~ plotNumber + 455,
+                                  row==5 ~ plotNumber + 513,
+                                  row==4 ~ plotNumber + 571,
+                                  row==3 ~ plotNumber + 629,
+                                  row==2 ~ plotNumber + 687,
+                                  row==1 ~ plotNumber + 745)) %>%
+  select(c(plotNumberSW, plantHeight, earHeight, combineYield, combineMoisture, combineTestWeight, yieldPerAcre))
+
+sbTestSW <- right_join(sbIndex, sbTestFieldData, join_by(plotNumber==plotNumberSW), keep = FALSE,
+                      suffix = c('', '')) %>%
+  rowwise() %>%
+  mutate(nitrogenTreatment = case_when(poundsOfNitrogenPerAcre < 100 ~ 'Low', 
+                                       poundsOfNitrogenPerAcre > 200 ~ 'High',
+                                       .default = 'Medium')) %>%
+  filter(location=='Scottsbluff')
+
+# Probably not a SW plant start; this shows no noticeable improvement
+plotRepCorr(sbTestSW, 'nitrogenTreatment', 'genotype', sbPhenos, 'location')
+
+# Do observations from Scottsbluff correlate with observations from the 'same' genotypes at other locations?
+# Probably not but let's check it anyway
+fieldDataWide <- fieldData %>%
+  group_by(genotype, location, nitrogenTreatment) %>%
+  mutate(genotypeObsNum = 1:n()) %>%
+  pivot_wider(id_cols = c(genotype, genotypeObsNum, nitrogenTreatment),
+              names_from = c(location),
+              values_from = c(earHeight, combineYield, combineMoisture, combineTestWeight, yieldPerAcre))
+sbPhenos <- c('earHeight', 'combineYield', 'combineMoisture', 'combineTestWeight', 'yieldPerAcre')
+
+for(i in 1:length(sbPhenos))
+{
+  phenoSB <- paste0(sbPhenos[i], '_Scottsbluff')
+  phenoLNK <- paste0(sbPhenos[i], '_Lincoln')
+  phenoMV <- paste0(sbPhenos[i], '_Missouri Valley')
+  phenoAmes <- paste0(sbPhenos[i], '_Ames')
+  phenoCF <- paste0(sbPhenos[i], '_Crawfordsville')
+  
+  plotSBLNK <- ggplot(fieldDataWide, aes(.data[[phenoSB]], .data[[phenoLNK]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  plotSBMV <- ggplot(fieldDataWide, aes(.data[[phenoSB]], .data[[phenoMV]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  plotSBAmes <- ggplot(fieldDataWide, aes(.data[[phenoSB]], .data[[phenoAmes]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  plotSBCF <- ggplot(fieldDataWide, aes(.data[[phenoSB]], .data[[phenoCF]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  plotLNKMV <- ggplot(fieldDataWide, aes(.data[[phenoLNK]], .data[[phenoMV]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  plotLNKAmes <- ggplot(fieldDataWide, aes(.data[[phenoLNK]], .data[[phenoAmes]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  plotLNKCF <- ggplot(fieldDataWide, aes(.data[[phenoLNK]], .data[[phenoMV]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  plotMVAmes <- ggplot(fieldDataWide, aes(.data[[phenoMV]], .data[[phenoAmes]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  plotMVCF <- ggplot(fieldDataWide, aes(.data[[phenoMV]], .data[[phenoCF]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  plotAmesCF <- ggplot(fieldDataWide, aes(.data[[phenoAmes]], .data[[phenoCF]])) +
+    geom_point() +
+    theme(legend.position = 'none')
+  
+  all <- plot_grid(plotSBLNK, plotSBMV, plotSBAmes, plotSBCF, plotLNKMV, plotLNKAmes, plotLNKCF, plotMVAmes, plotMVCF,
+                   plotAmesCF, nrow = 3)
+  print(all)
+}
