@@ -349,6 +349,7 @@ fieldData <- fieldData %>%
          plantHeight = case_when(plantHeight > 500 ~ NA, .default = plantHeight),
          totalStandCount = case_when(totalStandCount > 100 ~ NA, .default = totalStandCount))
 plotRepCorr(fieldData, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
+
 # sbLong <- scottsbluff %>%
 #   pivot_longer(any_of(sbPhenos), names_to = 'phenotype', values_to = 'val') %>%
 #   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')))
@@ -356,6 +357,9 @@ plotRepCorr(fieldData, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 #   geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) +
 #   facet_wrap(vars(phenotype), nrow = 2, scales = 'free')
 # sbViolins
+
+hybrids <- read.csv('outData/HIPS_2022_V3.5_HYBRIDS.csv')
+scottsbluff <- filter(fieldData, location=='Scottsbluff')
 
 nitrogenResponseViolins <- fieldData %>%
   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
@@ -406,8 +410,10 @@ sbTestSW <- right_join(sbIndex, sbTestFieldData, join_by(plotNumber==plotNumberS
                                        .default = 'Medium')) %>%
   filter(location=='Scottsbluff')
 
+
 # Probably not a SW plant start; this shows no noticeable improvement
-plotRepCorr(sbTestSW, 'nitrogenTreatment', 'genotype', sbPhenos, 'location')
+sbPhenos <- c('earHeight', 'combineYield', 'combineMoisture', 'combineTestWeight', 'yieldPerAcre')
+plotRepCorr(sbTestSW, 'nitrogenTreatment', 'genotype', c(sbPhenos, 'plantHeight'), 'location')
 
 # Do observations from Scottsbluff correlate with observations from the 'same' genotypes at other locations?
 # Probably not but let's check it anyway
