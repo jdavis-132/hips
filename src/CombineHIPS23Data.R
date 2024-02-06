@@ -477,3 +477,112 @@ for(i in 1:length(sbPhenos))
                    plotAmesCF, nrow = 3)
   print(all)
 }
+
+# Wrangle NP + SB ear data
+npSBEars <- read_excel('data/2023/hybrids/2023 HIPS Hybrid Ear Phenotyping - Worksheet 2.xlsx', 
+                       sheet = 'DataGaps..Removed', 
+                       skip = 1, 
+                       col_types = c(rep('skip', 2), rep('text', 4), rep('skip', 3), 'text', rep('numeric', 10), 'text',
+                                     rep('skip', 4)),
+                       col_names = c('qrCode', 'topBox', 'bottomBox', 'rowBandNotes', 'earNotes', 'earWidth', 
+                                     'earFillLength', 'kernelRowNumber', 'kernelsPerRow', 'earMass', 'shelledCobWidth', 
+                                     'earLength', 'shelledCobMass', 'hundredKernelMass', 'kernelsPerEar', 'kernelColor')) %>%
+  rowwise() %>%
+  mutate(qrCode = case_when(str_detect(earNotes, 'Missing QR Code') ~ 'Missing QR Code', .default = qrCode)) %>%
+  ungroup() %>%
+  fill(qrCode, topBox, bottomBox, rowBandNotes, .direction = 'down') %>%
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode), 
+         kernelColor = str_remove(kernelColor, fixed('$')), 
+         location = case_when(str_detect(qrCode, 'NORTH PLATTE') ~ 'North Platte',
+                              str_detect(qrCode, 'SCOTTSBLUFF') ~ 'Scottsbluff'),
+         plotNumber = str_split_i(qrCode, fixed('$'), 7) %>%
+           str_split_i('ROW', 1) %>%
+           str_remove('PLOT') %>%
+           as.numeric(), 
+         nitrogenTreatment = case_when(str_detect(qrCode, '150N') ~ 'Medium',
+                                       str_detect(qrCode, '75N') ~ 'Low',
+                                       str_detect(qrCode, '225N') ~ 'High'),
+         kernelMassPerEar = earMass - shelledCobMass) %>%
+  group_by(qrCode, topBox, bottomBox, rowBandNotes, plotNumber, location, nitrogenTreatment) %>%
+  summarise(earNotes = str_flatten(earNotes, collapse = ';', na.rm = TRUE),
+            earWidth = mean(earWidth, na.rm = TRUE)*0.1, 
+            earFillLength = mean(earFillLength, na.rm = TRUE)*0.1,
+            kernelRowNumber = mean(kernelRowNumber, na.rm = TRUE),
+            kernelsPerRow = mean(kernelsPerRow, na.rm = TRUE), 
+            kernelMassPerEar = mean(kernelMassPerEar, na.rm = TRUE), 
+            shelledCobWidth = mean(shelledCobWidth, na.rm = TRUE)*0.1,
+            earLength = mean(earLength, na.rm = TRUE)*0.1,
+            shelledCobMass = mean(shelledCobMass, na.rm = TRUE), 
+            hundredKernelMass = mean(hundredKernelMass, na.rm = TRUE), 
+            kernelsPerEar = mean(kernelsPerEar, na.rm = TRUE), 
+            kernelColor = max(kernelColor, na.rm = TRUE)) %>%
+  rowwise() %>%
+  mutate(plotNumber = case_when(location=='Scottsbluff' & nitrogenTreatment=='Medium' ~ plotNumber + 300))
+
+df <- full_join(fieldData, npSBEars, join_by(location, plotNumber), suffix = c('', '.ears'), keep = FALSE)
+df <- filter(df, !is.na(qrCode))
+plotRepCorr(df, 'nitrogenTreatment', 'genotype', c('earFillLength', 'earWidth', 'kernelRowNumber', 'kernelsPerRow', 'kernelMassPerEar', 'shelledCobWidth', 'earLength', 'shelledCobMass', 'hundredKernelMass', 'kernelsPerEar'), 'location')
+# Okay, that didn't really work -- there seems to be issues with SB data and we don't have pairs of genotypes at NP since there's only 49 plots right now
+
+# Let's get the Ames and Crawfordsville data wrangled
+acKRN <- read_excel('data/2023/hybrids/2_KRN_trait_Hybrid_2023_Compiled.xlsx',
+                    sheet = 'Sheet1', 
+                    skip = 4, 
+                    col_types = c('text', 'numeric', 'text', 'text', 'text', 'skip'),
+                    col_names = c('qrCode', 'kernelRowNumber', 'notes', 'smoothCob', 'sweetcorn')) %>%
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode) %>%
+           str_split_i(' ', 1),
+         smoothCob = case_when(!is.na(smoothCob) ~ 'smooth cob - ovule issue'),
+         sweetcorn = case_when(!is.na(sweetcorn) ~ 'sweetcorn')) %>%
+  unite('notes', c(notes, smoothCob, sweetcorn), sep = ';', remove = TRUE, na.rm = TRUE)
+
+acEar <- read_excel('data/2023/hybrids/3_ear_trait_HYBRID_2023_compiled.xlsx',
+                    sheet = 'Sheet1',
+                    skip = 1, 
+                    col_types = c('skip', 'text', 'skip', 'numeric', 'numeric', 'skip', 'skip', 'text', 'skip'),
+                    col_names = c('qrCode', 'earWidth', 'earMass', 'seedMissing')) %>%
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode) %>%
+           str_split_i(' ', 1), 
+         seedMissing = case_when(!is.na(seedMissing) ~ 'Seed missing on both sides at widest point of ear'))
+
+acCob <- read_excel('data/2023/hybrids/5_cob_Traits_HYBRID_2023_compiled.xlsx', 
+                    sheet = 'Sheet1', 
+                    skip = 1,
+                    col_types = c('skip', 'text', 'numeric', 'numeric', 'numeric', 'skip', 'text', 'text', 'skip', 'skip'),
+                    col_names = c('qrCode', 'earLength', 'shelledCobWidth', 'shelledCobMass', 'cobBroke', 'string')) %>%
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode) %>%
+           str_split_i(' ', 1), 
+         cobBroke = case_when(!is.na(cobBroke) ~ 'Cob broke in pieces during shelling'),
+         string = case_when(!is.na(string) ~ 'Severe bend in ear. String used to measure cob length')) %>%
+  unite('notes', c(cobBroke, string), sep = ';', remove = TRUE, na.rm = TRUE)
+
+acEarPhenotypes <- full_join(acKRN, acEar, join_by(qrCode), suffix = c('', '.ear'), keep = FALSE) %>%
+  unite('notes', c(notes, seedMissing), sep = ';', remove = TRUE, na.rm = TRUE)
+
+acEarPhenotypes <- full_join(acEarPhenotypes, acCob, join_by(qrCode), suffix = c('', '.cob'), keep = FALSE) %>%
+  unite('notes', c(notes, notes.cob), sep = ';', remove = TRUE, na.rm = TRUE) %>%
+  rowwise() %>%
+  mutate(kernelMassPerEar = earMass - shelledCobMass,
+         qrCode = str_c(str_split_i(qrCode, '-', 1), str_split_i(qrCode, '-', 2), str_split_i(qrCode, '-', 3), 
+                        sep = '-')) %>%
+  select(!earMass) %>%
+  group_by(qrCode) %>%
+  summarise(kernelRowNumber = mean(kernelRowNumber, na.rm = TRUE),
+            notes = str_flatten(notes, collapse = ';', na.rm = TRUE),
+            earWidth = mean(earWidth, na.rm = TRUE)*0.1,
+            earLength = mean(earLength, na.rm = TRUE)*0.1,
+            shelledCobWidth = mean(shelledCobWidth, na.rm = TRUE)*0.1,
+            shelledCobMass = mean(shelledCobMass, na.rm = TRUE), 
+            kernelMassPerEar = mean(kernelMassPerEar, na.rm = TRUE))
+  
+df2 <- full_join(fieldData, acEarPhenotypes, join_by(qrCode), suffix = c('', '.ears'), keep = FALSE) %>%
+  filter(!is.na(location))
+
+phenotypes <- c(phenotypes, 'earWidth', 'kernelRowNumber', 'kernelMassPerEar', 'shelledCobWidth', 'earLength',
+                'shelledCobMass')
+
+plotRepCorr(df2, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
