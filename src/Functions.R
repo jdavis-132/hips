@@ -120,7 +120,7 @@ getSpatialCorrections <- function(data, response)
       print(currTrt)
       model <- SpATS(response, genotype = 'plotNumber', genotype.as.random = TRUE, spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)), data = location.n.df)
       # Plot model
-      # plot.SpATS(model, main = paste0(response, ':', currlocation, ':', currTrt))
+      plot.SpATS(model, main = paste0(response, ':', currlocation, ':', currTrt))
       # Extract BLUPS
       summary <- summary(model)
       if(cor(location.n.df[[response]], summary$fitted + summary$residuals) > 0.99)

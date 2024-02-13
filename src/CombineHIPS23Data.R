@@ -586,3 +586,61 @@ phenotypes <- c(phenotypes, 'earWidth', 'kernelRowNumber', 'kernelMassPerEar', '
                 'shelledCobMass')
 
 plotRepCorr(df2, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
+
+df2 <- df2 %>%
+  rowwise() %>%
+  mutate(plantDensity = case_when(plantDensity < 20000 | plantDensity > 50000 ~ NA, .default = plantDensity),
+         flagLeafHeight = case_when(flagLeafHeight < 100 ~ NA, .default = flagLeafHeight))
+
+# Should there be a correlation for the same genotype, even if one is under full irrigation & the other isn't? Let's test it by looking at NP1 vs NP3 (suggested by Nikee)
+hybridsWideByLoc <- hybrids %>% 
+  group_by(location, genotype, nitrogenTreatment) %>% 
+  mutate(genotypeObsNum = 1:n()) %>% 
+  pivot_wider(id_cols = c(genotype, genotypeObsNum, nitrogenTreatment), 
+              names_from = location, 
+              values_from = c(earHeight, combineYield, combineMoisture, combineTestWeight, yieldPerAcre))
+
+# Plot NP1 vs NP3
+for (i in sbPhenos)
+{
+  phenoNP1 <- paste0(i, '_North Platte1')
+  phenoNP3 <- paste0(i, '_North Platte3')
+  
+  plot <- ggplot(hybridsWideByLoc, aes(.data[[phenoNP1]], .data[[phenoNP3]], color = nitrogenTreatment)) +
+    geom_point()
+  print(plot)
+  
+  print(i)
+  print(cor(hybridsWideByLoc[[phenoNP1]], hybridsWideByLoc[[phenoNP3]], use = 'complete.obs'))
+}
+
+sb21224 <- read_excel('data/2023/hybrids/240212 Scottsbluff_Corn Trial 2023_Data_2023_v2 from Coffey.xlsx', 
+                      sheet = 'Data23', 
+                      skip = 3)
+
+sb21224Wide <- sb21224 %>%
+  rowwise() %>%
+  mutate(genotype = str_to_upper(Genotype),
+         location = 'SB') %>%
+  plotRepCorr('N rate', 'genotype', c('Ear Ht. (cm)', 'Plot Weight (lb)', 'Moisture (%)', 'Test Weight (lb/bu)'), 'location')
+
+sbPhenos <- c('plantHeight', sbPhenos)
+
+for (i in sbPhenos)
+{
+  mapResponse(scottsbluff, i)
+}
+
+scottsbluffSP <- scottsbluff
+for (i in sbPhenos)
+{
+  scottsbluffSP <- getSpatialCorrections(scottsbluff, i)
+}
+
+plotRepCorr(scottsbluff, 'nitrogenTreatment', 'genotype', sbPhenos, 'location')
+
+
+
+
+
+
