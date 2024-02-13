@@ -341,13 +341,24 @@ plotRepCorr(fieldData, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 fieldData <- fieldData %>%
   rowwise() %>%
   mutate(anthesisDate = case_when(location=='North Platte' & plotNumber==146 ~ NA, .default = anthesisDate),
-         daysToAnthesis = case_when(location=='North Platte' & plotNumber==146 ~ NA, .default = daysToAnthesis),
+         daysToAnthesis = case_when(location=='North Platte' & plotNumber==146 ~ NA, 
+                                    daysToAnthesis < 50 ~ NA, 
+                                    .default = daysToAnthesis),
          silkDate = case_when(location=='North Platte' & plotNumber==349 ~ NA, .default = silkDate), 
          daysToSilk = case_when(location=='North Platte' & plotNumber==349 ~ NA, .default = daysToSilk), 
          anthesisSilkingInterval = case_when(location=='North Platte' & plotNumber %in% c(146, 349) ~ NA, 
+                                             anthesisSilkingInterval > 15 ~ NA,
                                              .default = anthesisSilkingInterval), 
          plantHeight = case_when(plantHeight > 500 ~ NA, .default = plantHeight),
-         totalStandCount = case_when(totalStandCount > 100 ~ NA, .default = totalStandCount))
+         totalStandCount = case_when(totalStandCount > 100 ~ NA, .default = totalStandCount),
+         flagLeafHeight = case_when(location=='Lincoln' & flagLeafHeight < 100 ~ NA, 
+                                    flagLeafHeight > 350 ~ NA,
+                                    .default = flagLeafHeight),
+         earHeight = case_when(earHeight > 225 ~ NA, 
+                               location=='North Platte' & earHeight < 80 ~ NA,
+                               .default = earHeight),
+         combineTestWeight = case_when(combineTestWeight < 40 ~ NA, .default = combineTestWeight),
+         combineMoisture = case_when(combineMoisture < 10 ~ NA, .default = combineMoisture))
 plotRepCorr(fieldData, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 
 # sbLong <- scottsbluff %>%
@@ -590,7 +601,15 @@ plotRepCorr(df2, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 df2 <- df2 %>%
   rowwise() %>%
   mutate(plantDensity = case_when(plantDensity < 20000 | plantDensity > 50000 ~ NA, .default = plantDensity),
-         flagLeafHeight = case_when(flagLeafHeight < 100 ~ NA, .default = flagLeafHeight))
+         flagLeafHeight = case_when(flagLeafHeight < 100 ~ NA, .default = flagLeafHeight),
+         earLength = case_when(earLength > 22.5 ~ NA, 
+                               location=='Crawfordsville' & earLength < 12.5 ~ NA,
+                               .default = earLength), 
+         shelledCobMass = case_when(location=='Ames' & shelledCobMass > 50 ~ NA, 
+                                    location=='Crawfordsville' & shelledCobMass > 40 ~ NA,
+                                    .default = shelledCobMass), 
+         kernelMassPerEar = case_when(location=='Crawfordsville' & kernelMassPerEar > 275 ~ NA, .default = kernelMassPerEar),
+         combineTestWeight = case_when(combineTestWeight < 45 ~ NA, .default = combineTestWeight))
 
 # Should there be a correlation for the same genotype, even if one is under full irrigation & the other isn't? Let's test it by looking at NP1 vs NP3 (suggested by Nikee)
 hybridsWideByLoc <- hybrids %>% 
@@ -639,6 +658,9 @@ for (i in sbPhenos)
 
 plotRepCorr(scottsbluff, 'nitrogenTreatment', 'genotype', sbPhenos, 'location')
 
+#  Does SB 2023 rep1 correlate with other locations? 
+
+#  Does SB 2023 rep 1 correlate across nitrogen treatments?
 
 
 
