@@ -3,6 +3,9 @@ library(readxl)
 library(lubridate)
 library(daymetr)
 library(cowplot)
+library(MoMAColors)
+library(lme4)
+library(car)
 source('src/Functions.R')
 
 iaFieldDataHyb <- read_excel('data/2023/2023_yield_ICIA_v3.xlsx', 
@@ -659,10 +662,152 @@ for (i in sbPhenos)
 plotRepCorr(scottsbluff, 'nitrogenTreatment', 'genotype', sbPhenos, 'location')
 
 #  Does SB 2023 rep1 correlate with other locations? 
-
+df3 <- filter(df2, !(location=='Scottsbluff' & range > 14)) 
+df3Wide <- df3%>% 
+  group_by(genotype, location, nitrogenTreatment) %>%
+  mutate(genotypeObsNum = 1:n()) %>%
+  pivot_wider(id_cols = c(genotype, genotypeObsNum, nitrogenTreatment),
+              names_from = c(location),
+              values_from = c(earHeight, combineYield, combineMoisture, combineTestWeight, yieldPerAcre))
+sbPhenos <- c('earHeight', 'combineYield', 'combineMoisture', 'combineTestWeight', 'yieldPerAcre')
+for(i in 1:length(sbPhenos))
+{
+  phenoSB <- paste0(sbPhenos[i], '_Scottsbluff')
+  phenoLNK <- paste0(sbPhenos[i], '_Lincoln')
+  phenoMV <- paste0(sbPhenos[i], '_Missouri Valley')
+  phenoAmes <- paste0(sbPhenos[i], '_Ames')
+  phenoCF <- paste0(sbPhenos[i], '_Crawfordsville')
+  print(sbPhenos[i])
+  
+  plotSBLNK <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoLNK]])) +
+    geom_point() +
+    labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoLNK]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  plotSBMV <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoMV]])) +
+    geom_point() +
+    labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoMV]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  plotSBAmes <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoAmes]])) +
+    geom_point() +
+    labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoAmes]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  plotSBCF <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoCF]])) +
+    geom_point() +
+    
+    labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoCF]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  plotLNKMV <- ggplot(df3Wide, aes(.data[[phenoLNK]], .data[[phenoMV]])) +
+    geom_point() +
+    labs(subtitle = cor(df3Wide[[phenoLNK]], df3Wide[[phenoMV]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  plotLNKAmes <- ggplot(df3Wide, aes(.data[[phenoLNK]], .data[[phenoAmes]])) +
+    geom_point() +
+    labs(subtitle = cor(df3Wide[[phenoLNK]], df3Wide[[phenoAmes]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  plotLNKCF <- ggplot(df3Wide, aes(.data[[phenoLNK]], .data[[phenoCF]])) +
+    geom_point() +
+    labs(subtitle = cor(df3Wide[[phenoLNK]], df3Wide[[phenoCF]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  plotMVAmes <- ggplot(df3Wide, aes(.data[[phenoMV]], .data[[phenoAmes]])) +
+    geom_point() +
+    labs(subtitle = cor(df3Wide[[phenoMV]], df3Wide[[phenoAmes]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  plotMVCF <- ggplot(df3Wide, aes(.data[[phenoMV]], .data[[phenoCF]])) +
+    geom_point() +
+    labs(subtitle = cor(df3Wide[[phenoMV]], df3Wide[[phenoCF]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  plotAmesCF <- ggplot(df3Wide, aes(.data[[phenoAmes]], .data[[phenoCF]])) +
+    geom_point() +
+    labs(subtitle = cor(df3Wide[[phenoAmes]], df3Wide[[phenoCF]], use = 'complete.obs')) +
+    theme(legend.position = 'none')
+  
+  all <- plot_grid(plotSBLNK, plotSBMV, plotSBAmes, plotSBCF, plotLNKMV, plotLNKAmes, plotLNKCF, plotMVAmes, plotMVCF,
+                   plotAmesCF, nrow = 3)
+  print(all)
+}
 #  Does SB 2023 rep 1 correlate across nitrogen treatments?
+sbR1 <- filter(df3, location=='Scottsbluff')
+sbR1Wide <- sbR1 %>%
+  pivot_wider(id_cols = genotype, names_from = nitrogenTreatment, values_from = all_of(sbPhenos))
 
+for(i in sbPhenos)
+{
+  phenoLow <- paste0(i, '_Low')
+  phenoMed <- paste0(i, '_Medium')
+  phenoHigh <- paste0(i, '_High')
+  
+  plotLM <- ggplot(sbR1Wide, aes(.data[[phenoLow]], .data[[phenoMed]])) + 
+    geom_point() + 
+    labs(subtitle = cor(sbR1Wide[[phenoLow]], sbR1Wide[[phenoMed]], use = 'complete.obs'))
+  
+  plotLH <- ggplot(sbR1Wide, aes(.data[[phenoLow]], .data[[phenoHigh]])) + 
+    geom_point() +
+    labs(subtitle = cor(sbR1Wide[[phenoLow]], sbR1Wide[[phenoHigh]], use = 'complete.obs'))
+  
+  plotMH <- ggplot(sbR1Wide, aes(.data[[phenoMed]], .data[[phenoHigh]])) +
+    geom_point() +
+    labs(subtitle = cor(sbR1Wide[[phenoMed]], sbR1Wide[[phenoHigh]], use = 'complete.obs'))
+  
+  all <- plot_grid(plotLM, plotLH, plotMH, nrow=1)
+  print(all)
+}
 
+hybridHIPS23 <- filter(df2, location!='Scottsbluff')
 
+nColors <- moma.colors('vonHeyl')
+nColors <- c(nColors[3], nColors[2], nColors[1])
 
+nitrogenResponseViolins23 <- hybridHIPS23 %>%
+  filter(!(location %in% c('Missouri Valley', 'North Platte'))) %>%
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
+  ggplot(aes(nitrogenTreatment, yieldPerAcre, fill = nitrogenTreatment)) +
+    geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) + 
+    facet_wrap(vars(location), nrow = 1) + 
+    scale_fill_manual(values = nColors) +
+    labs(title = '2023') +
+    theme(panel.background = element_blank())
+nitrogenResponseViolins23
+
+nitrogenResponseViolins22 <- hybrids %>%
+  filter(location!='Missouri Valley') %>%
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')),
+         location = factor(location, 
+                           levels = c('Crawfordsville', 'Ames', 'Lincoln', 'North Platte1', 'North Platte2', 'North Platte3',
+                                      'Scottsbluff'))) %>%
+  ggplot(aes(nitrogenTreatment, yieldPerAcre, fill = nitrogenTreatment)) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  facet_wrap(vars(location), nrow = 2) + 
+  scale_fill_manual(values = nColors) +
+  labs(title = '2022') +
+  theme(panel.background = element_blank())
+nitrogenResponseViolins22
+
+# Was there a statistically significant N effect on yield? 
+# 2022: statistically significant at all locations except NP1, but probably not practically significant in many sites 
+for(loc in c('Crawfordsville', 'Ames', 'Lincoln', 'North Platte1', 'North Platte2', 'North Platte3',
+            'Scottsbluff'))
+{
+  df <- filter(hybrids, location==loc)
+  print(loc)
+  model <- lmer(yieldPerAcre ~ nitrogenTreatment + (1|genotype) + (1|row) + (1|range), data = df)
+  print(Anova(model, type = 3))
+}
+
+# 2023: Statistically significant at Ames and Crawfordsville, not significant at Lincoln
+for(loc in c('Crawfordsville', 'Ames', 'Lincoln'))
+{
+  df <- filter(hybridHIPS23, location==loc)
+  print(loc)
+  model <- lmer(yieldPerAcre ~ nitrogenTreatment + (1|genotype) + (1|row) + (1|range), data = df)
+  print(Anova(model, type = 3))
+}
 
