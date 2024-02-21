@@ -593,7 +593,8 @@ acEarPhenotypes <- full_join(acEarPhenotypes, acCob, join_by(qrCode), suffix = c
   rowwise() %>%
   mutate(kernelMassPerEar = case_when(is.na(kernelMassPerEar) ~ earMass - shelledCobMass, .default = kernelMassPerEar),
          qrCode = str_c(str_split_i(qrCode, '-', 1), str_split_i(qrCode, '-', 2), str_split_i(qrCode, '-', 3), 
-                        sep = '-')) %>%
+                        sep = '-'), 
+         hundredKernelMass = (kernelMassPerEar / kernelsPerEar) * 100) %>%
   select(!earMass) %>%
   group_by(qrCode) %>%
   summarise(kernelRowNumber = mean(kernelRowNumber, na.rm = TRUE),
@@ -603,7 +604,8 @@ acEarPhenotypes <- full_join(acEarPhenotypes, acCob, join_by(qrCode), suffix = c
             shelledCobWidth = mean(shelledCobWidth, na.rm = TRUE)*0.1,
             shelledCobMass = mean(shelledCobMass, na.rm = TRUE), 
             kernelMassPerEar = mean(kernelMassPerEar, na.rm = TRUE),
-            kernelsPerEar = mean(kernelsPerEar, na.rm = TRUE))
+            kernelsPerEar = mean(kernelsPerEar, na.rm = TRUE),
+            hundredKernelMass = mean(hundredKernelMass, na.rm = TRUE))
 
 neMVEars <- read_excel('data/2023/hybrids/2023_Hyb_HIPS_LNK_MV_NP_Final_KL_Curated.xlsx', 
                        sheet = 'Data Entry Sheet - NoEmptyRows', 
@@ -616,7 +618,7 @@ neMVEars <- read_excel('data/2023/hybrids/2023_Hyb_HIPS_LNK_MV_NP_Final_KL_Curat
   rowwise() %>%
   mutate(qrCode = case_when(str_detect(earNotes, 'Missing QR Code') ~ 'Missing QR Code', .default = qrCode)) %>%
   ungroup() %>%
-  fill(qrCode, topBox, bottomBox, rowBandNotes, .direction = 'down') %>%
+  fill(qrCode) %>%
   rowwise() %>%
   mutate(qrCode = str_to_upper(qrCode), 
          kernelColor = str_remove(kernelColor, fixed('$')), 
@@ -637,10 +639,15 @@ neMVEars <- read_excel('data/2023/hybrids/2023_Hyb_HIPS_LNK_MV_NP_Final_KL_Curat
          row = str_split_i(qrCode, fixed('$'), 7) %>%
            str_split_i('ROW', 2) %>%
            as.numeric(),
-         kernelMassPerEar = earMass - shelledCobMass) %>%
-  group_by(qrCode, topBox, bottomBox, rowBandNotes, plotNumber, location, nitrogenTreatment, range, row) %>%
+         genotype = str_split_i(qrCode, fixed('@'), 2),
+         kernelMassPerEar = earMass - shelledCobMass,
+         topBox = case_when(!is.na(topBox) ~ 'Plants not completely dried down at harvest'),
+         bottomBox = case_when(!is.na(bottomBox) ~ 'Less than 4 ears available to harvest')) %>%
+  unite('notes', topBox, bottomBox, rowBandNotes, sep = ';', remove = TRUE, na.rm = TRUE) %>%
+  unite('earNotes', earNotes, adminNotes, sep = ';', remove = TRUE, na.rm = TRUE) %>%
+  group_by(qrCode, plotNumber, location, nitrogenTreatment, range, row, genotype) %>%
   summarise(earNotes = str_flatten(earNotes, collapse = ';', na.rm = TRUE),
-            adminNotes = str_flatten(adminNotes, collapse = ';', na.rm = TRUE),
+            notes = max(notes, na.rm = TRUE),
             earWidth = mean(earWidth, na.rm = TRUE)*0.1, 
             earFillLength = mean(earFillLength, na.rm = TRUE)*0.1,
             kernelRowNumber = mean(kernelRowNumber, na.rm = TRUE),
@@ -651,22 +658,46 @@ neMVEars <- read_excel('data/2023/hybrids/2023_Hyb_HIPS_LNK_MV_NP_Final_KL_Curat
             shelledCobMass = mean(shelledCobMass, na.rm = TRUE), 
             hundredKernelMass = mean(hundredKernelMass, na.rm = TRUE), 
             kernelsPerEar = mean(kernelsPerEar, na.rm = TRUE), 
-            kernelColor = max(kernelColor, na.rm = TRUE))
+            kernelColor = max(kernelColor, na.rm = TRUE)) %>%
+  unite('notes', notes, earNotes, sep = ';', remove = TRUE, na.rm = TRUE) %>%
+  filter(!(genotype %in% c('FILLER', 'SOLAR 1', 'SOLAR 2', 'SOLAR 3', 'SOLAR 4')))
   
 df2 <- full_join(fieldData, acEarPhenotypes, join_by(qrCode), suffix = c('', '.ears'), keep = FALSE) %>%
   full_join(neMVEars, join_by(location, range, row), suffix = c('', '.ne')) %>%
   filter(!is.na(location)) %>%
-  # filter(!str_detect(qrCode.ne, 'FILLER')) %>%
-  # filter(!str_detect(qrCode.ne, 'SOLAR')) %>%
+  # remove an MV plot that was discarded in the yield data for a planting error that we phenotyped ears for
+  filter(!(location=='Missouri Valley' & row==19 & range==11)) %>% 
   rowwise() %>%
   mutate(qrCode = max(qrCode, qrCode.ne, na.rm = TRUE),
          plotNumber = case_when(location %in% c('North Platte', 'Lincoln', 'Scottsbluff', 'Missouri Valley') ~ plotNumber.ne, .default = plotNumber),
          nitrogenTreatment = max(nitrogenTreatment, nitrogenTreatment.ne, na.rm = TRUE),
-         earWidth = max(earWidth, earWidth.ne, na.rm = TRUE)) %>%
-  unite('notes', notes, notes.ears, adminNotes, remove = TRUE, na.rm = TRUE, sep = ';')
+         earWidth = max(earWidth, earWidth.ne, na.rm = TRUE),
+         kernelRowNumber = max(kernelRowNumber, kernelRowNumber.ne, na.rm = TRUE), 
+         kernelMassPerEar = max(kernelMassPerEar, kernelMassPerEar.ne, na.rm = TRUE), 
+         shelledCobWidth = max(shelledCobWidth, shelledCobWidth.ne, na.rm = TRUE),
+         earLength = max(earLength, earLength.ne, na.rm = TRUE), 
+         shelledCobMass = max(shelledCobMass, shelledCobMass.ne, na.rm = TRUE),
+         kernelsPerEar = max(kernelsPerEar, kernelsPerEar.ne, na.rm = TRUE), 
+         hundredKernelMass = max(hundredKernelMass, hundredKernelMass.ne, na.rm = TRUE)) %>%
+  unite('notes', notes, notes.ears, remove = TRUE, na.rm = TRUE, sep = ';') %>%
+  # add height data in for the MV plot that yield data was dropped due to harvest glitch
+  mutate(genotype = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 'B73 x PHZ51', .default = genotype),
+         earHeight = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 139, .default = earHeight),
+         flagLeafHeight = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 264, .default = flagLeafHeight), 
+         pedigreeID = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 1739604, .default = pedigreeID),
+         notes = case_when(location=='Missouri Valley' & row==2 & range==10 ~ paste0(notes, '; Tattoo sensor; harvest glitch'), .default = notes),
+         sublocation = case_when(location=='Missouri Valley' ~ 'Missouri Valley', .default = sublocation),
+         irrigationProvided = case_when(location=='Missouri Valley' ~ 0, .default = irrigationProvided), 
+         poundsOfNitrogenPerAcre = case_when(location=='Missouri Valley' ~ 160, .default = poundsOfNitrogenPerAcre),
+         experiment = case_when(location=='Missouri Valley' & is.na(experiment) ~ 'LC2125', .default = experiment),
+         plotLength = case_when(location=='Missouri Valley' & is.na(experiment) ~ 17.5, .default = plotLength),
+         block = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 1, .default = block)) %>%
+  select(!ends_with('.ne'))
 
-phenotypes <- c(phenotypes, 'earWidth', 'kernelRowNumber', 'kernelMassPerEar', 'shelledCobWidth', 'earLength',
-                'shelledCobMass', 'kernelsPerEar')
+phenotypes <- c("plantDensity", "combineYield", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "percentLodging",
+                "yieldPerAcre", 'totalStandCount', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'kernelRowNumber', 'earWidth',
+                'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass', 'earFillLength', 
+                'kernelsPerRow')
 
 plotRepCorr(df2, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 
@@ -897,6 +928,7 @@ hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
            earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber, kernelsPerEar, hundredKernelMass, kernelMassPerEar, shelledCobMass, 
            percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes) %>%
   select(!c(ERNumber, irrigationTreatment, plantHeight))
+
 write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V1.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
 
 
