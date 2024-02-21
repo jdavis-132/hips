@@ -26,7 +26,7 @@ mapResponse <- function(data, trait)
 {
   plot <- ggplot(data, aes(range, row, fill = .data[[trait]], color = 'white')) + 
     geom_raster() +
-    facet_wrap(vars(location, sublocation)) + 
+    # facet_wrap(vars(location, sublocation)) + 
     scale_x_continuous(breaks = 0:40) +
     scale_y_continuous(breaks = 0:40) +
     scale_fill_viridis(option = 'turbo', direction = -1) +
@@ -62,7 +62,8 @@ plotRepCorr <- function(data, treatmentVar, genotype, phenotypes, facet)
     
     p <- ggplot(df.wide, aes(.data[[rep1]], .data[[rep2]], color = .data[[treatmentVar]])) + 
       geom_point() + 
-      facet_wrap(vars(all_of(.data[[facet]])))
+      facet_wrap(vars(all_of(.data[[facet]]))) +
+      labs(subtitle = paste0('r=', cor(df.wide[[rep1]], df.wide[[rep2]], use='complete.obs')))
     print(p)
     ggsave(paste0('analysis/repCorrelationByLocationInbreds', i, '.png'))
   }
