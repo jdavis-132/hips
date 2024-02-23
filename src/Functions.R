@@ -85,7 +85,7 @@ plotVarCorr <- function(data, x, y)
   print(p)
 }
 
-# ***Specific to HIPS data** Modify as needed. 
+# ***Specific to HIPS 2022 data** Modify as needed. 
 # Returns a dataframe with a column where the values are the fitted values after spatial correction using SpATS
 # Fits plot identifier as the genotype so we get values for every plot. 
 # data is a dataframe
@@ -146,6 +146,58 @@ getSpatialCorrections <- function(data, response)
   return(df.sp)
 }
 
+# ***Specific to HIPS data** Modify as needed. 
+# Returns a dataframe with a column where the values are the fitted values after spatial correction using SpATS
+# Fits plot identifier as the genotype so we get values for every plot. 
+# data is a dataframe
+# environment is the column identifying individual treatments as a string
+# response is a string name of the phenotype column to spatially adjust
+getSpatialCorrectionsEnvironment <- function(data, response, environment)
+{
+  # Declare empty df and levels of locations
+  df.sp <- tibble(environment = NULL,  plotNumber = NULL, '{response}':= NULL, nitrogenTreatment = NULL)
+  environments <- unique(data[[environment]])
+  # Loop over environments
+  for(currEnvironment in environments)
+  {
+    environment.df <- filter(data, .data[[environment]]==currEnvironment & !is.na(row) & !is.na(range) & !is.na(.data[[response]]))
+    if(length(environment.df$plotNumber)==0)
+    {
+      print(paste0('No data for ', response, ' at ', currEnvironment))
+      next
+    }
+    
+    rangeKnots <- floor(max(environment.df$range, na.rm = TRUE)/2) + 1
+    rowKnots <- floor(max(environment.df$row, na.rm = TRUE)/2) + 1
+    print(currEnvironment)
+    model <- SpATS(response, 
+                   genotype = 'plotNumber', 
+                   genotype.as.random = TRUE, 
+                   spatial = ~ SAP(range, row, nseg = c(rangeKnots, rowKnots)), 
+                   data = environment.df)
+    # Plot model
+    plot.SpATS(model, main = paste0(response, ':', currEnvironment))
+    # Extract BLUPS
+    summary <- summary(model)
+    if(cor(environment.df[[response]], summary$fitted + summary$residuals) > 0.99)
+    {
+      sp <- tibble(environment = currEnvironment,
+                   plotNumber = environment.df$plotNumber,
+                   '{response}':=summary$fitted)
+    }
+    else
+    {
+      print(paste0('Fitted values misordered. r =', cor(environment.df[[response]], summary$fitted + summary$residuals), '; ', currEnvironment))
+      next
+    }
+    # Bind to df
+    df.sp <- bind_rows(df.sp, sp) %>%
+      mutate(plotNumber = as.numeric(plotNumber))
+    }
+  print(length(df.sp$plotNumber))
+  # Return df
+  return(df.sp)
+}
 # Function to run variance partitioning
 # ***Specific to HIPS data** Modify as needed. 
 # Returns data frame with variance components
