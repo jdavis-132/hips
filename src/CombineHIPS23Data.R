@@ -429,6 +429,60 @@ sbTestSW <- right_join(sbIndex, sbTestFieldData, join_by(plotNumber==plotNumberS
 sbPhenos <- c('earHeight', 'combineYield', 'combineMoisture', 'combineTestWeight', 'yieldPerAcre')
 plotRepCorr(sbTestSW, 'nitrogenTreatment', 'genotype', c(sbPhenos, 'plantHeight'), 'location')
 
+# Let's check a NE plant start
+sbTestNE <- scottsbluff %>%
+  rowwise() %>%
+  mutate(rangeNE = 30 - range)
+sbTestNE <- right_join(sbIndex, sbTestNE, join_by(row, range==rangeNE), keep = FALSE, suffix = c('', '.ne')) %>%
+  rowwise() %>%
+  mutate(nitrogenTreatment = case_when(poundsOfNitrogenPerAcre < 100 ~ 'Low', 
+                                       poundsOfNitrogenPerAcre > 200 ~ 'High',
+                                       .default = 'Medium')) %>%
+  filter(location=='Scottsbluff')
+
+
+# Okay, probably not a NE plant start either
+sbPhenos <- c('earHeight', 'combineYield', 'combineMoisture', 'combineTestWeight', 'yieldPerAcre')
+plotRepCorr(sbTestNE, 'nitrogenTreatment', 'genotype', c(sbPhenos, 'plantHeight'), 'location')
+
+# Is it a NW plant start? 
+sbTestFieldDataNW <- sbTestNE %>% 
+  rowwise() %>%
+  mutate(plotNumberNW = case_when(row==22 ~ plotNumber - 745,
+                                  row==21 ~ plotNumber - 687,
+                                  row==20 ~ plotNumber - 629, 
+                                  row==19 ~ plotNumber - 571,
+                                  row==18 ~ plotNumber - 513,
+                                  row==17 ~ plotNumber - 455, 
+                                  row==15 ~ plotNumber - 203, 
+                                  row==14 ~ plotNumber - 145, 
+                                  row==13 ~ plotNumber - 87,
+                                  row==12 ~ plotNumber - 29, 
+                                  row==11 ~ plotNumber + 29,
+                                  row==10 ~ plotNumber + 87, 
+                                  row==9 ~ plotNumber + 145, 
+                                  row==8 ~ plotNumber + 203,
+                                  row==6 ~ plotNumber + 455,
+                                  row==5 ~ plotNumber + 513,
+                                  row==4 ~ plotNumber + 571,
+                                  row==3 ~ plotNumber + 629,
+                                  row==2 ~ plotNumber + 687,
+                                  row==1 ~ plotNumber + 745)) %>%
+  select(c(plotNumberNW, plantHeight, earHeight, combineYield, combineMoisture, combineTestWeight, yieldPerAcre))
+
+sbTestNW <- right_join(sbIndex, sbTestFieldDataNW, join_by(plotNumber==plotNumberNW), keep = FALSE,
+                       suffix = c('', '')) %>%
+  rowwise() %>%
+  mutate(nitrogenTreatment = case_when(poundsOfNitrogenPerAcre < 100 ~ 'Low', 
+                                       poundsOfNitrogenPerAcre > 200 ~ 'High',
+                                       .default = 'Medium')) %>%
+  filter(location=='Scottsbluff')
+
+
+# Probably not a NW plant start; this shows no noticeable improvement
+sbPhenos <- c('earHeight', 'combineYield', 'combineMoisture', 'combineTestWeight', 'yieldPerAcre')
+plotRepCorr(sbTestNW, 'nitrogenTreatment', 'genotype', c(sbPhenos, 'plantHeight'), 'location')
+
 # Do observations from Scottsbluff correlate with observations from the 'same' genotypes at other locations?
 # Probably not but let's check it anyway
 fieldDataWide <- fieldData %>%
@@ -680,7 +734,7 @@ df2 <- full_join(fieldData, acEarPhenotypes, join_by(qrCode), suffix = c('', '.e
          kernelsPerEar = max(kernelsPerEar, kernelsPerEar.ne, na.rm = TRUE), 
          hundredKernelMass = max(hundredKernelMass, hundredKernelMass.ne, na.rm = TRUE)) %>%
   unite('notes', notes, notes.ears, remove = TRUE, na.rm = TRUE, sep = ';') %>%
-  # add height data in for the MV plot that yield data was dropped due to harvest glitch
+  # add height and meta data in for the MV plot that yield data was dropped due to harvest glitch
   mutate(genotype = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 'B73 x PHZ51', .default = genotype),
          earHeight = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 139, .default = earHeight),
          flagLeafHeight = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 264, .default = flagLeafHeight), 
@@ -691,7 +745,10 @@ df2 <- full_join(fieldData, acEarPhenotypes, join_by(qrCode), suffix = c('', '.e
          poundsOfNitrogenPerAcre = case_when(location=='Missouri Valley' ~ 160, .default = poundsOfNitrogenPerAcre),
          experiment = case_when(location=='Missouri Valley' & is.na(experiment) ~ 'LC2125', .default = experiment),
          plotLength = case_when(location=='Missouri Valley' & is.na(experiment) ~ 17.5, .default = plotLength),
-         block = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 1, .default = block)) %>%
+         block = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 1, .default = block), 
+         plantingDate = case_when(location=='Missouri Valley' ~ '2023-05-02'),
+         plantDensity = case_when(location=='Missouri Valley' & row==2 & range==10 ~ 34000, .default = plantDensity),
+         harvestDate = case_when(location=='Missouri Valley' & row==2 & range==10 ~ ymd('2023-09-25'), .default = harvestDate)) %>%
   select(!ends_with('.ne'))
 
 phenotypes <- c("plantDensity", "combineYield", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "percentLodging",
@@ -701,18 +758,51 @@ phenotypes <- c("plantDensity", "combineYield", "combineTestWeight", "combineMoi
 
 plotRepCorr(df2, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 
+# fixHundredKernelMass <- full_join(acEar, acCob, join_by(qrCode), keep = FALSE) %>%
+#   full_join(acSeed, join_by(qrCode), keep = FALSE) %>%
+#   filter(str_detect(qrCode, '23-C-1746410')|
+#            str_detect(qrCode, '23-C-1746525')| 
+#            str_detect(qrCode, '23-C-1746706')|
+#            str_detect(qrCode, '23-C-1746805')) %>%
+#   select(qrCode, earMass, shelledCobMass, kernelMassPerEar, kernelsPerEar, starts_with('notes'))
+
+# Remove outliers and correct when they are wrong due to a data entry error, seed spill, or calculation error (hundredKernelMass)
 df2 <- df2 %>%
   rowwise() %>%
-  mutate(plantDensity = case_when(plantDensity < 20000 | plantDensity > 50000 ~ NA, .default = plantDensity),
+  mutate(plantDensity = case_when(plantDensity < 20000 | plantDensity > 50000 ~ NA, 
+                                  location=='Lincoln' ~ (totalStandCount/2)*(plotLength/17.5)*1000,
+                                  .default = plantDensity),
          flagLeafHeight = case_when(flagLeafHeight < 100 ~ NA, .default = flagLeafHeight),
          earLength = case_when(earLength > 22.5 ~ NA, 
                                location=='Crawfordsville' & earLength < 12.5 ~ NA,
+                               location=='North Platte' & (earLength < 10 | earLength > 20) ~ NA,
                                .default = earLength), 
          shelledCobMass = case_when(location=='Ames' & shelledCobMass > 50 ~ NA, 
                                     location=='Crawfordsville' & shelledCobMass > 40 ~ NA,
                                     .default = shelledCobMass), 
          kernelMassPerEar = case_when(location=='Crawfordsville' & kernelMassPerEar > 275 ~ NA, .default = kernelMassPerEar),
-         combineTestWeight = case_when(combineTestWeight < 45 ~ NA, .default = combineTestWeight))
+         combineTestWeight = case_when(combineTestWeight < 45 ~ NA, .default = combineTestWeight), 
+         hundredKernelMass = case_when(qrCode=='23-C-1746410' ~ mean(c((121/484)*100, (104.2/422)*100)), 
+                                       qrCode=='23-C-1746525' ~ mean(c((137/475)*100, (148.1/470)*100)),
+                                       qrCode=='23-C-1746706' ~ (200/655)*100,
+                                       qrCode=='23-C-1746805' ~ mean(c((112.5/440)*100, (86.2/361)*100)),
+                                       hundredKernelMass > 45 | hundredKernelMass < 15 ~ NA,
+                                       
+                                       .default = hundredKernelMass),
+         kernelsPerEar = case_when(qrCode=='23-C-1746688' ~ 1617/3, .default = kernelsPerEar),
+         kernelRowNumber = case_when(kernelRowNumber < 11.25 ~ NA, .default = kernelRowNumber),
+         earWidth = case_when(earWidth < 3.5 ~ NA, .default = earWidth),
+         shelledCobWidth = case_when((shelledCobWidth < 2)|(shelledCobWidth > 3.25) ~ NA, .default = shelledCobWidth),
+         shelledCobMass = case_when(location=='Ames' & shelledCobMass > 45 ~ NA, 
+                                    location=='Lincoln' & shelledCobMass > 35 ~ NA, 
+                                    location %in% c('Missouri Valley', 'North Platte') & (shelledCobMass > 42.5 | shelledCobMass < 10) ~ NA,
+                                    .default = shelledCobMass),
+         kernelsPerRow = case_when(kernelsPerRow < 20 ~ NA, .default = kernelsPerRow),
+         kernelsPerEar = case_when(kernelsPerEar < 250 ~ NA, 
+                                   location=='North Platte' & kernelsPerEar > 750 ~ NA, 
+                                   .default = kernelsPerEar)) %>%
+  ungroup() %>%
+  mutate(across(c(where(is.numeric), where(is.POSIXct)), ~case_when(.==-Inf ~ NA, .default = .)))
 
 # Should there be a correlation for the same genotype, even if one is under full irrigation & the other isn't? Let's test it by looking at NP1 vs NP3 (suggested by Nikee)
 hybridsWideByLoc <- hybrids %>% 
@@ -916,11 +1006,39 @@ hybridHIPS23 <- mutate(hybridHIPS23, year = '2023') %>%
   mutate(plantingDate = as.character(plantingDate), 
          anthesisDate = as.character(anthesisDate),
          silkDate = as.character(silkDate), 
-         harvestDate = as.character(harvestDate))
+         harvestDate = as.character(harvestDate) %>%
+           str_split_i(' ', 1))
 hybrids22 <- read.csv('outData/HIPS_2022_V3.5_HYBRIDS.csv') %>%
-  mutate(year = '2022')
+  mutate(year = '2022') %>%
+  rowwise() %>%
+  mutate(pedigreeID = list(case_when(genotype %in% pedigreeIDKey$genotype ~ pedigreeIDKey$pedigreeID[pedigreeIDKey$genotype==genotype])) %>%
+           as.double(),
+         harvestDate = case_when(harvestDate=='-Inf' ~ NA,
+                                 .default = harvestDate) %>%
+           str_split_i(' ', 1)) %>%
+  mutate(harvestDate = case_when(str_detect(harvestDate, fixed('/')) ~ mdy(harvestDate), .default = ymd(harvestDate)) %>%
+           as.character())
 
 hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
+  rowwise() %>%
+  mutate(percentLodging = round(percentLodging, 2),
+         earHeight = round(earHeight, 0),
+         flagLeafHeight = round(flagLeafHeight, 0),
+         plantDensity = round(plantDensity, 0), 
+         combineYield = round(combineYield, 2),
+         yieldPerAcre = round(yieldPerAcre, 2),
+         combineMoisture = round(combineMoisture, 1),
+         combineTestWeight = round(combineTestWeight, 1),
+         earLength = round(earLength, 3),
+         earFillLength = round(earFillLength, 3),
+         earWidth = round(earWidth, 3),
+         shelledCobWidth = round(shelledCobWidth, 3), 
+         kernelsPerRow = round(kernelsPerRow, 1), 
+         kernelRowNumber = round(kernelRowNumber, 1),
+         kernelsPerEar = round(kernelsPerEar, 0),
+         hundredKernelMass = round(hundredKernelMass, 3),
+         kernelMassPerEar = round(kernelMassPerEar, 1),
+         shelledCobMass = round(shelledCobMass, 3)) %>%
   arrange(year, location, sublocation, block, plotNumber) %>%
   relocate(qrCode, year, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range, plotNumber, 
            genotype, pedigreeID, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, 
@@ -929,7 +1047,7 @@ hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
            percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes) %>%
   select(!c(ERNumber, irrigationTreatment, plantHeight))
 
-write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V1.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
+write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
 
 
 
