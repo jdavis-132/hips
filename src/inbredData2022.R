@@ -1041,3 +1041,12 @@ responseVars <- c(c('earWidth', 'earFillLength', 'kernelRowNumber',
                     'plantDensity', 'totalStandCount', 'flagLeafHeight', 'earHeight', 'earLength', 'daysToAnthesis', 'GDDToAnthesis', 'daysToSilk', 'GDDToSilk', 'anthesisSilkingInterval', 'anthesisSilkingIntervalGDD'))
 
 inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
+
+inbreds4.9 <- inbreds %>%
+  rowwise() %>%
+  mutate(genotype = case_when(genotype=='IC I740' ~ 'ICI 740',
+                              genotype=='CI3A' ~ 'CI31A',
+                              .default = genotype) %>%
+           str_remove('@'),
+         irrigationProvided = case_when(is.na(irrigationProvided) ~ 0, .default = irrigationProvided),
+         )
