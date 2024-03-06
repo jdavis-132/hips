@@ -1040,13 +1040,40 @@ responseVars <- c(c('earWidth', 'earFillLength', 'kernelRowNumber',
                     'kernelsPerRow', 'kernelsPerEar', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass', 'kernelMassPerEar',
                     'plantDensity', 'totalStandCount', 'flagLeafHeight', 'earHeight', 'earLength', 'daysToAnthesis', 'GDDToAnthesis', 'daysToSilk', 'GDDToSilk', 'anthesisSilkingInterval', 'anthesisSilkingIntervalGDD'))
 
-inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
+inbredsWide <- plotRepCorr(inbreds4.9, 'nitrogenTreatment', 'genotype', responseVars, 'location')
+
+lnkIndex <- read_excel('data/2022 Inbred HIPS - Lincoln Summary File.xlsx',
+                       sheet = 'Index', 
+                       skip = 1,
+                       col_types = c('numeric', rep('skip', 4), 'numeric', 'numeric'),
+                       col_names = c('plotNumber', 'row', 'range'))
+
+mvIndex <- read_excel('data/Missouri Valley - Inbred - Summary.xlsx',
+                       sheet = 'Index', 
+                       skip = 1,
+                       col_types = c(rep('skip', 12), 'numeric', rep('skip', 5), 'numeric', 'numeric', rep('skip', 3)),
+                       col_names = c('plotNumber', 'range', 'row')) %>%
+  rowwise() %>%
+  mutate(plotNumber = case_when(range > 44 ~ plotNumber + 400, .default = plotNumber))
 
 inbreds4.9 <- inbreds %>%
   rowwise() %>%
-  mutate(genotype = case_when(genotype=='IC I740' ~ 'ICI 740',
-                              genotype=='CI3A' ~ 'CI31A',
-                              .default = genotype) %>%
+  mutate(genotype = case_when(genotype == 'IC I740' ~ 'ICI 740',
+         genotype == 'CI3A' ~ 'CI31A',
+         .default = genotype) %>% 
            str_remove('@'),
-         irrigationProvided = case_when(is.na(irrigationProvided) ~ 0, .default = irrigationProvided),
-         )
+    irrigationProvided = case_when(is.na(irrigationProvided) ~ 0, .default = irrigationProvided),
+    row = case_when(location == 'Lincoln' ~ ifelse(is.na(row), lnkIndex$row[lnkIndex$plotNumber == .data$plotNumber], row), .default = row),
+    range = case_when(location == 'Lincoln' ~ ifelse(is.na(range), lnkIndex$range[lnkIndex$plotNumber == .data$plotNumber], range), 
+                      .default = range),
+    plotNumber = case_when(location == 'Missouri Valley' ~ ifelse(is.na(plotNumber), 
+                                                                  mvIndex$plotNumber[mvIndex$range == range & mvIndex$row == row], plotNumber),
+                           .default = plotNumber))
+
+# Export v4.9
+write.table(inbreds, 'outData/HIPS_2022_V4.9_INBREDS.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
+
+
+
+
+
