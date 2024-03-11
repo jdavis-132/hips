@@ -155,7 +155,7 @@ getSpatialCorrections <- function(data, response)
 getSpatialCorrectionsEnvironment <- function(data, response, environment)
 {
   # Declare empty df and levels of locations
-  df.sp <- tibble(environment = NULL,  plotNumber = NULL, '{response}':= NULL, nitrogenTreatment = NULL)
+  df.sp <- tibble(environment = NULL,  plotNumber = NULL, '{response}':= NULL)
   environments <- unique(data[[environment]])
   # Loop over environments
   for(currEnvironment in environments)
@@ -179,6 +179,7 @@ getSpatialCorrectionsEnvironment <- function(data, response, environment)
     plot.SpATS(model, main = paste0(response, ':', currEnvironment))
     # Extract BLUPS
     summary <- summary(model)
+    sp <- tibble(environment = NULL, plotNumber = NULL, '{response}':=NULL)
     if(cor(environment.df[[response]], summary$fitted + summary$residuals) > 0.99)
     {
       sp <- tibble(environment = currEnvironment,
@@ -208,6 +209,29 @@ partitionVariance2 <- function(df, response, label)
 {
   df <- filter(df, !is.na(response))
   lm_formula <- as.formula(paste(response, "~ (1|location/nitrogenTreatment) + (1|genotype) + (1|location:genotype) + (1|nitrogenTreatment:genotype)"))
+  model <- lmer(lm_formula, data = df, na.action = na.omit)
+  vc <- as.data.frame(VarCorr(model), row.names = TRUE, order = 'cov.last', comp = 'Variance') %>%
+    as_tibble() %>%
+    mutate(responseVar = response)
+  totalVar <- sum(vc$vcov)
+  vc <- vc %>%
+    rowwise() %>%
+    mutate(pctVar = vcov/totalVar*100, 
+           label = label) %>%
+    select(responseVar, grp, vcov, pctVar, label)
+  return(vc)
+}
+
+# Function to run variance partitioning
+# Allows passing in right-hand side of model call as a string as modelStatement
+# Returns data frame with variance components
+# df is the data frame
+# response is the name of the response variable column
+# label is a string to label the response on a plot
+partitionVariance3 <- function(df, response, label, modelStatement) 
+{
+  df <- filter(df, !is.na(response))
+  lm_formula <- as.formula(paste(response, modelStatement))
   model <- lmer(lm_formula, data = df, na.action = na.omit)
   vc <- as.data.frame(VarCorr(model), row.names = TRUE, order = 'cov.last', comp = 'Variance') %>%
     as_tibble() %>%
@@ -275,6 +299,67 @@ getNitrogenPlasticityByLocation <- function(data, response, locations)
   return(response.df)
 }
 
+# Least-squares estimate of FW linear plasticity
+# From BQTP textbook pg 190
+# Returns data frame with the linear plasticity and predicted performance in best and worst environments
+# data is a data frame
+# trait is the response phenotype as a string
+# environment is the column identifying the environments as a string
+# genotype is the column identifying the environments as a string
+estimatePlasticity2 <- function(data, trait, environment, genotype)
+{
+  mu <- mean(data[[trait]], na.rm = TRUE)
+  df <- data %>%
+    group_by(.data[[environment]]) %>%
+    mutate(t_j = mean(.data[[trait]], na.rm = TRUE) - mu,
+           n = sum(!is.na(.data[[trait]]))) %>%
+    filter(n > 0) %>%
+    ungroup() %>%
+    group_by(.data[[genotype]]) %>%
+    mutate(g_i = mean(.data[[trait]], na.rm = TRUE) - mu) %>%
+    ungroup() %>%
+    group_by(.data[[environment]], .data[[genotype]]) %>%
+    summarise(y_ij = mean(.data[[trait]], na.rm = TRUE),
+              t_j = max(t_j, na.rm = TRUE),
+              g_i = max(g_i, na.rm = TRUE))
+  
+  denominator <- sum(unique(df$t_j)^2)
+  maxTj <- max(df$t_j)
+  minTj <- min(df$t_j)
+  
+  df <- df %>%
+    group_by(.data[[genotype]]) %>%
+    summarise('{trait}.b' := sum(y_ij*t_j, na.rm = TRUE)/denominator,
+              '{trait}.FWB' := mu + max(g_i, na.rm = TRUE) + (sum(y_ij*t_j, na.rm = TRUE)/denominator)*maxTj,
+              '{trait}.FWW' := mu + max(g_i, na.rm = TRUE) + (sum(y_ij*t_j, na.rm = TRUE)/denominator)*minTj,
+              '{trait}.mu' := mu + max(g_i, na.rm = TRUE))
+  return(df)
+}
+
+getNitrogenPlasticityByLocationYear <- function(data, trait, nitrogenTreatment, genotype)
+{
+  dfCompute <- data %>%
+    rowwise() %>%
+    mutate(locationYear = str_c(year, semanticLocation, sep = ':'))
+  locationYears <- unique(dfCompute$locationYear)
+  
+  # Initialize tibble to save computed data to
+  dfOut <- tibble(genotype = NULL, locationYear = NULL, '{trait}.b' := NULL, '{trait}.FWB' := NULL, '{trait}.FWW' := NULL, '{trait}.mu' := NULL)
+  for(currLocationYear in locationYears)
+  {
+    dfLocationYear <- filter(dfCompute, locationYear==currLocationYear)
+    
+    if(length(unique(dfLocationYear[[nitrogenTreatment]])) < 2)
+    {
+      next
+    }
+    
+    pl <- estimatePlasticity2(dfLocationYear, trait, nitrogenTreatment, genotype) %>%
+      mutate(locationYear = currLocationYear)
+    dfOut <- bind_rows(dfOut, pl)
+  }
+  return(dfOut)
+}
 # First, a function to calculate GDDs for a single day in fahrenheit
 # Returns GDD value for the given day
 # minTemp is the daily minimum temperature in Fahrenheit

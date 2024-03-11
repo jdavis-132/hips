@@ -181,7 +181,9 @@ npIndex <- read_excel('data/2023/Summary of HIPS 2023 Maps for Fields Visited by
            as.numeric(), 
          nitrogenTreatment = case_when(poundsOfNitrogenPerAcre < 100 ~ 'Low', 
                                        poundsOfNitrogenPerAcre > 100 & poundsOfNitrogenPerAcre < 200 ~ 'Medium', 
-                                       poundsOfNitrogenPerAcre > 200 ~ 'High'))
+                                       poundsOfNitrogenPerAcre > 200 ~ 'High'),
+         irrigationProvided = case_when(irrigationTreatment=='Full' ~ 4.5, 
+                                        irrigationTreatment=='Dryland' ~ 0))
 
 np <- full_join(npIndex, npFieldData, join_by(plotNumber, genotype), suffix = c('', '.field'), keep = FALSE)
 
@@ -291,7 +293,6 @@ fieldData <- fieldData %>%
                                        poundsOfNitrogenPerAcre > 200 ~ 'High', 
                                        .default = 'Medium'),
          irrigationProvided = case_when(location=='Missouri Valley' ~ 0,
-                                        location=='North Platte' ~ 4.5,
                                         .default = irrigationProvided), 
          plotLength = case_when(is.na(plotLength) ~ 17.5, .default = plotLength),
          qrCode = str_to_upper(qrCode),
@@ -680,16 +681,17 @@ neMVEars <- read_excel('data/2023/hybrids/2023_Hyb_HIPS_LNK_MV_NP_Final_KL_Curat
                               str_detect(qrCode, 'SCOTTSBLUFF') ~ 'Scottsbluff',
                               str_detect(qrCode, 'LINCOLN') ~ 'Lincoln',
                               str_detect(qrCode, 'MISSOURI VALLEY') ~ 'Missouri Valley'),
-         plotNumber = str_split_i(qrCode, fixed('$'), 7) %>%
-           str_split_i('ROW', 1) %>%
-           str_remove('PLOT') %>%
-           as.numeric(), 
-         nitrogenTreatment = case_when(str_detect(qrCode, '150N') ~ 'Medium',
-                                       str_detect(qrCode, '75N') ~ 'Low',
-                                       str_detect(qrCode, '225N') ~ 'High'),
          range = str_split_i(qrCode, fixed('$'), 8) %>%
            str_remove('RANGE') %>%
            as.numeric(),
+         plotNumber = str_split_i(qrCode, fixed('$'), 7) %>%
+           str_split_i('ROW', 1) %>%
+           str_remove('PLOT') %>%
+           as.numeric() %>%
+           case_when(range > 17 & location=='Missouri Valley' ~ . + 200, .default = .), 
+         nitrogenTreatment = case_when(str_detect(qrCode, '150N') ~ 'Medium',
+                                       str_detect(qrCode, '75N') ~ 'Low',
+                                       str_detect(qrCode, '225N') ~ 'High'),
          row = str_split_i(qrCode, fixed('$'), 7) %>%
            str_split_i('ROW', 2) %>%
            as.numeric(),
@@ -723,7 +725,8 @@ df2 <- full_join(fieldData, acEarPhenotypes, join_by(qrCode), suffix = c('', '.e
   filter(!(location=='Missouri Valley' & row==19 & range==11)) %>% 
   rowwise() %>%
   mutate(qrCode = max(qrCode, qrCode.ne, na.rm = TRUE),
-         plotNumber = case_when(location %in% c('North Platte', 'Lincoln', 'Scottsbluff', 'Missouri Valley') ~ plotNumber.ne, .default = plotNumber),
+         plotNumber = case_when(location %in% c('North Platte', 'Lincoln', 'Scottsbluff', 'Missouri Valley') ~ plotNumber.ne,  
+                                .default = plotNumber),
          nitrogenTreatment = max(nitrogenTreatment, nitrogenTreatment.ne, na.rm = TRUE),
          earWidth = max(earWidth, earWidth.ne, na.rm = TRUE),
          kernelRowNumber = max(kernelRowNumber, kernelRowNumber.ne, na.rm = TRUE), 
@@ -751,12 +754,12 @@ df2 <- full_join(fieldData, acEarPhenotypes, join_by(qrCode), suffix = c('', '.e
          harvestDate = case_when(location=='Missouri Valley' & row==2 & range==10 ~ ymd('2023-09-25'), .default = harvestDate)) %>%
   select(!ends_with('.ne'))
 
-phenotypes <- c("plantDensity", "combineYield", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "percentLodging",
-                "yieldPerAcre", 'totalStandCount', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'kernelRowNumber', 'earWidth',
-                'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass', 'earFillLength', 
-                'kernelsPerRow')
-
-plotRepCorr(df2, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
+# phenotypes <- c("plantDensity", "combineYield", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "percentLodging",
+#                 "yieldPerAcre", 'totalStandCount', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'kernelRowNumber', 'earWidth',
+#                 'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass', 'earFillLength', 
+#                 'kernelsPerRow')
+# 
+# plotRepCorr(df2, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 
 # fixHundredKernelMass <- full_join(acEar, acCob, join_by(qrCode), keep = FALSE) %>%
 #   full_join(acSeed, join_by(qrCode), keep = FALSE) %>%
@@ -800,206 +803,219 @@ df2 <- df2 %>%
          kernelsPerRow = case_when(kernelsPerRow < 20 ~ NA, .default = kernelsPerRow),
          kernelsPerEar = case_when(kernelsPerEar < 250 ~ NA, 
                                    location=='North Platte' & kernelsPerEar > 750 ~ NA, 
-                                   .default = kernelsPerEar)) %>%
+                                   .default = kernelsPerEar),
+         plotNumber = case_when(qrCode=='LINCOLN$HYBRID HIPS$150N$DRYLAND$REP$2$PLOT4165ROW16$RANGE8$@2369 X PHP02' ~ 4165,
+                                qrCode=='LINCOLN$HYBRID HIPS$225N$DRYLAND$REP$1$PLOT6054ROW5$RANGE26$@B73 X PHM49' ~ 6054,
+                                qrCode=='MISSOURI VALLEY$HYBRID HIPS$150N$DRYLAND$REP$1$PLOT119ROW21$RANGE27$@ER-PAIR 17' ~ 319,
+                                qrCode=='MISSOURI VALLEY$HYBRID HIPS$150N$DRYLAND$REP$1$PLOT131ROW21$RANGE33$@ER-PAIR 26' ~ 331,
+                                qrCode=='MISSOURI VALLEY$HYBRID HIPS$150N$DRYLAND$REP$2$PLOT205ROW21$RANGE35$@ER-PAIR 14' ~ 405,
+                                qrCode=='MISSOURI VALLEY$HYBRID HIPS$150N$DRYLAND$REP$2$PLOT216ROW19$RANGE40$@ER-PAIR 17' ~ 416,
+                                qrCode=='MISSOURI VALLEY$HYBRID HIPS$150N$DRYLAND$REP$2$PLOT212ROW20$RANGE39$@ER-PAIR 19' ~ 412,
+                                qrCode=='MISSOURI VALLEY$HYBRID HIPS$150N$DRYLAND$REP$2$PLOT206ROW21$RANGE36$@ER-PAIR 26' ~ 406,
+                                qrCode=='NORTH PLATTE$HYBRID HIPS$150N$FULL$REP$2$PLOT352ROW41$RANGE4$@PHK76 X LH82' ~ 352,
+                                qrCode=='NORTH PLATTE$HYBRID HIPS$150N$FULL$REP$2$PLOT236ROW12$RANGE6$@PHK56 X W606S' ~ 236,
+                                qrCode=='NORTH PLATTE$HYBRID HIPS$150N$DRYLAND$REP$2$PLOT305ROW29$RANGE3$@PHK56 X W606S' ~ 305,
+                                qrCode=='NORTH PLATTE$HYBRID HIPS$150N$DRYLAND$REP$1$PLOT170ROW44$RANGE14$@B37 X OH43' ~ 170,
+                                .default = plotNumber)) %>%
   ungroup() %>%
   mutate(across(c(where(is.numeric), where(is.POSIXct)), ~case_when(.==-Inf ~ NA, .default = .)))
 
-# Should there be a correlation for the same genotype, even if one is under full irrigation & the other isn't? Let's test it by looking at NP1 vs NP3 (suggested by Nikee)
-hybridsWideByLoc <- hybrids %>% 
-  group_by(location, genotype, nitrogenTreatment) %>% 
-  mutate(genotypeObsNum = 1:n()) %>% 
-  pivot_wider(id_cols = c(genotype, genotypeObsNum, nitrogenTreatment), 
-              names_from = location, 
-              values_from = c(earHeight, combineYield, combineMoisture, combineTestWeight, yieldPerAcre))
-
-# Plot NP1 vs NP3
-for (i in sbPhenos)
-{
-  phenoNP1 <- paste0(i, '_North Platte1')
-  phenoNP3 <- paste0(i, '_North Platte3')
-  
-  plot <- ggplot(hybridsWideByLoc, aes(.data[[phenoNP1]], .data[[phenoNP3]], color = nitrogenTreatment)) +
-    geom_point()
-  print(plot)
-  
-  print(i)
-  print(cor(hybridsWideByLoc[[phenoNP1]], hybridsWideByLoc[[phenoNP3]], use = 'complete.obs'))
-}
-
-sb21224 <- read_excel('data/2023/hybrids/240212 Scottsbluff_Corn Trial 2023_Data_2023_v2 from Coffey.xlsx', 
-                      sheet = 'Data23', 
-                      skip = 3)
-
-sb21224Wide <- sb21224 %>%
-  rowwise() %>%
-  mutate(genotype = str_to_upper(Genotype),
-         location = 'SB') %>%
-  plotRepCorr('N rate', 'genotype', c('Ear Ht. (cm)', 'Plot Weight (lb)', 'Moisture (%)', 'Test Weight (lb/bu)'), 'location')
-
-sbPhenos <- c('plantHeight', sbPhenos)
-
-for (i in sbPhenos)
-{
-  mapResponse(scottsbluff, i)
-}
-
-scottsbluffSP <- scottsbluff
-for (i in sbPhenos)
-{
-  scottsbluffSP <- getSpatialCorrections(scottsbluff, i)
-}
-
-plotRepCorr(scottsbluff, 'nitrogenTreatment', 'genotype', sbPhenos, 'location')
-
-#  Does SB 2023 rep1 correlate with other locations? 
-df3 <- filter(df2, !(location=='Scottsbluff' & range > 14)) 
-df3Wide <- df3%>% 
-  group_by(genotype, location, nitrogenTreatment) %>%
-  mutate(genotypeObsNum = 1:n()) %>%
-  pivot_wider(id_cols = c(genotype, genotypeObsNum, nitrogenTreatment),
-              names_from = c(location),
-              values_from = c(earHeight, combineYield, combineMoisture, combineTestWeight, yieldPerAcre))
-sbPhenos <- c('earHeight', 'combineYield', 'combineMoisture', 'combineTestWeight', 'yieldPerAcre')
-for(i in 1:length(sbPhenos))
-{
-  phenoSB <- paste0(sbPhenos[i], '_Scottsbluff')
-  phenoLNK <- paste0(sbPhenos[i], '_Lincoln')
-  phenoMV <- paste0(sbPhenos[i], '_Missouri Valley')
-  phenoAmes <- paste0(sbPhenos[i], '_Ames')
-  phenoCF <- paste0(sbPhenos[i], '_Crawfordsville')
-  print(sbPhenos[i])
-  
-  plotSBLNK <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoLNK]])) +
-    geom_point() +
-    labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoLNK]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  plotSBMV <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoMV]])) +
-    geom_point() +
-    labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoMV]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  plotSBAmes <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoAmes]])) +
-    geom_point() +
-    labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoAmes]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  plotSBCF <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoCF]])) +
-    geom_point() +
-    
-    labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoCF]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  plotLNKMV <- ggplot(df3Wide, aes(.data[[phenoLNK]], .data[[phenoMV]])) +
-    geom_point() +
-    labs(subtitle = cor(df3Wide[[phenoLNK]], df3Wide[[phenoMV]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  plotLNKAmes <- ggplot(df3Wide, aes(.data[[phenoLNK]], .data[[phenoAmes]])) +
-    geom_point() +
-    labs(subtitle = cor(df3Wide[[phenoLNK]], df3Wide[[phenoAmes]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  plotLNKCF <- ggplot(df3Wide, aes(.data[[phenoLNK]], .data[[phenoCF]])) +
-    geom_point() +
-    labs(subtitle = cor(df3Wide[[phenoLNK]], df3Wide[[phenoCF]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  plotMVAmes <- ggplot(df3Wide, aes(.data[[phenoMV]], .data[[phenoAmes]])) +
-    geom_point() +
-    labs(subtitle = cor(df3Wide[[phenoMV]], df3Wide[[phenoAmes]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  plotMVCF <- ggplot(df3Wide, aes(.data[[phenoMV]], .data[[phenoCF]])) +
-    geom_point() +
-    labs(subtitle = cor(df3Wide[[phenoMV]], df3Wide[[phenoCF]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  plotAmesCF <- ggplot(df3Wide, aes(.data[[phenoAmes]], .data[[phenoCF]])) +
-    geom_point() +
-    labs(subtitle = cor(df3Wide[[phenoAmes]], df3Wide[[phenoCF]], use = 'complete.obs')) +
-    theme(legend.position = 'none')
-  
-  all <- plot_grid(plotSBLNK, plotSBMV, plotSBAmes, plotSBCF, plotLNKMV, plotLNKAmes, plotLNKCF, plotMVAmes, plotMVCF,
-                   plotAmesCF, nrow = 3)
-  print(all)
-}
-#  Does SB 2023 rep 1 correlate across nitrogen treatments?
-sbR1 <- filter(df3, location=='Scottsbluff')
-sbR1Wide <- sbR1 %>%
-  pivot_wider(id_cols = genotype, names_from = nitrogenTreatment, values_from = all_of(sbPhenos))
-
-for(i in sbPhenos)
-{
-  phenoLow <- paste0(i, '_Low')
-  phenoMed <- paste0(i, '_Medium')
-  phenoHigh <- paste0(i, '_High')
-  
-  plotLM <- ggplot(sbR1Wide, aes(.data[[phenoLow]], .data[[phenoMed]])) + 
-    geom_point() + 
-    labs(subtitle = cor(sbR1Wide[[phenoLow]], sbR1Wide[[phenoMed]], use = 'complete.obs'))
-  
-  plotLH <- ggplot(sbR1Wide, aes(.data[[phenoLow]], .data[[phenoHigh]])) + 
-    geom_point() +
-    labs(subtitle = cor(sbR1Wide[[phenoLow]], sbR1Wide[[phenoHigh]], use = 'complete.obs'))
-  
-  plotMH <- ggplot(sbR1Wide, aes(.data[[phenoMed]], .data[[phenoHigh]])) +
-    geom_point() +
-    labs(subtitle = cor(sbR1Wide[[phenoMed]], sbR1Wide[[phenoHigh]], use = 'complete.obs'))
-  
-  all <- plot_grid(plotLM, plotLH, plotMH, nrow=1)
-  print(all)
-}
+# # Should there be a correlation for the same genotype, even if one is under full irrigation & the other isn't? Let's test it by looking at NP1 vs NP3 (suggested by Nikee)
+# hybridsWideByLoc <- hybrids %>% 
+#   group_by(location, genotype, nitrogenTreatment) %>% 
+#   mutate(genotypeObsNum = 1:n()) %>% 
+#   pivot_wider(id_cols = c(genotype, genotypeObsNum, nitrogenTreatment), 
+#               names_from = location, 
+#               values_from = c(earHeight, combineYield, combineMoisture, combineTestWeight, yieldPerAcre))
+# 
+# # Plot NP1 vs NP3
+# for (i in sbPhenos)
+# {
+#   phenoNP1 <- paste0(i, '_North Platte1')
+#   phenoNP3 <- paste0(i, '_North Platte3')
+#   
+#   plot <- ggplot(hybridsWideByLoc, aes(.data[[phenoNP1]], .data[[phenoNP3]], color = nitrogenTreatment)) +
+#     geom_point()
+#   print(plot)
+#   
+#   print(i)
+#   print(cor(hybridsWideByLoc[[phenoNP1]], hybridsWideByLoc[[phenoNP3]], use = 'complete.obs'))
+# }
+# 
+# sb21224 <- read_excel('data/2023/hybrids/240212 Scottsbluff_Corn Trial 2023_Data_2023_v2 from Coffey.xlsx', 
+#                       sheet = 'Data23', 
+#                       skip = 3)
+# 
+# sb21224Wide <- sb21224 %>%
+#   rowwise() %>%
+#   mutate(genotype = str_to_upper(Genotype),
+#          location = 'SB') %>%
+#   plotRepCorr('N rate', 'genotype', c('Ear Ht. (cm)', 'Plot Weight (lb)', 'Moisture (%)', 'Test Weight (lb/bu)'), 'location')
+# 
+# sbPhenos <- c('plantHeight', sbPhenos)
+# 
+# for (i in sbPhenos)
+# {
+#   mapResponse(scottsbluff, i)
+# }
+# 
+# scottsbluffSP <- scottsbluff
+# for (i in sbPhenos)
+# {
+#   scottsbluffSP <- getSpatialCorrections(scottsbluff, i)
+# }
+# 
+# plotRepCorr(scottsbluff, 'nitrogenTreatment', 'genotype', sbPhenos, 'location')
+# 
+# #  Does SB 2023 rep1 correlate with other locations? 
+# df3 <- filter(df2, !(location=='Scottsbluff' & range > 14)) 
+# df3Wide <- df3%>% 
+#   group_by(genotype, location, nitrogenTreatment) %>%
+#   mutate(genotypeObsNum = 1:n()) %>%
+#   pivot_wider(id_cols = c(genotype, genotypeObsNum, nitrogenTreatment),
+#               names_from = c(location),
+#               values_from = c(earHeight, combineYield, combineMoisture, combineTestWeight, yieldPerAcre))
+# sbPhenos <- c('earHeight', 'combineYield', 'combineMoisture', 'combineTestWeight', 'yieldPerAcre')
+# for(i in 1:length(sbPhenos))
+# {
+#   phenoSB <- paste0(sbPhenos[i], '_Scottsbluff')
+#   phenoLNK <- paste0(sbPhenos[i], '_Lincoln')
+#   phenoMV <- paste0(sbPhenos[i], '_Missouri Valley')
+#   phenoAmes <- paste0(sbPhenos[i], '_Ames')
+#   phenoCF <- paste0(sbPhenos[i], '_Crawfordsville')
+#   print(sbPhenos[i])
+#   
+#   plotSBLNK <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoLNK]])) +
+#     geom_point() +
+#     labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoLNK]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   plotSBMV <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoMV]])) +
+#     geom_point() +
+#     labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoMV]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   plotSBAmes <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoAmes]])) +
+#     geom_point() +
+#     labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoAmes]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   plotSBCF <- ggplot(df3Wide, aes(.data[[phenoSB]], .data[[phenoCF]])) +
+#     geom_point() +
+#     
+#     labs(subtitle = cor(df3Wide[[phenoSB]], df3Wide[[phenoCF]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   plotLNKMV <- ggplot(df3Wide, aes(.data[[phenoLNK]], .data[[phenoMV]])) +
+#     geom_point() +
+#     labs(subtitle = cor(df3Wide[[phenoLNK]], df3Wide[[phenoMV]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   plotLNKAmes <- ggplot(df3Wide, aes(.data[[phenoLNK]], .data[[phenoAmes]])) +
+#     geom_point() +
+#     labs(subtitle = cor(df3Wide[[phenoLNK]], df3Wide[[phenoAmes]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   plotLNKCF <- ggplot(df3Wide, aes(.data[[phenoLNK]], .data[[phenoCF]])) +
+#     geom_point() +
+#     labs(subtitle = cor(df3Wide[[phenoLNK]], df3Wide[[phenoCF]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   plotMVAmes <- ggplot(df3Wide, aes(.data[[phenoMV]], .data[[phenoAmes]])) +
+#     geom_point() +
+#     labs(subtitle = cor(df3Wide[[phenoMV]], df3Wide[[phenoAmes]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   plotMVCF <- ggplot(df3Wide, aes(.data[[phenoMV]], .data[[phenoCF]])) +
+#     geom_point() +
+#     labs(subtitle = cor(df3Wide[[phenoMV]], df3Wide[[phenoCF]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   plotAmesCF <- ggplot(df3Wide, aes(.data[[phenoAmes]], .data[[phenoCF]])) +
+#     geom_point() +
+#     labs(subtitle = cor(df3Wide[[phenoAmes]], df3Wide[[phenoCF]], use = 'complete.obs')) +
+#     theme(legend.position = 'none')
+#   
+#   all <- plot_grid(plotSBLNK, plotSBMV, plotSBAmes, plotSBCF, plotLNKMV, plotLNKAmes, plotLNKCF, plotMVAmes, plotMVCF,
+#                    plotAmesCF, nrow = 3)
+#   print(all)
+# }
+# #  Does SB 2023 rep 1 correlate across nitrogen treatments?
+# sbR1 <- filter(df3, location=='Scottsbluff')
+# sbR1Wide <- sbR1 %>%
+#   pivot_wider(id_cols = genotype, names_from = nitrogenTreatment, values_from = all_of(sbPhenos))
+# 
+# for(i in sbPhenos)
+# {
+#   phenoLow <- paste0(i, '_Low')
+#   phenoMed <- paste0(i, '_Medium')
+#   phenoHigh <- paste0(i, '_High')
+#   
+#   plotLM <- ggplot(sbR1Wide, aes(.data[[phenoLow]], .data[[phenoMed]])) + 
+#     geom_point() + 
+#     labs(subtitle = cor(sbR1Wide[[phenoLow]], sbR1Wide[[phenoMed]], use = 'complete.obs'))
+#   
+#   plotLH <- ggplot(sbR1Wide, aes(.data[[phenoLow]], .data[[phenoHigh]])) + 
+#     geom_point() +
+#     labs(subtitle = cor(sbR1Wide[[phenoLow]], sbR1Wide[[phenoHigh]], use = 'complete.obs'))
+#   
+#   plotMH <- ggplot(sbR1Wide, aes(.data[[phenoMed]], .data[[phenoHigh]])) +
+#     geom_point() +
+#     labs(subtitle = cor(sbR1Wide[[phenoMed]], sbR1Wide[[phenoHigh]], use = 'complete.obs'))
+#   
+#   all <- plot_grid(plotLM, plotLH, plotMH, nrow=1)
+#   print(all)
+# }
 
 hybridHIPS23 <- filter(df2, location!='Scottsbluff')
 
-nColors <- moma.colors('vonHeyl')
-nColors <- c(nColors[3], nColors[2], nColors[1])
-
-nitrogenResponseViolins23 <- hybridHIPS23 %>%
-  filter(!(location %in% c('Missouri Valley', 'North Platte'))) %>%
-  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
-  ggplot(aes(nitrogenTreatment, yieldPerAcre, fill = nitrogenTreatment)) +
-    geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) + 
-    facet_wrap(vars(location), nrow = 1) + 
-    scale_fill_manual(values = nColors) +
-    labs(title = '2023') +
-    theme(panel.background = element_blank())
-nitrogenResponseViolins23
-
-nitrogenResponseViolins22 <- hybrids %>%
-  filter(location!='Missouri Valley') %>%
-  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')),
-         location = factor(location, 
-                           levels = c('Crawfordsville', 'Ames', 'Lincoln', 'North Platte1', 'North Platte2', 'North Platte3',
-                                      'Scottsbluff'))) %>%
-  ggplot(aes(nitrogenTreatment, yieldPerAcre, fill = nitrogenTreatment)) +
-  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) + 
-  facet_wrap(vars(location), nrow = 2) + 
-  scale_fill_manual(values = nColors) +
-  labs(title = '2022') +
-  theme(panel.background = element_blank())
-nitrogenResponseViolins22
-
-# Was there a statistically significant N effect on yield? 
-# 2022: statistically significant at all locations except NP1, but probably not practically significant in many sites 
-for(loc in c('Crawfordsville', 'Ames', 'Lincoln', 'North Platte1', 'North Platte2', 'North Platte3',
-            'Scottsbluff'))
-{
-  df <- filter(hybrids, location==loc)
-  print(loc)
-  model <- lmer(yieldPerAcre ~ nitrogenTreatment + (1|genotype) + (1|row) + (1|range), data = df)
-  print(Anova(model, type = 3))
-}
-
-# 2023: Statistically significant at Ames and Crawfordsville, not significant at Lincoln
-for(loc in c('Crawfordsville', 'Ames', 'Lincoln'))
-{
-  df <- filter(hybridHIPS23, location==loc)
-  print(loc)
-  model <- lmer(yieldPerAcre ~ nitrogenTreatment + (1|genotype) + (1|row) + (1|range), data = df)
-  print(Anova(model, type = 3))
-}
+# nColors <- moma.colors('vonHeyl')
+# nColors <- c(nColors[3], nColors[2], nColors[1])
+# 
+# nitrogenResponseViolins23 <- hybridHIPS23 %>%
+#   filter(!(location %in% c('Missouri Valley', 'North Platte'))) %>%
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
+#   ggplot(aes(nitrogenTreatment, yieldPerAcre, fill = nitrogenTreatment)) +
+#     geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) + 
+#     facet_wrap(vars(location), nrow = 1) + 
+#     scale_fill_manual(values = nColors) +
+#     labs(title = '2023') +
+#     theme(panel.background = element_blank())
+# nitrogenResponseViolins23
+# 
+# nitrogenResponseViolins22 <- hybrids %>%
+#   filter(location!='Missouri Valley') %>%
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')),
+#          location = factor(location, 
+#                            levels = c('Crawfordsville', 'Ames', 'Lincoln', 'North Platte1', 'North Platte2', 'North Platte3',
+#                                       'Scottsbluff'))) %>%
+#   ggplot(aes(nitrogenTreatment, yieldPerAcre, fill = nitrogenTreatment)) +
+#   geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) + 
+#   facet_wrap(vars(location), nrow = 2) + 
+#   scale_fill_manual(values = nColors) +
+#   labs(title = '2022') +
+#   theme(panel.background = element_blank())
+# nitrogenResponseViolins22
+# 
+# # Was there a statistically significant N effect on yield? 
+# # 2022: statistically significant at all locations except NP1, but probably not practically significant in many sites 
+# for(loc in c('Crawfordsville', 'Ames', 'Lincoln', 'North Platte1', 'North Platte2', 'North Platte3',
+#             'Scottsbluff'))
+# {
+#   df <- filter(hybrids, location==loc)
+#   print(loc)
+#   model <- lmer(yieldPerAcre ~ nitrogenTreatment + (1|genotype) + (1|row) + (1|range), data = df)
+#   print(Anova(model, type = 3))
+# }
+# 
+# # 2023: Statistically significant at Ames and Crawfordsville, not significant at Lincoln
+# for(loc in c('Crawfordsville', 'Ames', 'Lincoln'))
+# {
+#   df <- filter(hybridHIPS23, location==loc)
+#   print(loc)
+#   model <- lmer(yieldPerAcre ~ nitrogenTreatment + (1|genotype) + (1|row) + (1|range), data = df)
+#   print(Anova(model, type = 3))
+# }
 
 hybridHIPS23 <- mutate(hybridHIPS23, year = '2023') %>%
   rowwise() %>%
@@ -1047,7 +1063,7 @@ hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
            percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes) %>%
   select(!c(ERNumber, irrigationTreatment, plantHeight))
 
-write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
+write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.1.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
 
 
 
