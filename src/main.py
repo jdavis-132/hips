@@ -4,8 +4,10 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GroupKFold
 from sklearn.metrics import mean_squared_error
 from sklearn import preprocessing
-import base
-import RF
+from modelClass import base, RF
+# import Base
+# import RF
+# from pathlib import Path
 
 # Number of folds for CV
 k = 5
@@ -14,15 +16,18 @@ k = 5
 # Assuming you have a DataFrame named 'data' with columns: plantDensity, kernelRowNumber, kernelsPerRow, hundredKernelMass, yieldPerAcre
 # Adjust the file path or loading mechanism as needed
 data = pd.read_csv("../analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv")
+print(data.shape)
 data = data[['yieldPerAcre.sp', 'genotype', 'environment', 'plotNumber', 'plantDensity.sp', 'kernelRowNumber.sp', 'kernelsPerRow.sp', 'hundredKernelMass.sp']]
 data = data.dropna()
+print(data.shape)
 
 environments = data['environment'].unique()
 
 predictions_ds = pd.DataFrame(columns = ['environment', 'plotNumber', 'predictedYieldRF'])
-importance_ds = pd.DataFrame(columns = ['environment', 'plantDensity.sp', 'kernelRowNumber.sp', 'kernelsPerRow.sp', 'hundredKernelMass.sp'])
+importance_ds = pd.DataFrame(columns = ['plantDensity.sp', 'kernelRowNumber.sp', 'kernelsPerRow.sp', 'hundredKernelMass.sp', 'environment'])
 
 for env in environments:
+    print(env)
     env_ds = data[data['environment']==env]
     genotype = env_ds['genotype']
     group_kfold = GroupKFold(n_splits = k)
@@ -30,8 +35,8 @@ for env in environments:
     splits = group_kfold.split(X = env_ds, groups = genotype)
     
     for train_idx, test_idx in splits:
-        train_ds = env_ds[train_idx]
-        test_ds = env_ds[test_idx]
+        train_ds = env_ds.iloc[train_idx]
+        test_ds = env_ds.iloc[test_idx]
         
         train_features = train_ds[['plantDensity.sp', 'kernelRowNumber.sp', 'kernelsPerRow.sp', 'hundredKernelMass.sp']]
         train_response = train_ds['yieldPerAcre.sp']
@@ -51,9 +56,15 @@ for env in environments:
         fold_predictions = pd.DataFrame({'environment': [env]*len(predictions),
                                        'plotNumber':test_plotNumbers,
                                        'predictedYield': predictions})
-        predictions.append(fold_predictions)
+        predictions_ds = pd.concat([predictions_ds, fold_predictions])
         
-        importance = model.feature_importance()
-        importance = np.concatenate(([env], importance))
+        importance = model.feature_importances_
+        importance = np.append(importance, env)
+        importance = pd.Series(importance)
         
-        importance_ds.append(importance, ignore_index=True)
+        importance_ds = pd.concat([importance_ds, importance])
+
+        
+predictions_ds.to_csv('../analysis/RFpredictions.csv')
+importance_ds.to_csv('../analysis/featureImportances.csv')
+print('DONE')
