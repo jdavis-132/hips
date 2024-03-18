@@ -9,6 +9,7 @@ library(cowplot)
 library(MoMAColors)
 library(lme4)
 library(car)
+library(jpeg)
 source('src/Functions.R')
 
 hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.1.csv') %>%
@@ -23,8 +24,20 @@ hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.1.csv') %>%
 # Now we need to spatially correct within an environment
 phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
                 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'kernelRowNumber', 'earWidth',
-                'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass', 'earFillLength', 
+                'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass',
+                'earFillLength', 
                 'kernelsPerRow')
+phenotypeLabels <- c('Plant Density (plants/acre)', 'Test Weight (lbs/bushel)', 'Harvest Moisture (%)', 'Flag Leaf Height (cm)',
+                     'Ear Height (cm)', 'Yield (bushels/acre)', 'Days to Anthesis', 'Days To Silk', 
+                     'Anthesis Silking Interval (days)', 'Kernel Row Number', 'Ear Width (cm)', 'Ear Length (cm)',
+                     'Shelled Cob Width (cm)', 'Shelled Cob Mass (cm)', 'Kernel Mass Per Ear (g)', 'Kernels Per Ear', 
+                     'Hundred Kernel Mass (g)', 'Ear Fill Length (cm)', 'Kernels Per Row')
+phenotypeLabelsVP <-  c('Plant Density (1)', 'Test Weight (2)', 'Harvest Moisture (2)', 'Flag Leaf Height (1)',
+                        'Ear Height (1)', 'Yield (2)', 'Days to Anthesis (1)', 'Days to Silk (1)', 
+                        'Anthesis Silking Interval (1)', 'Kernel Row Number (3)', 'Ear Width (3)', 'Ear Length (3)',
+                        'Shelled Cob Width (3)', 'Shelled Cob Mass (3)', 'Kernel Mass Per Ear (3)', 
+                        'Kernels Per Ear (3)', 
+                        'Hundred Kernel Mass (3)', 'Ear Fill Length (3)', 'Kernels Per Row (3)')
 
 
 yieldComponents <- c('earFillLength', 'earWidth', 'shelledCobWidth', 'earLength', 'kernelsPerEar', 'yieldPerAcre', 
@@ -84,12 +97,23 @@ for(i in 1:length(phenotypes))
 
 # So let's fit a simpler model
 vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
-for(i in 1:length(yieldComponents))
+for(i in 1:length(phenotypes))
 {
-  var <- paste0(yieldComponents[i], '.sp')
-  vc_all <- bind_rows(vc_all, partitionVariance3(hybrids, var, yieldComponentsLabels[i], '~ (1|environment) + (1|genotype) + (1|genotype:environment)'))
+  var <- paste0(phenotypes[i], '.sp')
+  vc_all <- bind_rows(vc_all, partitionVariance3(hybrids, var, phenotypeLabelsVP[i], '~ (1|environment) + (1|genotype) + (1|genotype:environment)'))
 }
 
+
+# vc_all <- vc_all %>%
+#   rowwise() %>%
+#   mutate(grp = case_when(grp=='genotype' ~ 'Genotype',
+#                          grp=='environment' ~ 'Environment',
+#                          grp=='genotype:environment' ~ 'Genotype x Environment',
+#                          .default = grp) %>%
+#            factor(levels = c('Genotype', 'Environment', 'Genotype x Environment', 'Residual')),
+#          label = factor(label, levels = c('Yield (Bushels / Acre)', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)',
+#                                           'Kernels Per Ear', 'Kernel Row Number', 'Kernels Per Row', 'Ear Length (cm)', 
+#                                           'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)')))
 
 vc_all <- vc_all %>%
   rowwise() %>%
@@ -97,20 +121,25 @@ vc_all <- vc_all %>%
                          grp=='environment' ~ 'Environment',
                          grp=='genotype:environment' ~ 'Genotype x Environment',
                          .default = grp) %>%
-           factor(levels = c('Genotype', 'Environment', 'Genotype x Environment', 'Residual')),
-         label = factor(label, levels = c('Yield (Bushels / Acre)', 'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)',
-                                          'Kernels Per Ear', 'Kernel Row Number', 'Kernels Per Row', 'Ear Length (cm)', 
-                                          'Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)')))
+           factor(levels = c('Environment', 'Genotype', 'Genotype x Environment', 'Residual')))
+envImportanceOrder <- vc_all %>%
+  filter(grp=='Environment') %>%
+  arrange(desc(pctVar))
+envImportanceOrder <- envImportanceOrder$label
+
+vc_all <- mutate(vc_all, label = factor(label, levels = envImportanceOrder))
+
 vp.plot <- ggplot(vc_all, aes(label, pctVar, fill = grp)) +
   geom_col(position = 'stack') + 
-  scale_fill_manual(values = moma.colors('VanGogh'), labels = label_wrap(11)) +
+  scale_fill_viridis(discrete = TRUE, labels = label_wrap(11)) +
   scale_x_discrete(labels = label_wrap(8)) +
   labs(x = 'Phenotype', y = 'Percent Variance', fill = '') +
   theme_minimal() +
-  theme(axis.text.x = element_text(size = rel(0.8), color = 'black'),
-        axis.text.y = element_text(size = rel(0.8), color = 'black'),
-        text = element_text(size = 14, color = 'black'),
-        legend.position = 'top',
+  theme(axis.text.x = element_text(size = 10, color = 'black'),
+        axis.text.y = element_text(size = 10, color = 'black'),
+        legend.text = element_text(size = 10, color = 'black'),
+        text = element_text(size = 10, color = 'black'),
+        legend.position = 'bottom',
         line = element_line(color = 'black', linewidth = 1),
         panel.grid = element_blank())
 vp.plot
@@ -744,3 +773,198 @@ for(i in 1:length(yieldComponents))
   
   print(cxHeatmap)
 }
+
+rfFeatures <- read.csv('analysis/featureImportances.csv')[,2:6]
+colnames(rfFeatures) <- c('plantDensity', 'kernelRowNumber', 'kernelsPerRow', 'hundredKernelMass', 'environment')
+
+rfFeaturesSummmary <- rfFeatures %>%
+  summarise(plantDensity.mean = mean(plantDensity, na.rm = TRUE),
+            plantDensity.sd = sd(plantDensity, na.rm = TRUE),
+            kernelRowNumber.mean = mean(kernelRowNumber, na.rm = TRUE),
+            kernelRowNumber.sd = sd(kernelRowNumber, na.rm = TRUE),
+            kernelsPerRow.mean = mean(kernelsPerRow, na.rm = TRUE),
+            kernelsPerRow.sd = sd(kernelsPerRow, na.rm = TRUE),
+            hundredKernelMass.mean = mean(hundredKernelMass, na.rm = TRUE),
+            hundredKernelMass.sd = sd(hundredKernelMass, na.rm = TRUE)) %>%
+  pivot_longer(everything(), names_to = 'type', values_to = 'val') %>%
+  rowwise() %>%
+  mutate(phenotype = str_split_i(type, fixed('.'), 1),
+         statistic = str_split_i(type, fixed('.'), 2)) %>%
+  select(phenotype, statistic, val) %>%
+  pivot_wider(id_cols = phenotype, names_from = statistic, values_from = val) %>%
+  mutate(phenotypeLabel = c('Plant Density (plants/acre)', 'Kernel Row Number', 'Kernels Per Row', 'Hundred Kernel Mass (g)')) %>%
+  mutate(phenotypeLabel = factor(phenotypeLabel,
+                                 levels = c('Kernel Row Number', 'Plant Density (plants/acre)', 'Hundred Kernel Mass (g)', 
+                                            'Kernels Per Row'), ordered = TRUE))
+
+rfFeatures <- rfFeatures %>%
+  pivot_longer(!c(environment), names_to = 'phenotype', values_to = 'val') %>%
+  rowwise() %>%
+  mutate(phenotypeLabel = case_when(phenotype=='plantDensity' ~ 'Plant Density (plants/acre)',
+                                    phenotype=='kernelRowNumber' ~ 'Kernel Row Number',
+                                    phenotype=='kernelsPerRow' ~ 'Kernels Per Row', 
+                                    phenotype=='hundredKernelMass' ~ 'Hundred Kernel Mass (g)')) %>%
+  mutate(phenotypeLabel = factor(phenotypeLabel,
+                                 levels = c('Kernel Row Number', 'Plant Density (plants/acre)', 'Hundred Kernel Mass (g)', 
+                                            'Kernels Per Row'), ordered = TRUE))
+
+featureImportance <- ggplot(rfFeatures, aes(val, phenotypeLabel, fill = phenotypeLabel)) +
+  geom_boxplot(color = 'black') +
+  scale_y_discrete(labels = str_wrap(rfFeatures$phenotypeLabel, 9)) +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(x = 'Mean Feature Importance', y = '') +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(color = 'black', size = 10),
+        axis.text.y = element_text(color = 'black', size = 10),
+        text = element_text(color = 'black', size = 10),
+        panel.grid = element_blank(),
+        legend.position = 'none')
+featureImportance
+# Extension: https://crops.extension.iastate.edu/blog/meaghan-anderson/making-yield-estimates-corn-2022-edition
+yieldPredictions <- read.csv('analysis/RFpredictions.csv') %>%
+  select(environment, plotNumber, predictedYield) %>%
+  rename(predictedYieldRF = predictedYield) %>%
+  full_join(hybrids, join_by(environment, plotNumber), keep = FALSE, suffix = c('', '')) %>%
+  filter(!is.na(predictedYieldRF)) %>%
+  select(environment, plotNumber, yieldPerAcre, predictedYieldRF, plantDensity, kernelRowNumber, kernelsPerRow, hundredKernelMass) %>%
+  mutate(predictedYieldExtension = (plantDensity*kernelRowNumber*kernelsPerRow)/((56*453.592*100)/hundredKernelMass))
+
+rfRegressionModel <- lm(predictedYieldRF ~ yieldPerAcre, data = yieldPredictions)
+rfIntercept <- rfRegressionModel$coefficients[1]
+rfSlope <- rfRegressionModel$coefficients[2]
+# Adjusted R2 from summary(model)
+rfR2 <- 0.6365
+
+extensionRegressionModel <- lm(predictedYieldExtension ~ yieldPerAcre, data = yieldPredictions)
+extensionIntercept <- extensionRegressionModel$coefficients[1]
+extensionSlope <- extensionRegressionModel$coefficients[2]
+# Adjusted R2 from summary(model)
+extensionR2 <- 0.4567
+
+yieldPredictionsSubsample <- yieldPredictions %>%
+  slice_sample(prop = 0.5) %>%
+  pivot_longer(c(predictedYieldExtension, predictedYieldRF), 
+               values_to = 'predictedYield', 
+               names_to = 'method', 
+               names_prefix = 'predictedYield') %>%
+  rowwise() %>%
+  mutate(method = case_when(method=='RF' ~ 'Random Forest', .default = method))
+
+yieldPredictionsPlot <- ggplot(yieldPredictionsSubsample, aes(yieldPerAcre, predictedYield, color = method)) + 
+  geom_point() + 
+  geom_abline(slope = extensionSlope, intercept = extensionIntercept, color = viridis_pal()(4)[1], linewidth = 1) +
+  geom_abline(slope = rfSlope, intercept = rfIntercept, color = viridis_pal()(4)[2], linewidth = 1) +
+  scale_color_manual(values = viridis_pal()(4)[1:2]) + 
+  scale_x_continuous(limits = c(0, 300)) +
+  labs(x = 'Actual Yield (bushels/acre)', y = 'Predicted Yield (bushels/acre)', color = 'Method') + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 10),
+        axis.text.y = element_text(color = 'black', size = 10),
+        legend.text = element_text(color = 'black', size = 10),
+        text = element_text(color = 'black', size = 10),
+        legend.position = 'top',
+        panel.grid = element_blank())
+yieldPredictionsPlot
+# Single model 
+rfFeatures <- read.csv('analysis/featureImportances5CV.csv')[2:5]
+colnames(rfFeatures) <- c('plantDensity', 'kernelRowNumber', 'kernelsPerRow', 'hundredKernelMass')
+
+rfFeaturesSummmary <- rfFeatures %>%
+  summarise(plantDensity.mean = mean(plantDensity, na.rm = TRUE),
+            plantDensity.sd = sd(plantDensity, na.rm = TRUE),
+            kernelRowNumber.mean = mean(kernelRowNumber, na.rm = TRUE),
+            kernelRowNumber.sd = sd(kernelRowNumber, na.rm = TRUE),
+            kernelsPerRow.mean = mean(kernelsPerRow, na.rm = TRUE),
+            kernelsPerRow.sd = sd(kernelsPerRow, na.rm = TRUE),
+            hundredKernelMass.mean = mean(hundredKernelMass, na.rm = TRUE),
+            hundredKernelMass.sd = sd(hundredKernelMass, na.rm = TRUE)) %>%
+  pivot_longer(everything(), names_to = 'type', values_to = 'val') %>%
+  rowwise() %>%
+  mutate(phenotype = str_split_i(type, fixed('.'), 1),
+         statistic = str_split_i(type, fixed('.'), 2)) %>%
+  select(phenotype, statistic, val) %>%
+  pivot_wider(id_cols = phenotype, names_from = statistic, values_from = val) %>%
+  mutate(phenotypeLabel = c('Plant Density (plants/acre)', 'Kernel Row Number', 'Kernels Per Row', 'Hundred Kernel Mass (g)')) %>%
+  mutate(phenotypeLabel = factor(phenotypeLabel,
+                                 levels = c('Kernel Row Number', 'Plant Density (plants/acre)', 'Hundred Kernel Mass (g)', 
+                                            'Kernels Per Row'), ordered = TRUE))
+
+rfFeatures <- rfFeatures %>%
+  pivot_longer(everything(), names_to = 'phenotype', values_to = 'val') %>%
+  rowwise() %>%
+  mutate(phenotypeLabel = case_when(phenotype=='plantDensity' ~ 'Plant Density (plants/acre)',
+                                    phenotype=='kernelRowNumber' ~ 'Kernel Row Number',
+                                    phenotype=='kernelsPerRow' ~ 'Kernels Per Row',
+                                    phenotype=='hundredKernelMass' ~ 'Hundred Kernel Mass (g)')) %>%
+  mutate(phenotypeLabel = factor(phenotypeLabel, 
+                                 levels = c('Kernel Row Number', 'Plant Density (plants/acre)', 'Kernels Per Row', 'Hundred Kernel Mass (g)'), 
+                                 ordered = TRUE))
+
+featureImportance <- ggplot(rfFeatures, aes(val, phenotypeLabel, fill = phenotypeLabel)) +
+  geom_boxplot(color = 'black') +
+  scale_y_discrete(labels = str_wrap(levels(rfFeatures$phenotypeLabel), 9)) +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(x = 'Mean Feature Importance', y = '') +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(color = 'black', size = 10),
+        axis.text.y = element_text(color = 'black', size = 10),
+        text = element_text(color = 'black', size = 10),
+        panel.grid = element_blank(),
+        legend.position = 'none')
+featureImportance
+# Extension: https://crops.extension.iastate.edu/blog/meaghan-anderson/making-yield-estimates-corn-2022-edition
+yieldPredictions <- read.csv('analysis/RFpredictions5CV.csv') %>%
+  select(environment, plotNumber, predictedYield) %>%
+  rename(predictedYieldRF = predictedYield) %>%
+  full_join(hybrids, join_by(environment, plotNumber), keep = FALSE, suffix = c('', '')) %>%
+  filter(!is.na(predictedYieldRF)) %>%
+  select(environment, plotNumber, yieldPerAcre, predictedYieldRF, plantDensity, kernelRowNumber, kernelsPerRow, hundredKernelMass) %>%
+  mutate(predictedYieldExtension = (plantDensity*kernelRowNumber*kernelsPerRow)/((56*453.592*100)/hundredKernelMass))
+
+rfRegressionModel <- lm(predictedYieldRF ~ yieldPerAcre, data = yieldPredictions)
+rfIntercept <- rfRegressionModel$coefficients[1]
+rfSlope <- rfRegressionModel$coefficients[2]
+# Adjusted R2 from summary(model)
+rfR2 <-  0.113 
+
+extensionRegressionModel <- lm(predictedYieldExtension ~ yieldPerAcre, data = yieldPredictions)
+extensionIntercept <- extensionRegressionModel$coefficients[1]
+extensionSlope <- extensionRegressionModel$coefficients[2]
+# Adjusted R2 from summary(model)
+extensionR2 <- 0.4567
+
+yieldPredictionsSubsample <- yieldPredictions %>%
+  slice_sample(prop = 0.5) %>%
+  pivot_longer(c(predictedYieldExtension, predictedYieldRF), 
+               values_to = 'predictedYield', 
+               names_to = 'method', 
+               names_prefix = 'predictedYield') %>%
+  rowwise() %>%
+  mutate(method = case_when(method=='RF' ~ 'Random Forest', .default = method))
+
+yieldPredictionsPlot <- ggplot(yieldPredictionsSubsample, aes(yieldPerAcre, predictedYield, color = method)) + 
+  geom_point() + 
+  geom_abline(slope = extensionSlope, intercept = extensionIntercept, color = viridis_pal()(4)[1], linewidth = 1) +
+  geom_abline(slope = rfSlope, intercept = rfIntercept, color = viridis_pal()(4)[2], linewidth = 1) +
+  scale_color_manual(values = viridis_pal()(4)[1:2]) + 
+  scale_x_continuous(limits = c(0, 300)) +
+  labs(x = 'Actual Yield (bushels/acre)', y = 'Predicted Yield (bushels/acre)', color = 'Method') + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 10),
+        axis.text.y = element_text(color = 'black', size = 10),
+        legend.text = element_text(color = 'black', size = 10),
+        text = element_text(color = 'black', size = 10),
+        legend.position = 'top',
+        panel.grid = element_blank())
+yieldPredictionsPlot
+
+
+workflow <- rasterGrob(readPNG('../workflow.png'))
+
+fig1top <- plot_grid(experimentalDesign, workflow, labels = c('A', 'B'), rel_widths = c(1, 0.5))
+fig1bottom <- plot_grid(vp.plot, yieldPredictionsPlot, featureImportance, nrow = 1, rel_widths = c(1, 0.4, 0.3), labels = c('C', 'D', 'E'))
+
+fig1 <- plot_grid(fig1top, fig1bottom, ncol = 1)
+fig1
+
+

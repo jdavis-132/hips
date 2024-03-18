@@ -5,8 +5,6 @@ from sklearn.model_selection import GroupKFold
 from sklearn.metrics import mean_squared_error
 from sklearn import preprocessing
 from modelClass import base, RF
-# import Base
-# import RF
 # from pathlib import Path
 
 # Number of folds for CV
@@ -16,15 +14,13 @@ k = 5
 # Assuming you have a DataFrame named 'data' with columns: plantDensity, kernelRowNumber, kernelsPerRow, hundredKernelMass, yieldPerAcre
 # Adjust the file path or loading mechanism as needed
 data = pd.read_csv("../analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv")
-print(data.shape)
 data = data[['yieldPerAcre.sp', 'genotype', 'environment', 'plotNumber', 'plantDensity.sp', 'kernelRowNumber.sp', 'kernelsPerRow.sp', 'hundredKernelMass.sp']]
 data = data.dropna()
-print(data.shape)
 
 environments = data['environment'].unique()
 
 predictions_ds = pd.DataFrame(columns = ['environment', 'plotNumber', 'predictedYieldRF'])
-importance_ds = pd.DataFrame(columns = ['plantDensity.sp', 'kernelRowNumber.sp', 'kernelsPerRow.sp', 'hundredKernelMass.sp', 'environment'])
+importance_ds = pd.DataFrame()
 
 for env in environments:
     print(env)
@@ -33,7 +29,7 @@ for env in environments:
     group_kfold = GroupKFold(n_splits = k)
     
     splits = group_kfold.split(X = env_ds, groups = genotype)
-    
+    count=0
     for train_idx, test_idx in splits:
         train_ds = env_ds.iloc[train_idx]
         test_ds = env_ds.iloc[test_idx]
@@ -59,12 +55,13 @@ for env in environments:
         predictions_ds = pd.concat([predictions_ds, fold_predictions])
         
         importance = model.feature_importances_
-        importance = np.append(importance, env)
-        importance = pd.Series(importance)
+        importance = importance.tolist()
+        importance.append(env)
+        importance = pd.DataFrame(importance).T
         
         importance_ds = pd.concat([importance_ds, importance])
 
-        
+# importance_ds = pd.DataFrame.from_dict(importance_ds)        
 predictions_ds.to_csv('../analysis/RFpredictions.csv')
 importance_ds.to_csv('../analysis/featureImportances.csv')
 print('DONE')
