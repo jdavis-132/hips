@@ -1024,7 +1024,7 @@ hybridHIPS23 <- mutate(hybridHIPS23, year = '2023') %>%
          silkDate = as.character(silkDate), 
          harvestDate = as.character(harvestDate) %>%
            str_split_i(' ', 1))
-hybrids22 <- read.csv('outData/HIPS_2022_V3.5_HYBRIDS.csv') %>%
+hybrids22 <- read.csv('outData/HIPS_2022_V3.6_HYBRIDS.csv') %>%
   mutate(year = '2022') %>%
   rowwise() %>%
   mutate(pedigreeID = list(case_when(genotype %in% pedigreeIDKey$genotype ~ pedigreeIDKey$pedigreeID[pedigreeIDKey$genotype==genotype])) %>%
@@ -1063,7 +1063,7 @@ hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
            percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes) %>%
   select(!c(ERNumber, irrigationTreatment, plantHeight))
 
-write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.1.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
+write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
 
 
 

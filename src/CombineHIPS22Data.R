@@ -3444,7 +3444,13 @@ rename(qrCode = qr,
 # Export version 3.4 --- only remaining changes for hybrids will be to add lat/lon for NE sites if extracted from satellite plot extractions
 write.table(hips_v3.4, 'outData/HIPS_2022_V3.4_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
 
-hips_v3.5 <- select(hips_v3.4, !c(latitude, longitude))
-
-# Export version 3.5 - FINAL version for hybrids
-write.table(hips_v3.5, 'outData/HIPS_2022_V3.5_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
+hips_v3.5 <- select(hips_v3.4, !c(latitude, longitude)) %>%
+  filter(!(location=='North Platte1' & plotNumber %in% c(161, 145, 129, 337, 321))) %>% # drop due to planting errors
+  filter(!(location=='North Platte2' & plotNumber %in% c(1038, 1054))) %>% # drop due to planting errors
+  rowwise() %>%
+ # drop due to damage during solar panel removal from experimental plots due to plant start switch
+  mutate(combineYield = case_when(location=='Scottsbluff' & plotNumber %in% c(1094, 1095, 1265, 1435) ~ NA, .default = combineYield),
+         yieldPerAcre = case_when(location=='Scottsbluff' & plotNumber %in% c(1094, 1095, 1265, 1435) ~ NA, .default = yieldPerAcre)) #
+  
+# Export version 3.6 - FINAL version for hybrids
+write.table(hips_v3.5, 'outData/HIPS_2022_V3.6_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)

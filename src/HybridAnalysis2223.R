@@ -10,13 +10,14 @@ library(MoMAColors)
 library(lme4)
 library(car)
 library(jpeg)
+library(scales)
 source('src/Functions.R')
 
-hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.1.csv') %>%
-  filter(location!='') %>% 
+hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv') %>%
+  filter(location!='') %>%
   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
   rowwise() %>%
-  # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment, 
+  # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment,
   # let's have an option to keep 2022 NP as one location
   mutate(semanticLocation = case_when(location %in% c('North Platte1', 'North Platte2', 'North Platte3') ~ 'North Platte', .default = location),
          environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'))
@@ -46,8 +47,8 @@ yieldComponentsLabels <- c('Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Co
                            'Kernels Per Ear', 'Yield (Bushels / Acre)', 'Kernels Per Row', 'Kernel Row Number', 
                            'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)')
 
-# # testSPATS <- getSpatialCorrectionsEnvironment(hybrids, 'yieldPerAcre', 'environment')
-# # testJoin <- full_join(hybrids, testSPATS, join_by(environment, plotNumber), suffix = c('', '.sp'), keep = FALSE)
+# # # testSPATS <- getSpatialCorrectionsEnvironment(hybrids, 'yieldPerAcre', 'environment')
+# # # testJoin <- full_join(hybrids, testSPATS, join_by(environment, plotNumber), suffix = c('', '.sp'), keep = FALSE)
 for(i in phenotypes)
 {
   hybrids <- full_join(hybrids,
@@ -87,13 +88,13 @@ hybrids <- read.csv('analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
   rowwise() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .)))
 
-# Location or irrigationProvided, which is mostly location, is most important for 15/19 traits when we don't count residual
-vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
-for(i in 1:length(phenotypes))
-{
-  var <- paste0(phenotypes[i], '.sp')
-  vc_all <- bind_rows(vc_all, partitionVariance3(hybrids, var, phenotypes[i], '~ (1|year) + (1|semanticLocation/nitrogenTreatment) + (1|genotype) + (1|irrigationProvided) + (1|semanticLocation:genotype) + (1|nitrogenTreatment:genotype)'))
-}
+# # Location or irrigationProvided, which is mostly location, is most important for 15/19 traits when we don't count residual
+# vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
+# for(i in 1:length(phenotypes))
+# {
+#   var <- paste0(phenotypes[i], '.sp')
+#   vc_all <- bind_rows(vc_all, partitionVariance3(hybrids, var, phenotypes[i], '~ (1|year) + (1|semanticLocation/nitrogenTreatment) + (1|genotype) + (1|irrigationProvided) + (1|semanticLocation:genotype) + (1|nitrogenTreatment:genotype)'))
+# }
 
 # So let's fit a simpler model
 vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
@@ -966,5 +967,8 @@ fig1bottom <- plot_grid(vp.plot, yieldPredictionsPlot, featureImportance, nrow =
 
 fig1 <- plot_grid(fig1top, fig1bottom, ncol = 1)
 fig1
+
+# Variance partitioning for yield from yield components
+vc_yield <- partitionVariance3(hybrids, 'yieldPerAcre.sp', 'Yield (bushels/acre)', '~ (1|plantDensity) + (1|kernelRowNumber) + (1|kernelsPerRow) + (1|hundredKernelMass)')
 
 
