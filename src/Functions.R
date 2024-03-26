@@ -521,4 +521,17 @@ getCumulativeGDDs <- function(start, end, weather, location)
   return(cumulativeGDDs)
 }  
 
+# Function to calculate R2 between two variables
+getR2 <- function(data, x, y)
+{
+  r2 <- cor(data[[x]], data[[y]], use = 'complete.obs')^2
+  return(r2)
+}
+
+# Function to calculate R between two variables
+getR <- function(data, x, y)
+{
+  r <- cor(data[[x]], data[[y]], use = 'complete.obs')
+  return(r)
+}
 

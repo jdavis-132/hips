@@ -13,14 +13,14 @@ library(jpeg)
 library(scales)
 source('src/Functions.R')
 
-hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv') %>%
-  filter(location!='') %>%
-  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
-  rowwise() %>%
-  # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment,
-  # let's have an option to keep 2022 NP as one location
-  mutate(semanticLocation = case_when(location %in% c('North Platte1', 'North Platte2', 'North Platte3') ~ 'North Platte', .default = location),
-         environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'))
+# hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv') %>%
+#   filter(location!='') %>%
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
+#   rowwise() %>%
+#   # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment,
+#   # let's have an option to keep 2022 NP as one location
+#   mutate(semanticLocation = case_when(location %in% c('North Platte1', 'North Platte2', 'North Platte3') ~ 'North Platte', .default = location),
+#          environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'))
 
 # Now we need to spatially correct within an environment
 phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
@@ -47,41 +47,41 @@ yieldComponentsLabels <- c('Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Co
                            'Kernels Per Ear', 'Yield (Bushels / Acre)', 'Kernels Per Row', 'Kernel Row Number', 
                            'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)')
 
-# # # testSPATS <- getSpatialCorrectionsEnvironment(hybrids, 'yieldPerAcre', 'environment')
-# # # testJoin <- full_join(hybrids, testSPATS, join_by(environment, plotNumber), suffix = c('', '.sp'), keep = FALSE)
-for(i in phenotypes)
-{
-  hybrids <- full_join(hybrids,
-                       getSpatialCorrectionsEnvironment(hybrids, i, 'environment'),
-                       by = join_by(environment, plotNumber),
-                       suffix = c('', '.sp'),
-                       keep = FALSE)
-}
-
-hybrids <- hybrids %>%
-  rowwise() %>%
-  mutate(across(everything(), ~case_when(is.null(.) ~ NA, .default = .)))
-
-# # Is there shrinkage toward the mean of a treatment ?
-for(i in 1:length(phenotypes))
-{
-  sp.correction.plot <- ggplot(hybrids, (aes(.data[[phenotypes[i]]], .data[[paste0(phenotypes[i], '.sp')]], color = environment))) +
-    geom_point() +
-    geom_abline(slope = 1) +
-    facet_wrap(vars(location, year)) +
-    theme(legend.position = 'none')
-  print(sp.correction.plot)
-}
-
-# Don't use spatially corrected values if there is shrinkage towards the mean of a treatment
-hybrids <- hybrids %>%
-  rowwise() %>%
-  mutate(anthesisSilkingInterval.sp = case_when(location %in% c('North Platte1', 'North Platte2') & year=='2022' ~ anthesisSilkingInterval,
-                                                .default = anthesisSilkingInterval.sp),
-         combineMoisture.sp = case_when(location=='Ames' & year=='2022' ~ combineMoisture, .default = combineMoisture.sp))
-
-# Export spatial corrections so we don't have to run it again
-write.csv(hybrids, 'analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv')
+# # # # testSPATS <- getSpatialCorrectionsEnvironment(hybrids, 'yieldPerAcre', 'environment')
+# # # # testJoin <- full_join(hybrids, testSPATS, join_by(environment, plotNumber), suffix = c('', '.sp'), keep = FALSE)
+# for(i in phenotypes)
+# {
+#   hybrids <- full_join(hybrids,
+#                        getSpatialCorrectionsEnvironment(hybrids, i, 'environment'),
+#                        by = join_by(environment, plotNumber),
+#                        suffix = c('', '.sp'),
+#                        keep = FALSE)
+# }
+# 
+# hybrids <- hybrids %>%
+#   rowwise() %>%
+#   mutate(across(everything(), ~case_when(is.null(.) ~ NA, .default = .)))
+# 
+# # # Is there shrinkage toward the mean of a treatment ?
+# for(i in 1:length(phenotypes))
+# {
+#   sp.correction.plot <- ggplot(hybrids, (aes(.data[[phenotypes[i]]], .data[[paste0(phenotypes[i], '.sp')]], color = environment))) +
+#     geom_point() +
+#     geom_abline(slope = 1) +
+#     facet_wrap(vars(location, year)) +
+#     theme(legend.position = 'none')
+#   print(sp.correction.plot)
+# }
+# 
+# # Don't use spatially corrected values if there is shrinkage towards the mean of a treatment
+# hybrids <- hybrids %>%
+#   rowwise() %>%
+#   mutate(anthesisSilkingInterval.sp = case_when(location %in% c('North Platte1', 'North Platte2') & year=='2022' ~ anthesisSilkingInterval,
+#                                                 .default = anthesisSilkingInterval.sp),
+#          combineMoisture.sp = case_when(location=='Ames' & year=='2022' ~ combineMoisture, .default = combineMoisture.sp))
+# 
+# # Export spatial corrections so we don't have to run it again
+# write.csv(hybrids, 'analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv')
 hybrids <- read.csv('analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
   filter(location!='') %>% 
   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
@@ -170,7 +170,7 @@ hybrids.pl <- hybrids.pl %>%
          pollenParent = str_split_i(genotype, ' X ', 2))
 
 parentInfo <- read_excel('data/HIPS_Genotype_Information_2022 - HIPS_Genotype_Information_2022_2023.xlsx',
-                         range = 'A2:D357', 
+                         range = 'A2:D358', 
                          col_names = c('genotype', 'accession', 'additionalAccessionNames', 'releaseYear'),
                          col_types = rep('text', 4)) %>%
   filter(genotype!='NA') %>%
@@ -181,6 +181,13 @@ parentInfo <- read_excel('data/HIPS_Genotype_Information_2022 - HIPS_Genotype_In
                                  releaseYear=='PRE 1964' ~ 1964, 
                                  .default = as.numeric(releaseYear))) %>%
   select(genotype, releaseYear)
+
+missingParents <- c('I159', '66', 'A344', 'B7', 'CI 3A', 'K201', 'KYS', 'C.I. 540', 'L 289', 'W606S', 'N209', 'A12', 'WF9')
+missingParentReleaseYears <- c(1998, 2002, 1996, 1968, 1945, 1963, 1963, 1948, 1934, 1963, 1997,  1965, 1943)
+missingParents <- tibble(genotype = missingParents, releaseYear = missingParentReleaseYears)
+parentInfo <- parentInfo %>%
+  filter(!(genotype %in% missingParents$genotype)) %>%
+  bind_rows(missingParents)
 
 hybrids.pl <- left_join(hybrids.pl, parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
   rename(earParentAge = releaseYear) %>%
@@ -193,42 +200,42 @@ hybrids.pl <- left_join(hybrids.pl, parentInfo, join_by(earParent==genotype), su
   ungroup() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
 
-for(i in c(4, 6))
+for(i in c(8, 10))
 {
   traitMu <- paste0(yieldComponents[i], '.sp.mu')
   traitB <- paste0(yieldComponents[i], '.sp.b')
   meanLabel <- paste0('Mean ', yieldComponentsLabels[i])
   plasticityLabel <- paste0(yieldComponentsLabels[i], ' Linear Plasticity')
-  # 
-  # oldestParentPlot <- ggplot(hybrids.pl, aes(.data[[traitMu]], .data[[traitB]], color = oldestParentAge)) +
-  #   geom_point() +
-  #   geom_hline(yintercept=1) +
-  #   scale_color_viridis_c() +
-  #   labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Oldest Parent Release Year', width = 1)) + 
-  #   theme(text = element_text(color = 'black', size = 14),
-  #         axis.text = element_text(color = 'black', size = rel(1)),
-  #         axis.line = element_line(color = 'black', size = 1),
-  #         panel.background = element_blank(),
-  #         panel.border = element_blank(),
-  #         panel.grid = element_blank(), 
-  #         plot.background = element_blank(), 
-  #         legend.position = 'right',
-  #         legend.background = element_rect(color = 'black'))
-  # 
-  # youngestParentPlot <- ggplot(hybrids.pl, aes(.data[[traitMu]], .data[[traitB]], color = youngestParentAge)) +
-  #   geom_point() +
-  #   geom_hline(yintercept=1) +
-  #   scale_color_viridis_c() +
-  #   labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Youngest Parent Release Year', width = 1)) + 
-  #   theme(text = element_text(color = 'black', size = 14),
-  #         axis.text = element_text(color = 'black', size = rel(1)),
-  #         axis.line = element_line(color = 'black', size = 1),
-  #         panel.background = element_blank(),
-  #         panel.border = element_blank(),
-  #         panel.grid = element_blank(), 
-  #         plot.background = element_blank(), 
-  #         legend.position = 'right',
-  #         legend.background = element_rect(color = 'black'))
+
+  oldestParentPlot <- ggplot(hybrids.pl, aes(.data[[traitMu]], .data[[traitB]], color = oldestParentAge)) +
+    geom_point() +
+    geom_hline(yintercept=1) +
+    scale_color_viridis_c() +
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Oldest Parent Release Year', width = 1)) +
+    theme(text = element_text(color = 'black', size = 14),
+          axis.text = element_text(color = 'black', size = rel(1)),
+          axis.line = element_line(color = 'black', size = 1),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(),
+          plot.background = element_blank(),
+          legend.position = 'right',
+          legend.background = element_rect(color = 'black'))
+
+  youngestParentPlot <- ggplot(hybrids.pl, aes(.data[[traitMu]], .data[[traitB]], color = youngestParentAge)) +
+    geom_point() +
+    geom_hline(yintercept=1) +
+    scale_color_viridis_c() +
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Youngest Parent Release Year', width = 1)) +
+    theme(text = element_text(color = 'black', size = 14),
+          axis.text = element_text(color = 'black', size = rel(1)),
+          axis.line = element_line(color = 'black', size = 1),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(),
+          plot.background = element_blank(),
+          legend.position = 'right',
+          legend.background = element_rect(color = 'black'))
   
   meanParentPlot <- ggplot(hybrids.pl, aes(.data[[traitMu]], .data[[traitB]], color = meanParentAge)) +
     geom_point() +
@@ -245,10 +252,10 @@ for(i in c(4, 6))
           legend.position = 'right',
           legend.background = element_rect(color = 'black'))
   
-  # print(oldestParentPlot)
-  # print(youngestParentPlot)
+  print(oldestParentPlot)
+  print(youngestParentPlot)
   print(meanParentPlot)
-  ggsave(paste0('analysis/', yieldComponents[i], 'LinearPlasticityVsMean.png'), dpi = 1000)
+  # ggsave(paste0('analysis/', yieldComponents[i], 'LinearPlasticityVsMean.png'), dpi = 1000)
 }
 
 orderedEnvironments <- hybrids %>%
@@ -298,18 +305,18 @@ hybridsNOLNK22.pl <- hybridsNOLNK22.pl %>%
          earParent = str_split_i(genotype, ' X ', 1),
          pollenParent = str_split_i(genotype, ' X ', 2))
 
-parentInfo <- read_excel('data/HIPS_Genotype_Information_2022 - HIPS_Genotype_Information_2022_2023.xlsx',
-                         range = 'A2:D357', 
-                         col_names = c('genotype', 'accession', 'additionalAccessionNames', 'releaseYear'),
-                         col_types = rep('text', 4)) %>%
-  filter(genotype!='NA') %>%
-  mutate(releaseYear = case_when(releaseYear=='NEAR 1946' ~ 1946,
-                                 releaseYear=='PRE 1956' ~ 1956,
-                                 releaseYear=='PRE 1976' ~ 1976,
-                                 releaseYear=='PRE 1941' ~ 1941,
-                                 releaseYear=='PRE 1964' ~ 1964, 
-                                 .default = as.numeric(releaseYear))) %>%
-  select(genotype, releaseYear)
+# parentInfo <- read_excel('data/HIPS_Genotype_Information_2022 - HIPS_Genotype_Information_2022_2023.xlsx',
+#                          range = 'A2:D357', 
+#                          col_names = c('genotype', 'accession', 'additionalAccessionNames', 'releaseYear'),
+#                          col_types = rep('text', 4)) %>%
+#   filter(genotype!='NA') %>%
+#   mutate(releaseYear = case_when(releaseYear=='NEAR 1946' ~ 1946,
+#                                  releaseYear=='PRE 1956' ~ 1956,
+#                                  releaseYear=='PRE 1976' ~ 1976,
+#                                  releaseYear=='PRE 1941' ~ 1941,
+#                                  releaseYear=='PRE 1964' ~ 1964, 
+#                                  .default = as.numeric(releaseYear))) %>%
+#   select(genotype, releaseYear)
 
 hybridsNOLNK22.pl <- left_join(hybridsNOLNK22.pl, parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
   rename(earParentAge = releaseYear) %>%
@@ -577,19 +584,19 @@ hybridsCommon.pl <- hybridsCommon.pl %>%
   mutate(genotype = str_to_upper(genotype),
          earParent = str_split_i(genotype, ' X ', 1),
          pollenParent = str_split_i(genotype, ' X ', 2))
-
-parentInfo <- read_excel('data/HIPS_Genotype_Information_2022 - HIPS_Genotype_Information_2022_2023.xlsx',
-                         range = 'A2:D357', 
-                         col_names = c('genotype', 'accession', 'additionalAccessionNames', 'releaseYear'),
-                         col_types = rep('text', 4)) %>%
-  filter(genotype!='NA') %>%
-  mutate(releaseYear = case_when(releaseYear=='NEAR 1946' ~ 1946,
-                                 releaseYear=='PRE 1956' ~ 1956,
-                                 releaseYear=='PRE 1976' ~ 1976,
-                                 releaseYear=='PRE 1941' ~ 1941,
-                                 releaseYear=='PRE 1964' ~ 1964, 
-                                 .default = as.numeric(releaseYear))) %>%
-  select(genotype, releaseYear)
+# parentInfo <- read.csv('data/HIPS_Genotype_Information_2022 - HIPS_Genotype_Information_2022_2023.csv')
+# parentInfo <- read_excel('data/HIPS_Genotype_Information_2022 - HIPS_Genotype_Information_2022_2023.xlsx',
+#                          range = 'A2:D357', 
+#                          col_names = c('genotype', 'accession', 'additionalAccessionNames', 'releaseYear'),
+#                          col_types = rep('text', 4)) %>%
+#   filter(genotype!='NA') %>%
+#   mutate(releaseYear = case_when(releaseYear=='NEAR 1946' ~ 1946,
+#                                  releaseYear=='PRE 1956' ~ 1956,
+#                                  releaseYear=='PRE 1976' ~ 1976,
+#                                  releaseYear=='PRE 1941' ~ 1941,
+#                                  releaseYear=='PRE 1964' ~ 1964, 
+#                                  .default = as.numeric(releaseYear))) %>%
+#   select(genotype, releaseYear)
 
 hybridsCommon.pl <- left_join(hybridsCommon.pl, parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
   rename(earParentAge = releaseYear) %>%
@@ -602,42 +609,42 @@ hybridsCommon.pl <- left_join(hybridsCommon.pl, parentInfo, join_by(earParent==g
   ungroup() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
 
-for(i in c(4, 6))
+for(i in 1:length(yieldComponents))
 {
   traitMu <- paste0(yieldComponents[i], '.sp.mu')
   traitB <- paste0(yieldComponents[i], '.sp.b')
   meanLabel <- paste0('Mean ', yieldComponentsLabels[i])
   plasticityLabel <- paste0(yieldComponentsLabels[i], ' Linear Plasticity')
-  # 
-  # oldestParentPlot <- ggplot(hybridsCommon.pl, aes(.data[[traitMu]], .data[[traitB]], color = oldestParentAge)) +
-  #   geom_point() +
-  #   geom_hline(yintercept=1) +
-  #   scale_color_viridis_c() +
-  #   labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Oldest Parent Release Year', width = 1)) + 
-  #   theme(text = element_text(color = 'black', size = 14),
-  #         axis.text = element_text(color = 'black', size = rel(1)),
-  #         axis.line = element_line(color = 'black', size = 1),
-  #         panel.background = element_blank(),
-  #         panel.border = element_blank(),
-  #         panel.grid = element_blank(), 
-  #         plot.background = element_blank(), 
-  #         legend.position = 'right',
-  #         legend.background = element_rect(color = 'black'))
-  # 
-  # youngestParentPlot <- ggplot(hybridsCommon.pl, aes(.data[[traitMu]], .data[[traitB]], color = youngestParentAge)) +
-  #   geom_point() +
-  #   geom_hline(yintercept=1) +
-  #   scale_color_viridis_c() +
-  #   labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Youngest Parent Release Year', width = 1)) + 
-  #   theme(text = element_text(color = 'black', size = 14),
-  #         axis.text = element_text(color = 'black', size = rel(1)),
-  #         axis.line = element_line(color = 'black', size = 1),
-  #         panel.background = element_blank(),
-  #         panel.border = element_blank(),
-  #         panel.grid = element_blank(), 
-  #         plot.background = element_blank(), 
-  #         legend.position = 'right',
-  #         legend.background = element_rect(color = 'black'))
+
+  oldestParentPlot <- ggplot(hybridsCommon.pl, aes(.data[[traitMu]], .data[[traitB]], color = oldestParentAge)) +
+    geom_point() +
+    geom_hline(yintercept=1) +
+    scale_color_viridis_c() +
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Oldest Parent Release Year', width = 1)) +
+    theme(text = element_text(color = 'black', size = 14),
+          axis.text = element_text(color = 'black', size = rel(1)),
+          axis.line = element_line(color = 'black', size = 1),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(),
+          plot.background = element_blank(),
+          legend.position = 'right',
+          legend.background = element_rect(color = 'black'))
+
+  youngestParentPlot <- ggplot(hybridsCommon.pl, aes(.data[[traitMu]], .data[[traitB]], color = youngestParentAge)) +
+    geom_point() +
+    geom_hline(yintercept=1) +
+    scale_color_viridis_c() +
+    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Youngest Parent Release Year', width = 1)) +
+    theme(text = element_text(color = 'black', size = 14),
+          axis.text = element_text(color = 'black', size = rel(1)),
+          axis.line = element_line(color = 'black', size = 1),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(),
+          plot.background = element_blank(),
+          legend.position = 'right',
+          legend.background = element_rect(color = 'black'))
   
   meanParentPlot <- ggplot(hybridsCommon.pl, aes(.data[[traitMu]], .data[[traitB]], color = meanParentAge)) +
     geom_point() +
@@ -654,14 +661,14 @@ for(i in c(4, 6))
           legend.position = 'right',
           legend.background = element_rect(color = 'black'))
   
-  # print(oldestParentPlot)
-  # print(youngestParentPlot)
+  print(oldestParentPlot)
+  print(youngestParentPlot)
   print(meanParentPlot)
-  ggsave(paste0('analysis/', yieldComponents[i], 'LinearPlasticityVsMean.png'), dpi = 1000)
+  # ggsave(paste0('analysis/', yieldComponents[i], 'LinearPlasticityVsMean.png'), dpi = 1000)
 }
 
 # Subset to the locations where we got a significant, classical N response on a population level and estimate plasticity --> does N plasticity correlate across location years?
-nResponse <- filter(hybridsCommon, str_detect(environment, '2023:Ames')|str_detect(environment, '2023:Crawfordsville')|location %in% c('North Platte2', 'Scottsbluff'))
+nResponse <- filter(hybrids, str_detect(environment, '2023:Ames')|str_detect(environment, '2023:Crawfordsville')|location %in% c('North Platte2', 'Scottsbluff'))
 
 nResponse.pl <- getNitrogenPlasticityByLocationYear(nResponse, paste0(yieldComponents[1], '.sp'), 'nitrogenTreatment', 'genotype')
 
@@ -677,8 +684,22 @@ for(i in 2:length(yieldComponents))
 nResponse.pl <- nResponse.pl %>%
   rowwise() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .))) %>% 
-  mutate(locationYear = case_when(locationYear=='2022:North Platte' ~ '2022:North Platte:4.3', .default = locationYear))
-
+  mutate(locationYear = case_when(locationYear=='2022:North Platte' ~ '2022:North Platte:4.3', .default = locationYear)) %>% 
+  rowwise() %>%
+  mutate(genotype = str_to_upper(genotype),
+         earParent = str_split_i(genotype, ' X ', 1),
+         pollenParent = str_split_i(genotype, ' X ', 2)) %>%
+  left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(earParentAge = releaseYear) %>%
+  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(pollenParentAge = releaseYear) %>%
+  rowwise() %>%
+  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
+         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
+         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+ # Yield
 nResponse.plWide <- nResponse.pl %>%
   pivot_wider(id_cols = genotype, 
               names_from = locationYear,
@@ -691,25 +712,198 @@ names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
 
 nPlasticityCorYield <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
   geom_tile(color = 'white') +
-  scale_fill_viridis_c() + 
+  scale_fill_viridis_c(direction = -1) + 
   scale_x_discrete(breaks = unique(corData$locationYear1), 
                    labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
                               str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
   scale_y_discrete(breaks = unique(corData$locationYear1), 
                    labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
                               str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
-  labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1)) + 
-  theme(text = element_text(color = 'black', size = 14),
+  labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Yield (bushels/acre)') + 
+  theme(text = element_text(color = 'black', size = 10),
+        axis.text.x = element_text(color = 'black', size = rel(1)),
+        axis.text = element_text(color = 'black', size = rel(1)),
+        axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(), 
+        plot.background = element_blank(), 
+        legend.position = 'none',
+        legend.background = element_blank())
+nPlasticityCorYield
+# Kernel Row Number
+nResponse.plWideKRN <- nResponse.pl %>%
+  pivot_wider(id_cols = genotype, 
+              names_from = locationYear,
+              values_from = kernelRowNumber.sp.b)
+
+corData <- cor(nResponse.plWideKRN[, 2:5], use = 'complete.obs') %>%
+  as.table() %>%
+  as.data.frame()
+names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
+
+nPlasticityCorKRN <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
+  geom_tile(color = 'white') +
+  scale_fill_viridis_c(direction = -1) + 
+  scale_x_discrete(breaks = unique(corData$locationYear1), 
+                   labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
+                              str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
+  scale_y_discrete(breaks = unique(corData$locationYear1), 
+                   labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
+                              str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
+  labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Kernel Row Number') + 
+  theme(text = element_text(color = 'black', size = 10),
+        axis.text.x = element_text(color = 'black', size = rel(1)),
+        axis.text = element_text(color = 'black', size = rel(1)),
+        axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(), 
+        plot.background = element_blank(), 
+        legend.position = 'none',
+        legend.background = element_blank())
+nPlasticityCorKRN
+
+# Hundred Kernel Mass
+nResponse.plWideHKM <- nResponse.pl %>%
+  pivot_wider(id_cols = genotype, 
+              names_from = locationYear,
+              values_from = yieldPerAcre.sp.b)
+
+corData <- cor(nResponse.plWideHKM[, 2:5], use = 'complete.obs') %>%
+  as.table() %>%
+  as.data.frame()
+names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
+
+nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
+  geom_tile(color = 'white') +
+  scale_fill_viridis_c(direction = -1) + 
+  scale_x_discrete(breaks = unique(corData$locationYear1), 
+                   labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
+                              str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
+  scale_y_discrete(breaks = unique(corData$locationYear1), 
+                   labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
+                              str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
+  labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Hundred Kernel Mass (g)') + 
+  theme(text = element_text(color = 'black', size = 10),
+        axis.text.x = element_text(color = 'black', size = rel(1)),
+        axis.text = element_text(color = 'black', size = rel(1)),
+        axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(), 
+        plot.background = element_blank(), 
+        legend.position = 'none',
+        legend.background = element_blank())
+nPlasticityCorHKM
+
+nPlasticityCorLegend <- get_legend(nPlasticityCorHKM) 
+
+# which variables, and locationYear should we show for scatter with plasticity and parentAge
+# R2
+locationYears <- unique(nResponse.pl$locationYear)
+for(locationYear in locationYears)
+{
+  df <- filter(nResponse.pl, locationYear==locationYear)
+  for (yieldComponent in yieldComponents)
+  {
+    print(paste0(locationYear, yieldComponent, 'meanParentAge ', getR2(df, paste0(yieldComponent, '.sp.b'), 'meanParentAge'), sep = ':'))
+    print(paste0(locationYear, yieldComponent, 'youngestParentAge ', getR2(df, paste0(yieldComponent, '.sp.b'), 'youngestParentAge'), sep = ':'))
+    print(paste0(locationYear, yieldComponent, 'oldestParentAge ', getR2(df, paste0(yieldComponent, '.sp.b'), 'oldestParentAge'), sep = ':'))
+  }
+}
+
+#R
+for(locationYear in locationYears)
+{
+  df <- filter(nResponse.pl, locationYear==locationYear)
+  for (yieldComponent in yieldComponents)
+  {
+    print(paste0(locationYear, yieldComponent, 'meanParentAge ', getR(df, paste0(yieldComponent, '.sp.b'), 'meanParentAge'), sep = ':'))
+    print(paste0(locationYear, yieldComponent, 'youngestParentAge ', getR(df, paste0(yieldComponent, '.sp.b'), 'youngestParentAge'), sep = ':'))
+    print(paste0(locationYear, yieldComponent, 'oldestParentAge ', getR(df, paste0(yieldComponent, '.sp.b'), 'oldestParentAge'), sep = ':'))
+  }
+}
+
+sb22NResponse.pl <- filter(nResponse.pl, locationYear=='2022:Scottsbluff')
+
+nPlasticitySBYield <- ggplot(sb22NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
+  geom_point() +
+  geom_hline(yintercept = 1, color = 'black', linewidth = 1) +
+  scale_color_viridis(direction = -1) +
+  scale_y_continuous(limits = c(-2.5, 2.5)) + 
+  labs(x = 'Mean Yield (bushels/acre)', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
+  theme(text = element_text(color = 'black', size = 10),
         axis.text.x = element_text(color = 'black', size = rel(1)),
         axis.text = element_text(color = 'black', size = rel(1)),
         axis.line = element_line(color = 'black', size = 1),
         panel.background = element_blank(),
         panel.border = element_blank(),
-        panel.grid = element_blank(), 
-        plot.background = element_blank(), 
-        legend.position = 'right',
+        panel.grid = element_blank(),
+        plot.background = element_blank(),
+        legend.position = 'none',
         legend.background = element_blank())
-nPlasticityCorYield
+ nPlasticitySBYield
+ 
+ nPlasticityParentAgeLegend <- get_legend(nPlasticitySBYield)
+
+ nPlasticitySBKRN <- ggplot(sb22NResponse.pl, aes(kernelRowNumber.sp.mu, kernelRowNumber.sp.b, color = meanParentAge)) +
+   geom_point() +
+   geom_hline(yintercept = 1, color = 'black', linewidth = 1) +
+   scale_color_viridis(direction = -1) +
+   scale_y_continuous(limits = c(-2.5, 2.5)) + 
+   labs(x = 'Mean Kernel Row Number', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
+   theme(text = element_text(color = 'black', size = 10),
+         axis.text.x = element_text(color = 'black', size = rel(1)),
+         axis.text = element_text(color = 'black', size = rel(1)),
+         axis.line = element_line(color = 'black', size = 1),
+         panel.background = element_blank(),
+         panel.border = element_blank(),
+         panel.grid = element_blank(),
+         plot.background = element_blank(),
+         legend.position = 'none',
+         legend.background = element_blank())
+ nPlasticitySBKRN
+
+ nPlasticitySBHKM <- ggplot(sb22NResponse.pl, aes(hundredKernelMass.sp.mu, hundredKernelMass.sp.b, color = meanParentAge)) +
+   geom_point() +
+   geom_hline(yintercept = 1, color = 'black', linewidth = 1) +
+   scale_color_viridis(direction = -1) +
+   scale_y_continuous(limits = c(-2.5, 2.5)) + 
+   labs(x = 'Mean Hundred Kernel Mass (g)', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
+   theme(text = element_text(color = 'black', size = 10),
+         axis.text.x = element_text(color = 'black', size = rel(1)),
+         axis.text = element_text(color = 'black', size = rel(1)),
+         axis.line = element_line(color = 'black', size = 1),
+         panel.background = element_blank(),
+         panel.border = element_blank(),
+         panel.grid = element_blank(),
+         plot.background = element_blank(),
+         legend.position = 'none',
+         legend.background = element_blank())
+ nPlasticitySBHKM
+
+ # Which genotypes are 'most' and 'least' nitrogen stable across these envs for yield
+ nResponseGenotypeLevel <- nResponse.pl %>%
+   group_by(genotype) %>%
+   summarise(maxNPlasticityYield = max(yieldPerAcre.sp.b, na.rm = TRUE), 
+             minNPlasticityYield = min(yieldPerAcre.sp.b, na.rm = TRUE), 
+             meanNPlasticityYield = mean(yieldPerAcre.sp.b, na.rm = TRUE)) %>%
+   arrange(meanNPlasticityYield)
+ 
+ lowPlasticityGenotype <- nResponseGenotypeLevel$genotype[2]
+ avgPlasticityGenotype <- nResponseGenotypeLevel$genotype[47]
+ highPlasticityGenotype <- nResponseGenotypeLevel$genotype[122]
+ 
+nPlasticityLAH <- filter(hybrids, genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype) & (str_detect(environment, '2023:Ames')|str_detect(environment, '2023:Crawfordsville')|location %in% c('North Platte2', 'Scottsbluff')))  %>%
+  group_by(genotype, environment, nitrogenTreatment) %>%
+  summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High')),
+         genotype = factor(genotype, levels = lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype))
+
+nPlasticityGenotypeLines <- ggplot(nPlasticityLAH, aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype)) + 
+  geom_line()
+nPlasticityGenotypeLines
 
 for(i in 1:length(yieldComponents))
 {
@@ -971,4 +1165,11 @@ fig1
 # Variance partitioning for yield from yield components
 vc_yield <- partitionVariance3(hybrids, 'yieldPerAcre.sp', 'Yield (bushels/acre)', '~ (1|plantDensity) + (1|kernelRowNumber) + (1|kernelsPerRow) + (1|hundredKernelMass)')
 
+fig3topleft <- plot_grid(nPlasticityCorYield, nPlasticityCorKRN, nPlasticityCorHKM, nPlasticityCorLegend, labels = c('A', 'B', 'C', ''), nrow = 1, rel_widths = c(0.3, 0.3, 0.3, 0.1))
+fig3topleft
 
+fig3bottomleft <- plot_grid(nPlasticitySBYield, nPlasticitySBKRN, nPlasticitySBHKM, nPlasticityParentAgeLegend, labels = c('D', 'E', 'F', ''), nrow = 1, rel_widths = c(0.3, 0.3, 0.3, 0.1))
+fig3bottomleft
+
+fig3left <- plot_grid(fig3topleft, fig3bottomleft, ncol = 1)
+fig3left
