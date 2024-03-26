@@ -905,6 +905,39 @@ nPlasticityGenotypeLines <- ggplot(nPlasticityLAH, aes(nitrogenTreatment, yieldP
   geom_line()
 nPlasticityGenotypeLines
 
+# How well does N plasticity correlate between locations within a 
+nResponseBlock.pl <- getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(yieldComponents[1], '.sp'), 'nitrogenTreatment', 'genotype')
+
+for(i in 2:length(yieldComponents))
+{
+  nResponseBlock.pl <- full_join(nResponseBlock.pl, 
+                            getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(yieldComponents[i], '.sp'), 'nitrogenTreatment', 'genotype'),
+                            join_by(genotype, locationYear, blockSet),
+                            suffix = c('', ''),
+                            keep = FALSE)
+}
+
+for(i in 1:length(yieldComponents))
+{
+  traitNPlasticity <- paste0(yieldComponents[i], '.sp.b')
+  
+  dfWide <- nResponseBlock.pl %>%
+    pivot_wider(id_cols = c(genotype, locationYear), 
+                names_from = blockSet, 
+                values_from = all_of(traitNPlasticity), 
+                names_prefix = 'blockSet')
+  
+  nPlasticityBlockCorr <- ggplot(dfWide, aes(blockSet1, blockSet2)) + 
+    geom_point() + 
+    facet_wrap(vars(locationYear)) + 
+    labs(title = yieldComponents[i])
+  print(yieldComponents[i])
+  print(cor(dfWide$blockSet1, dfWide$blockSet2, use = 'complete.obs'))
+  print(nPlasticityBlockCorr)
+}
+  
+
+
 for(i in 1:length(yieldComponents))
 {
   traitMu <- paste0(yieldComponents[i], '.sp.mu')

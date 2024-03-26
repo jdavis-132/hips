@@ -360,6 +360,41 @@ getNitrogenPlasticityByLocationYear <- function(data, trait, nitrogenTreatment, 
   }
   return(dfOut)
 }
+
+getNitrogenPlasticityByLocationYearBlock <- function(data, trait, nitrogenTreatment, genotype)
+{
+  dfCompute <- data %>%
+    rowwise() %>%
+    mutate(locationYear = str_c(year, semanticLocation, sep = ':'))
+  locationYears <- unique(dfCompute$locationYear)
+  
+  # Initialize tibble to save computed data to
+  dfOut <- tibble(genotype = NULL, locationYear = NULL, '{trait}.b' := NULL, '{trait}.FWB' := NULL, '{trait}.FWW' := NULL, '{trait}.mu' := NULL, blockSet = NULL)
+  for(currLocationYear in locationYears)
+  {
+    dfLocationYear <- filter(dfCompute, locationYear==currLocationYear)
+    
+    if(length(unique(dfLocationYear[[nitrogenTreatment]])) < 2)
+    {
+      next
+    }
+    # Randomly choose a block from each nitrogen level to use in the first set; use the other block in the second set
+    blocks1 <- c(sample(1:2, 1), sample(3:4, 1), sample(5:6, 1))
+    blocks2 <- setdiff(1:6, blocks1)
+    df1 <- filter(dfLocationYear, block %in% blocks1)
+    df2 <- filter(dfLocationYear, block %in% blocks2)
+    
+    pl1 <- estimatePlasticity2(df1, trait, nitrogenTreatment, genotype) %>%
+      mutate(locationYear = currLocationYear,
+             blockSet = 1)
+    pl2 <- estimatePlasticity2(df2, trait, nitrogenTreatment, genotype) %>%
+      mutate(locationYear = currLocationYear,
+             blockSet = 2)
+    
+    dfOut <- bind_rows(dfOut, pl1, pl2)
+  }
+  return(dfOut)
+}
 # First, a function to calculate GDDs for a single day in fahrenheit
 # Returns GDD value for the given day
 # minTemp is the daily minimum temperature in Fahrenheit
