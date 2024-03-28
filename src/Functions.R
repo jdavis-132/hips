@@ -570,3 +570,91 @@ getR <- function(data, x, y)
   return(r)
 }
 
+# Modifies dataframe genotypePairs with columns genotype1 and genotype2 at a minimum that identify all pairwise comparisons between genotypes
+# Remove dashes from genotype names before using so we can split the comparisons in the tukey step
+getSignificantCrossovers <- function(data, pheno, environments)
+{
+  phenotype <- paste0(pheno, '.sp')
+  phenotypeMean <- paste0(pheno, 'Mean')
+  phenotypeRank <- paste0(pheno, 'Rank')
+  phenotypeAdjustedP <- paste0(pheno, 'AdjP')
+  phenotypeSigDiff <- paste0(pheno, 'SigDiff')
+  phenotypeRankChange <- paste0(pheno, 'RC')
+  phenotypeScore <- paste0(pheno, 'Score')
+  phenotypeComparedEnvs <- paste0(pheno, 'ComparedEnvs')
+  
+  for(env in environments)
+  {
+    envSuffix <- paste0('.E', env)
+    
+    environmentData <- data %>%
+      filter(environmentCode==env) %>%
+      select(genotype, all_of(phenotype))
+    environmentData <- environmentData[complete.cases(environmentData), ]
+    
+    anova <- aov(as.formula(paste(phenotype, ' ~ genotype')), data = environmentData)
+    
+    tukey <- TukeyHSD(anova)$genotype %>%
+      as_tibble(rownames = 'genotypes') %>%
+      rowwise() %>%
+      mutate(genotype1 = str_split_i(genotypes, '-', 1),
+             genotype2 = str_split_i(genotypes, '-', 2)) %>%
+      rename('{phenotypeAdjustedP}' := `p adj`) %>%
+      mutate('{phenotypeSigDiff}' := .data[[phenotypeAdjustedP]] < 0.05) %>%
+      select(c(genotypes, genotype1, genotype2,  all_of(c(phenotypeAdjustedP, phenotypeSigDiff))))
+    
+    environmentDataSummary <- data %>%
+      filter(environmentCode==env) %>%
+      group_by(genotype) %>%
+      summarise('{phenotypeMean}' := mean(.data[[phenotype]], na.rm = TRUE)) %>%
+      mutate('{phenotypeRank}' := dense_rank(desc(.data[[phenotypeMean]]))) %>%
+      select(c(all_of(phenotypeRank), genotype))
+    
+    envG1Suffix <- paste0(envSuffix, '.G1')
+    envG2Suffix <- paste0(envSuffix, '.G2')
+    
+    genotypePairs <- inner_join(genotypePairs, tukey, join_by(genotype1==genotype1, genotype2==genotype1), keep = FALSE, suffix = c('', '')) %>%
+      inner_join(tukey, join_by(genotype1==genotype2, genotype2==genotype2), keep = FALSE, suffix = c('', '')) %>%
+      distinct() %>%
+      rename('{phenotypeAdjustedP}{envSuffix}' := phenotypeAdjustedP,
+             '{phenotypeSigDiff}{envSuffix}' := phenotypeSigDiff) #%>%
+      # full_join(environmentDataSummary, join_by(genotype1==genotype), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
+      # rename('{phenotypeRank}{envG1Suffix}' := .data[[phenotypeRank]]) %>%
+      # full_join(environmentDataSummary, join_by(genotype2==genotype), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
+      # rename('{phenotypeRank}{envG2Suffix}' := .data[[phenotypeRank]])
+  }
+  
+  for(i in 1:totalEnvironments)
+  {
+    envI <- environments[i]
+    envISuffix <- paste0('.E', envI)
+    envIG1Rank <- paste0(phenotypeRank, envISuffix, '.G1')
+    envIG2Rank <- paste0(phenotypeRank, envISuffix, '.G2')
+    envISigDiff <- paste0(phenotypeSigDiff, envISuffix)
+    
+    for(j in (i + 1):totalEnvironments)
+    {
+      envJ <- environments[j]
+      envJSuffix <- paste0('.E', envJ)
+      envJG1Rank <- paste0(phenotypeRank, envJSuffix, '.G1')
+      envJG2Rank <- paste0(phenotypeRank, envJSuffix, '.G2')
+      envJSigDiff <- paste0(phenotypeSigDiff, envJSuffix)
+      
+      envPairSuffix <- paste0('.E', envI, '-', envJ)
+      envPairRankChange <- paste0(phenotypeRankChange, envPairSuffix)
+      envPairScore <- paste0(phenotypeScore, envPairSuffix)
+      
+      genotypePairs <- genotypePairs %>%
+        rowwise() %>%
+        mutate('{envPairRankChange}' := ((.data[[envIG1Rank]] - .data[[envIG2Rank]])/(.data[[envJG1Rank]] - .data[[envJG2Rank]])) < 0) %>%
+        mutate('{envPairScore}' := case_when(!.data[[envPairRankChange]] ~ 0, 
+                                             .data[[envPairRankChange]] ~ .data[[envISigDiff]] + .data[[envJSigDiff]]))
+    }
+  }
+  
+  genotypePairs <- genotypePairs %>%
+    rowwise() %>%
+    mutate('{phenotypeScore}' := rowSums(across(contains(phenotypeScore))), 
+           '{pheno}ComparedEnvs' := rowSums(!is.na(across(contains(phenotypeAdjustedP))))) %>%
+    mutate('{phenotypeScore}Normalized' := .data[[phenotypeScore]]/((.data[[phenotypeComparedEnvs]]*(.data[[phenotypeComparedEnvs]]))))
+}

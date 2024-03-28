@@ -12,7 +12,7 @@ library(grid)
 library(gridExtra)
 library(cowplot)
 
-# API_KEY <- 'AIzaSyBx0dJsUYphK3y144m_ldAOhc7loeHZUOo'
+API_KEY <- 'AIzaSyBx0dJsUYphK3y144m_ldAOhc7loeHZUOo'
 
 aoi <- aoi_get(state = c('NE', 'IA'), county = 'all')
 gridmetPrecip <- getGridMET(AOI = aoi, varname = 'pr', startDate = '2021-11-01', endDate = '2023-10-31') %>%
