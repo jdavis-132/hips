@@ -609,7 +609,7 @@ hybridsCommon.pl <- left_join(hybridsCommon.pl, parentInfo, join_by(earParent==g
   ungroup() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
 
-for(i in 1:length(yieldComponents))
+for(i in 6)
 {
   traitMu <- paste0(yieldComponents[i], '.sp.mu')
   traitB <- paste0(yieldComponents[i], '.sp.b')
@@ -649,17 +649,18 @@ for(i in 1:length(yieldComponents))
   meanParentPlot <- ggplot(hybridsCommon.pl, aes(.data[[traitMu]], .data[[traitB]], color = meanParentAge)) +
     geom_point() +
     geom_hline(yintercept=1) +
-    scale_color_viridis_c() +
+    scale_color_viridis_c(direction = -1) +
     labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Mean Parent Release Year', width = 1)) + 
-    theme(text = element_text(color = 'black', size = 14),
+    theme(text = element_text(color = 'black', size = 10),
+          axis.text.x = element_text(color = 'black', size = rel(1)),
           axis.text = element_text(color = 'black', size = rel(1)),
           axis.line = element_line(color = 'black', size = 1),
           panel.background = element_blank(),
           panel.border = element_blank(),
-          panel.grid = element_blank(), 
-          plot.background = element_blank(), 
+          panel.grid = element_blank(),
+          plot.background = element_blank(),
           legend.position = 'right',
-          legend.background = element_rect(color = 'black'))
+          legend.background = element_blank())
   
   print(oldestParentPlot)
   print(youngestParentPlot)
@@ -938,7 +939,7 @@ for(i in 1:length(yieldComponents))
   
 
 
-for(i in 1:length(yieldComponents))
+for(i in 6)
 {
   traitMu <- paste0(yieldComponents[i], '.sp.mu')
   traitBestEnv <- paste0(yieldComponents[i], '.sp.FWB')
@@ -973,7 +974,14 @@ for(i in 1:length(yieldComponents))
       
       if((xBest - yBest)*(xWorst - yWorst) < 0)
       {
-        cxMatrix[x, y] <- 1
+        if(xBest > yBest)
+        {
+          cxMatrix[x, y] <- 1
+        }
+        else
+        {
+          cxMatrix[x, y] <- -1
+        }
       }
     }
   }
@@ -981,68 +989,158 @@ for(i in 1:length(yieldComponents))
   cxData <- as.data.frame(cxMatrix)
   cols <- colnames(cxData)
   cxData <- mutate(cxData, genotypeRank1 = 1:numhybridsCommon) %>%
-    pivot_longer(starts_with('V'), names_to = 'genotypeRank2', values_to = 'crossover', names_prefix = 'V')
+    pivot_longer(starts_with('V'), names_to = 'genotypeRank2', values_to = 'crossover', names_prefix = 'V') %>%
+    filter(crossover==-1 | crossover==1)
   
   cxHeatmap <- ggplot(cxData, aes(genotypeRank1, as.numeric(genotypeRank2), fill = factor(crossover))) + 
     geom_tile(color = 'white') +
-    scale_fill_manual(values = c('white', moma.colors('VanGogh', 1))) +
+    scale_fill_manual(values = viridis_pal()(4)[1:2], 
+                      ) +
     labs(x = 'Genotype Mean Rank', y = 'Genotype Mean Rank', fill = str_wrap('Finlay-Wilkinson Predicted Crossover Interaction', 1), title = yieldComponentsLabels[i]) + 
-    theme(text = element_text(color = 'black', size = 14),
+    theme(text = element_text(color = 'black', size = 10),
           axis.text.x = element_text(color = 'black', size = rel(1)),
-          axis.text.y = element_text(color = 'black', size = rel(1)),
           axis.text = element_text(color = 'black', size = rel(1)),
-          axis.line = element_line(color = 'black', size = 1),
+          axis.line = element_blank(),
           panel.background = element_blank(),
           panel.border = element_blank(),
           panel.grid = element_blank(), 
           plot.background = element_blank(), 
-          legend.position = 'none',
+          legend.position = 'right',
           legend.background = element_blank())
   
   print(cxHeatmap)
 }
 
-# How often are interactions between a pair of hybrids crossover interactions AND represent significant differences in the phenotype?
-genotypePairs <- tibble(genotype1 = NULL, genotype2 = NULL)
-hybridEnvs <- hybrids %>%
-  group_by(environment) %>%
-  summarise(environmentCode = cur_group_id())
-hybrids <- full_join(hybrids, hybridEnvs, join_by(environment), keep = FALSE, suffix = c('', ''))
+# # How often are interactions between a pair of hybrids crossover interactions AND represent significant differences in the phenotype?
+# genotypePairs <- tibble(genotype1 = NULL, genotype2 = NULL)
+# hybridEnvs <- hybrids %>%
+#   group_by(environment) %>%
+#   summarise(environmentCode = cur_group_id())
+# hybrids <- full_join(hybrids, hybridEnvs, join_by(environment), keep = FALSE, suffix = c('', ''))
+# 
+# hybridsSigCrossovers <- hybrids %>%
+#   rowwise() %>%
+#   mutate(genotype = str_replace_all(genotype, '-', ' '))
+# 
+# allGenotypes <- unique(hybridsSigCrossovers$genotype)
+# totalGenotypes <- length(allGenotypes)
+# 
+# for(i in 1:totalGenotypes)
+# {
+#   df <- tibble(genotype1 = allGenotypes[i], genotype2 = allGenotypes[(i + 1):totalGenotypes])
+#   genotypePairs <- bind_rows(genotypePairs, df)
+# }
+# 
+# environments <- unique(hybrids$environmentCode)
+# totalEnvironments <- length(environments)
+# 
+# for(i in phenotypes)
+# {
+#   genotypePairs <- full_join(genotypePairs, 
+#                              getSignificantCrossovers(hybridsSigCrossovers, i, environments), 
+#                              join_by(genotype1, genotype2), 
+#                              keep = FALSE, 
+#                              suffix = c('', ''))
+# }
+# 
+# write.csv(genotypePairs, 'analysis/significantCrossovers.csv')
+sigCrossovers <- read.csv('analysis/significantCrossovers.csv')
 
-hybridsSigCrossovers <- hybrids %>%
-  rowwise() %>%
-  mutate(genotype = str_replace_all(genotype, '-', ' '))
-
-allGenotypes <- unique(hybridsSigCrossovers$genotype)
-totalGenotypes <- length(allGenotypes)
-
-for(i in 1:totalGenotypes)
+for(i in 6)
 {
-  df <- tibble(genotype1 = allGenotypes[i], genotype2 = allGenotypes[(i + 1):totalGenotypes])
-  genotypePairs <- bind_rows(genotypePairs, df)
+  phenotype <- phenotypes[i]
+  phenotypeSpatial <- paste0(phenotype, '.sp')
+  phenotypeLabel <- phenotypeLabels[i]
+  phenotypeScoreNormalized <- paste0(phenotype, 'ScoreNormalized')
+  
+  df1 <- sigCrossovers %>%
+    select(c(genotype1, genotype2, all_of(phenotypeScoreNormalized)))
+  df2 <- df1 %>%
+    rowwise() %>%
+    mutate(genotype1A = genotype2, 
+           genotype2 = genotype1) %>%
+    select(c(genotype1A, genotype2, all_of(phenotypeScoreNormalized))) %>%
+    rename(genotype1 = genotype1A)
+  
+  df <- bind_rows(df1, df2)
+  
+  blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = hybrids) 
+  blups <- ranef(blups)
+  blups <- as_tibble(blups$genotype, rownames = 'genotype') %>%
+    rename(blup = `(Intercept)`) %>%
+    mutate(rank = dense_rank(blup)) %>%
+    select(genotype, rank)
+  
+  df <- left_join(df, blups, join_by(genotype1==genotype), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
+    rename(rankG1 = rank) %>%
+    left_join(blups, join_by(genotype2==genotype), keep = FALSE, suffix = c('', '')) %>%
+    rename(rankG2 = rank) %>%
+    filter(!is.na(.data[[phenotypeScoreNormalized]]))
+  
+  heatmap <- ggplot(df, aes(rankG1, rankG2, fill = .data[[phenotypeScoreNormalized]])) + 
+    geom_tile() + 
+    scale_fill_viridis(direction = -1) +
+    labs(x = 'Hybrid Overall Rank', y = 'Hybrid Overall Rank', fill = str_wrap('Normalized Crossover Significance Score', 1), title = phenotypeLabel) + 
+    theme(text = element_text(color = 'black', size = 10),
+          axis.text.x = element_text(color = 'black', size = rel(1)),
+          axis.text = element_text(color = 'black', size = rel(1)),
+          axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(), 
+          plot.background = element_blank(), 
+          legend.position = 'right',
+          legend.background = element_blank())
+  print(heatmap)
+  
+  # normalizedScoreHistogram <- ggplot(df, aes(.data[[phenotypeScoreNormalized]])) + 
+  #   geom_histogram()
+  # print(normalizedScoreHistogram)
+    
 }
 
-environments <- unique(hybrids$environmentCode)
-totalEnvironments <- length(environments)
+highPlasticityGenotype <- hybridsCommon.pl %>%
+  arrange(yieldPerAcre.sp.b)
+highPlasticityGenotype <- highPlasticityGenotype$genotype[length(highPlasticityGenotype$genotype)]
 
-# Debug with yield
-getSignificantCrossovers(hybridsSigCrossovers, 'yieldPerAcre', environments)
+lowPlasticityGenotype <- hybridsCommon.pl %>%
+  arrange(yieldPerAcre.sp.b)
+lowPlasticityGenotype <- lowPlasticityGenotype$genotype[1]
 
-write.csv(genotypePairs, 'analysis/significantCrossovers.csv')
+averagePlasticityGenotype <- 'F42 X MO17'
 
+LAHPlasticities <- filter(hybridsCommon.pl, genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>% 
+  select(genotype, yieldPerAcre.sp.b)
 
+meanYield <- mean(hybridsCommon$yieldPerAcre.sp, na.rm = TRUE)
 
+LAHData <- hybridsCommon %>%
+  group_by(environment) %>%
+  mutate(envIndex = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  filter(genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>%
+  ungroup()
 
+LAHGenotypeSummary <- hybridsCommon %>%
+  filter(genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>%
+  group_by(genotype) %>%
+  summarise(intercept = ((mean(yieldPerAcre.sp, na.rm = TRUE) - meanYield))) %>%
+  full_join(LAHPlasticities, join_by(genotype), keep = FALSE, suffix = c('', ''))
 
-
-
-
-
-
-
-
-
-
+FWConceptualPlot <- ggplot(LAHData, aes(envIndex, yieldPerAcre.sp, color = genotype)) +
+  geom_point() + 
+  geom_abline(slope = LAHGenotypeSummary$yieldPerAcre.sp.b[1], intercept = LAHGenotypeSummary$intercept[1], color = viridis_pal()(4)[1]) +
+  geom_abline(slope = LAHGenotypeSummary$yieldPerAcre.sp.b[2], intercept = LAHGenotypeSummary$intercept[2], color = viridis_pal()(4)[3]) +
+  geom_abline(slope = LAHGenotypeSummary$yieldPerAcre.sp.b[3], intercept = LAHGenotypeSummary$intercept[3], color = viridis_pal()(4)[2]) +
+  scale_color_manual(values = viridis_pal()(4)[1:3]) + 
+  labs(x = 'Mean Environment Yield (bushels/acre)', y = 'Yield (bushels/acre)', color = 'Genotype') + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 10),
+        axis.text.y = element_text(color = 'black', size = 10),
+        legend.text = element_text(color = 'black', size = 10),
+        text = element_text(color = 'black', size = 10),
+        legend.position = 'top',
+        panel.grid = element_blank())
+FWConceptualPlot
 
 rfFeatures <- read.csv('analysis/featureImportances.csv')[,2:6]
 colnames(rfFeatures) <- c('plantDensity', 'kernelRowNumber', 'kernelsPerRow', 'hundredKernelMass', 'environment')
@@ -1237,6 +1335,8 @@ fig1bottom <- plot_grid(vp.plot, yieldPredictionsPlot, featureImportance, nrow =
 fig1 <- plot_grid(fig1top, fig1bottom, ncol = 1)
 fig1
 
+fig2Left <- plot_grid(FWConceptualPlot, meanParentPlot, cxHeatmap, heatmap, nrow = 2, labels = c('A', 'B', 'C', 'D'))
+fig2Left
 # Variance partitioning for yield from yield components
 vc_yield <- partitionVariance3(hybrids, 'yieldPerAcre.sp', 'Yield (bushels/acre)', '~ (1|plantDensity) + (1|kernelRowNumber) + (1|kernelsPerRow) + (1|hundredKernelMass)')
 
@@ -1248,3 +1348,4 @@ fig3bottomleft
 
 fig3left <- plot_grid(fig3topleft, fig3bottomleft, ncol = 1)
 fig3left
+
