@@ -3,7 +3,7 @@ library(readxl)
 library(lubridate)
 source('src/Functions.R')
 
-df <- read.csv('../../../../../../../Downloads/2023_inbred_HIPS_data_03_19_2024 - 2023_inbred_HIPS_data (1).csv') %>% 
+df <- read.csv('../../../../../../../Downloads/2023_inbred_HIPS_data_04_01_2024 (1).csv') %>% 
   mutate(earHeight = as.numeric(earHeight), 
          flagLeafHeight = as.numeric(flagLeafHeight)) %>%
   mutate(flagLeafHeight = case_when(flagLeafHeight > 500 ~ NA, .default = flagLeafHeight), 

@@ -144,6 +144,23 @@ vp.plot <- ggplot(vc_all, aes(label, pctVar, fill = grp)) +
         line = element_line(color = 'black', linewidth = 1),
         panel.grid = element_blank())
 vp.plot
+
+ehvp <- vc_all %>%
+  filter(responseVar=='earHeight.sp') %>%
+  ggplot(aes(label, pctVar, fill = grp)) +
+  geom_col(position = 'stack') + 
+  scale_fill_viridis(discrete = TRUE, labels = label_wrap(11)) +
+  scale_x_discrete(labels = label_wrap(8)) +
+  labs(x = '', y = 'Percent Variance', fill = '') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 10, color = 'black'),
+        axis.text.y = element_text(size = 10, color = 'black'),
+        legend.text = element_text(size = 10, color = 'black'),
+        text = element_text(size = 10, color = 'black'),
+        legend.position = 'right',
+        line = element_line(color = 'black', linewidth = 1),
+        panel.grid = element_blank())
+ehvp
 ggsave('analysis/variancePartitioning_20240224.png', width = 7.1, height = (7.1/12.57)*8.92, dpi=1000)
 # Estimate FW plasticity across all environments where phenotype was observed
 hybrids.pl <- estimatePlasticity2(hybrids, trait = paste0(yieldComponents[1], '.sp'), environment = 'environment', genotype = 'genotype')
@@ -990,13 +1007,15 @@ for(i in 6)
   cols <- colnames(cxData)
   cxData <- mutate(cxData, genotypeRank1 = 1:numhybridsCommon) %>%
     pivot_longer(starts_with('V'), names_to = 'genotypeRank2', values_to = 'crossover', names_prefix = 'V') %>%
-    filter(crossover==-1 | crossover==1)
+    filter(crossover==-1 | crossover==1) %>%
+    mutate(crossover = case_when(crossover==1 ~ 'X',
+                                 crossover==-1 ~ 'Y'))
   
   cxHeatmap <- ggplot(cxData, aes(genotypeRank1, as.numeric(genotypeRank2), fill = factor(crossover))) + 
     geom_tile(color = 'white') +
     scale_fill_manual(values = viridis_pal()(4)[1:2], 
                       ) +
-    labs(x = 'Genotype Mean Rank', y = 'Genotype Mean Rank', fill = str_wrap('Finlay-Wilkinson Predicted Crossover Interaction', 1), title = yieldComponentsLabels[i]) + 
+    labs(x = 'Genotype Mean Rank', y = 'Genotype Mean Rank', fill = str_wrap('Superior Hybrid in Best Environment', 8), title = yieldComponentsLabels[i]) + 
     theme(text = element_text(color = 'black', size = 10),
           axis.text.x = element_text(color = 'black', size = rel(1)),
           axis.text = element_text(color = 'black', size = rel(1)),
@@ -1062,7 +1081,8 @@ for(i in 6)
     select(c(genotype1A, genotype2, all_of(phenotypeScoreNormalized))) %>%
     rename(genotype1 = genotype1A)
   
-  df <- bind_rows(df1, df2)
+  df <- bind_rows(df1, df2) %>%
+    filter((genotype1 %in% hybridsCommon$genotype) & (genotype2 %in% hybridsCommon))
   
   blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = hybrids) 
   blups <- ranef(blups)
@@ -1080,7 +1100,7 @@ for(i in 6)
   heatmap <- ggplot(df, aes(rankG1, rankG2, fill = .data[[phenotypeScoreNormalized]])) + 
     geom_tile() + 
     scale_fill_viridis(direction = -1) +
-    labs(x = 'Hybrid Overall Rank', y = 'Hybrid Overall Rank', fill = str_wrap('Normalized Crossover Significance Score', 1), title = phenotypeLabel) + 
+    labs(x = 'Hybrid Overall Rank', y = 'Hybrid Overall Rank', fill = str_wrap('Normalized Interaction Importance Score', 1), title = phenotypeLabel) + 
     theme(text = element_text(color = 'black', size = 10),
           axis.text.x = element_text(color = 'black', size = rel(1)),
           axis.text = element_text(color = 'black', size = rel(1)),
