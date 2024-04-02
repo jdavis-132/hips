@@ -44,7 +44,7 @@ phenotypeLabelsVP <-  c('Plant Density (1)', 'Test Weight (2)', 'Harvest Moistur
 yieldComponents <- c('earFillLength', 'earWidth', 'shelledCobWidth', 'earLength', 'kernelsPerEar', 'yieldPerAcre', 
                      'kernelsPerRow', 'kernelRowNumber', 'kernelMassPerEar', 'hundredKernelMass')
 yieldComponentsLabels <- c('Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Cob Width (cm)', 'Ear Length (cm)',
-                           'Kernels Per Ear', 'Yield (Bushels / Acre)', 'Kernels Per Row', 'Kernel Row Number', 
+                           'Kernels Per Ear', 'Yield (bushels/acre)', 'Kernels Per Row', 'Kernel Row Number', 
                            'Kernel Mass Per Ear (g)', 'Hundred Kernel Mass (g)')
 
 # # # # testSPATS <- getSpatialCorrectionsEnvironment(hybrids, 'yieldPerAcre', 'environment')
@@ -579,17 +579,17 @@ hybridsCommon <- filter(hybrids, genotype %in% hybridsCommon)
 
 # Estimate plasticity and plot vs mean performance
 # Estimate FW plasticity across all environments where phenotype was observed
-hybridsCommon.pl <- estimatePlasticity2(hybridsCommon, trait = paste0(yieldComponents[1], '.sp'), environment = 'environment', genotype = 'genotype')
+hybridsCommon.pl <- estimatePlasticity2(hybridsCommon, trait = paste0(phenotypes[1], '.sp'), environment = 'environment', genotype = 'genotype')
 
-for(i in 2:length(yieldComponents))
+for(i in 2:length(phenotypes))
 {
   hybridsCommon.pl <- full_join(hybridsCommon.pl, 
-                          estimatePlasticity2(hybridsCommon, trait = paste0(yieldComponents[i], '.sp'), environment = 'environment', genotype = 'genotype'),
+                          estimatePlasticity2(hybridsCommon, trait = paste0(phenotypes[i], '.sp'), environment = 'environment', genotype = 'genotype'),
                           join_by(genotype),
                           suffix = c('', ''), 
                           keep = FALSE)
   # Print mean of the b column so we know we are getting reasonable values
-  print(mean(hybridsCommon.pl[[paste0(yieldComponents[i], '.sp.b')]], na.rm = TRUE))
+  print(mean(hybridsCommon.pl[[paste0(phenotypes[i], '.sp.b')]], na.rm = TRUE))
 }
 
 hybridsCommon.pl <- hybridsCommon.pl %>%
@@ -667,7 +667,7 @@ for(i in 6)
     geom_point() +
     geom_hline(yintercept=1) +
     scale_color_viridis_c(direction = -1) +
-    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Mean Parent Release Year', width = 1)) + 
+    labs(x = meanLabel, y = plasticityLabel, color = str_wrap('Mean Parent Release Year', width = 1)) + 
     theme(text = element_text(color = 'black', size = 10),
           axis.text.x = element_text(color = 'black', size = rel(1)),
           axis.text = element_text(color = 'black', size = rel(1)),
@@ -676,7 +676,7 @@ for(i in 6)
           panel.border = element_blank(),
           panel.grid = element_blank(),
           plot.background = element_blank(),
-          legend.position = 'right',
+          legend.position = 'top',
           legend.background = element_blank())
   
   print(oldestParentPlot)
@@ -963,9 +963,15 @@ for(i in 6)
   traitWorstEnv <- paste0(yieldComponents[i], '.sp.FWW')
   numhybridsCommon <- length(hybridsCommon.pl$genotype)
   
+  blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = hybridsCommon) 
+  blups <- ranef(blups)
+  blups <- as_tibble(blups$genotype, rownames = 'genotype') %>%
+    rename(blup = `(Intercept)`) %>%
+    mutate(rankOrder = dense_rank(blup))
+  
   sortedhybridsCommon <- hybridsCommon.pl %>%
-    arrange(.data[[traitMu]]) %>%
-    mutate(rankOrder = 1:numhybridsCommon)
+    full_join(blups, join_by(genotype), keep = FALSE, suffix = c('', '')) %>%
+    arrange(blup)
   
   cxMatrix <- matrix(0, numhybridsCommon, numhybridsCommon)
   
@@ -1013,10 +1019,13 @@ for(i in 6)
   
   cxHeatmap <- ggplot(cxData, aes(genotypeRank1, as.numeric(genotypeRank2), fill = factor(crossover))) + 
     geom_tile(color = 'white') +
-    scale_fill_manual(values = viridis_pal()(4)[1:2], 
-                      ) +
-    labs(x = 'Genotype Mean Rank', y = 'Genotype Mean Rank', fill = str_wrap('Superior Hybrid in Best Environment', 8), title = yieldComponentsLabels[i]) + 
+    scale_fill_manual(values = viridis_pal()(4)[1:2]) +
+    labs(x = 'Overall Hybrid Rank', 
+         y = 'Overall Hybrid Rank', 
+         fill = str_wrap('Superior Hybrid in Best Environment', 8), 
+         title = yieldComponentsLabels[i]) + 
     theme(text = element_text(color = 'black', size = 10),
+          title = element_text(color = 'black', size = 10),
           axis.text.x = element_text(color = 'black', size = rel(1)),
           axis.text = element_text(color = 'black', size = rel(1)),
           axis.line = element_blank(),
@@ -1081,10 +1090,10 @@ for(i in 6)
     select(c(genotype1A, genotype2, all_of(phenotypeScoreNormalized))) %>%
     rename(genotype1 = genotype1A)
   
-  df <- bind_rows(df1, df2) %>%
-    filter((genotype1 %in% hybridsCommon$genotype) & (genotype2 %in% hybridsCommon))
+  df <-bind_rows(df1, df2) %>%
+    filter((genotype1 %in% hybridsCommon$genotype) & (genotype2 %in% hybridsCommon$genotype))
   
-  blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = hybrids) 
+  blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = hybridsCommon) 
   blups <- ranef(blups)
   blups <- as_tibble(blups$genotype, rownames = 'genotype') %>%
     rename(blup = `(Intercept)`) %>%
@@ -1130,7 +1139,7 @@ lowPlasticityGenotype <- lowPlasticityGenotype$genotype[1]
 averagePlasticityGenotype <- 'F42 X MO17'
 
 LAHPlasticities <- filter(hybridsCommon.pl, genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>% 
-  select(genotype, yieldPerAcre.sp.b)
+  select(genotype, yieldPerAcre.sp.b, yieldPerAcre.sp.FWW)
 
 meanYield <- mean(hybridsCommon$yieldPerAcre.sp, na.rm = TRUE)
 
@@ -1139,18 +1148,23 @@ LAHData <- hybridsCommon %>%
   mutate(envIndex = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
   filter(genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>%
   ungroup()
+worstEnvIndex <- min(LAHData$envIndex, na.rm = TRUE)
 
 LAHGenotypeSummary <- hybridsCommon %>%
+  group_by(environment) %>%
+  mutate(envIndex = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  ungroup() %>%
   filter(genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>%
+  filter(envIndex==min(envIndex, na.rm = TRUE)) %>%
   group_by(genotype) %>%
-  summarise(intercept = ((mean(yieldPerAcre.sp, na.rm = TRUE) - meanYield))) %>%
+  summarise(intercept = mean(yieldPerAcre.sp, na.rm = TRUE) - envIndex) #%>%
   full_join(LAHPlasticities, join_by(genotype), keep = FALSE, suffix = c('', ''))
 
 FWConceptualPlot <- ggplot(LAHData, aes(envIndex, yieldPerAcre.sp, color = genotype)) +
   geom_point() + 
-  geom_abline(slope = LAHGenotypeSummary$yieldPerAcre.sp.b[1], intercept = LAHGenotypeSummary$intercept[1], color = viridis_pal()(4)[1]) +
-  geom_abline(slope = LAHGenotypeSummary$yieldPerAcre.sp.b[2], intercept = LAHGenotypeSummary$intercept[2], color = viridis_pal()(4)[3]) +
-  geom_abline(slope = LAHGenotypeSummary$yieldPerAcre.sp.b[3], intercept = LAHGenotypeSummary$intercept[3], color = viridis_pal()(4)[2]) +
+  geom_abline(slope = LAHPlasticities$yieldPerAcre.sp.b[1], intercept = LAHPlasticities$yieldPerAcre.sp.FWW[1] - worstEnvIndex, color = viridis_pal()(4)[1]) +
+  geom_abline(slope = LAHPlasticities$yieldPerAcre.sp.b[2], intercept = LAHPlasticities$yieldPerAcre.sp.FWW[2] - worstEnvIndex, color = viridis_pal()(4)[3]) +
+  geom_abline(slope = LAHPlasticities$yieldPerAcre.sp.b[3], intercept = LAHPlasticities$yieldPerAcre.sp.FWW[3] - worstEnvIndex, color = viridis_pal()(4)[2]) +
   scale_color_manual(values = viridis_pal()(4)[1:3]) + 
   labs(x = 'Mean Environment Yield (bushels/acre)', y = 'Yield (bushels/acre)', color = 'Genotype') + 
   theme_minimal() +
@@ -1161,6 +1175,54 @@ FWConceptualPlot <- ggplot(LAHData, aes(envIndex, yieldPerAcre.sp, color = genot
         legend.position = 'top',
         panel.grid = element_blank())
 FWConceptualPlot
+
+
+gca_vp <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
+for(i in 1:length(phenotypes))
+{
+  var <- paste0(phenotypes[i], '.sp.b')
+  
+  if(!(var %in% colnames(hybridsCommon.pl))){next}
+  
+  gca_vp <- bind_rows(gca_vp, partitionVariance3(hybridsCommon.pl, var, phenotypeLabelsVP[i], '~ (1|earParent) + (1|pollenParent)'))
+}
+
+gca_vp <- gca_vp %>%
+  rowwise() %>%
+  mutate(grp = case_when(grp=='earParent' ~ 'Ear Parent GCA',
+                         grp=='pollenParent' ~ 'Pollen Parent GCA',
+                         .default = grp) %>%
+           factor(levels = c('Ear Parent GCA', 'Pollen Parent GCA', 'Residual')))
+
+gcaImportance <- gca_vp %>%
+  filter(grp %in% c('Ear Parent GCA', 'Pollen Parent GCA')) %>%
+  group_by(responseVar) %>%
+  summarise(proportionGCA = sum(pctVar, na.rm = FALSE))
+
+gcaImportanceOrder <- gca_vp %>%
+  full_join(gcaImportance, join_by(responseVar), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
+  filter(grp=='Pollen Parent GCA') %>%
+  arrange(desc(proportionGCA), desc(pctVar))
+gcaImportanceOrder <-unique(gcaImportanceOrder$label)
+
+gca_vp <- mutate(gca_vp, label = factor(label, levels = gcaImportanceOrder))
+
+gca_vp.plot <- ggplot(gca_vp, aes(label, pctVar, fill = grp)) +
+  geom_col(position = 'stack') + 
+  scale_fill_viridis(discrete = TRUE, labels = label_wrap(20)) +
+  scale_x_discrete(labels = label_wrap(8)) +
+  labs(x = 'Phenotype', y = 'Percent Variance of Linear Plasticity Explained', fill = '') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 10, color = 'black'),
+        axis.text.y = element_text(size = 10, color = 'black'),
+        legend.text = element_text(size = 10, color = 'black'),
+        text = element_text(size = 10, color = 'black'),
+        legend.position = 'right',
+        line = element_line(color = 'black', linewidth = 1),
+        panel.grid = element_blank())
+gca_vp.plot
+
+
 
 rfFeatures <- read.csv('analysis/featureImportances.csv')[,2:6]
 colnames(rfFeatures) <- c('plantDensity', 'kernelRowNumber', 'kernelsPerRow', 'hundredKernelMass', 'environment')
@@ -1355,10 +1417,14 @@ fig1bottom <- plot_grid(vp.plot, yieldPredictionsPlot, featureImportance, nrow =
 fig1 <- plot_grid(fig1top, fig1bottom, ncol = 1)
 fig1
 
-fig2Left <- plot_grid(FWConceptualPlot, meanParentPlot, cxHeatmap, heatmap, nrow = 2, labels = c('A', 'B', 'C', 'D'))
-fig2Left
+fig2top <- plot_grid(FWConceptualPlot, meanParentPlot, cxHeatmap, heatmap, nrow = 1, labels = c('A', 'B', 'C', 'D'), rel_widths = c(0.31, 0.21, 0.31, 0.31))
+fig2top
+
+fig2 <- plot_grid(fig2top, gca_vp.plot, nrow = 2, labels = c('', 'E'), rel_heights = c(0.5, 0.5))
+fig2
+
 # Variance partitioning for yield from yield components
-vc_yield <- partitionVariance3(hybrids, 'yieldPerAcre.sp', 'Yield (bushels/acre)', '~ (1|plantDensity) + (1|kernelRowNumber) + (1|kernelsPerRow) + (1|hundredKernelMass)')
+# vc_yield <- partitionVariance3(hybrids, 'yieldPerAcre.sp', 'Yield (bushels/acre)', '~ (1|plantDensity) + (1|kernelRowNumber) + (1|kernelsPerRow) + (1|hundredKernelMass)')
 
 fig3topleft <- plot_grid(nPlasticityCorYield, nPlasticityCorKRN, nPlasticityCorHKM, nPlasticityCorLegend, labels = c('A', 'B', 'C', ''), nrow = 1, rel_widths = c(0.3, 0.3, 0.3, 0.1))
 fig3topleft
