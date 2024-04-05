@@ -84,7 +84,7 @@ mvPlot
 nitrogenLegend <- ggplot(nitrogenDF3, aes(col, fill = col)) +
   geom_bar() +
   scale_fill_manual(values = nitrogenColors) +
-  labs(fill = str_wrap('Nitrogen Fertilizer (lbs/acre)', 19)) +
+  labs(fill = str_wrap('Nitrogen Fertilizer (lbs/acre)', 9)) +
   theme_void() + 
   theme(legend.position = 'right', 
         legend.text = element_text(size = 10, color = 'black'),
@@ -97,7 +97,7 @@ irrigationLevels <- tibble(label = c('0.0', '100-200', '>200')) %>%
 irrigationLegend <- ggplot(irrigationLevels, aes(label, fill = label)) +
   geom_bar() + 
   scale_fill_manual(values = irrigationColors) + 
-  labs(fill = str_wrap('Irrigation Provided (mm)', 19)) + 
+  labs(fill = str_wrap('Irrigation Provided (mm)', 11)) + 
   theme_void() +
   theme(legend.position = 'right', 
         legend.text = element_text(color = 'black', size = 10),
@@ -112,7 +112,7 @@ map <- ggplot(data = gridmetPrecip) +
   geom_sf(aes(fill = accumPrecip), color = NA) +
   geom_sf(data = hipsLocations_sf, color = 'white') + 
   geom_sf_text(data = hipsLocations_sf, aes(label = city), position = position_nudge(x = 0.05, y = -0.15), 
-               size.unit = 'pt', size = 10, color = 'white') +
+               size.unit = 'pt', size = 9.25, color = 'white') +
   scale_fill_viridis_c(direction = -1) +
   guides(fill = guide_colourbar(barwidth = 10,
                                 barheight = 1)) +
@@ -132,6 +132,6 @@ map <- ggplot(data = gridmetPrecip) +
 map
 
 legends <- plot_grid(nitrogenLegend, irrigationLegend, ncol = 1)
-experimentalDesign <- plot_grid(map, legends, nrow = 1, rel_widths = c(1, 0.2))
+experimentalDesign <- plot_grid(map, legends, nrow = 1, rel_widths = c(1.127, 0.08))
 experimentalDesign
 
