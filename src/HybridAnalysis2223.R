@@ -1539,3 +1539,6 @@ fig3
 ggsave('../fig1HighRes.png', plot = fig1, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
 ggsave('../fig2HighRes.png', plot = fig2, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
 ggsave('../fig3HighRes.png', plot = fig3, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
+
+# Testing nlsr
+model <- nls(yieldPerAcre.sp ~ genotype + environment + genotype*environment, data = hybrids, na.action = na.omit, start = c(genotype=1, environment=1))

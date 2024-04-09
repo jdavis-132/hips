@@ -6,6 +6,9 @@ library(cowplot)
 library(MoMAColors)
 library(lme4)
 library(car)
+library(sf)
+library(AOI)
+library(climateR)
 source('src/Functions.R')
 
 iaFieldDataHyb <- read_excel('data/2023/2023_yield_ICIA_v3.xlsx', 
@@ -1066,4 +1069,10 @@ hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
 write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
 
 
-
+# 2023 HIPS weather
+sites <- tibble(location = c('North Platte', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville'),
+                lon = c(41.08808149, 40.8606363814325, 41.66986803903, 41.9857796124525, 41.19451639818),
+                lat = c(-100.775524839895, -96.5982886186525, -95.94593885585, -93.6916168881725, -91.479082779405))
+sites_sf <- st_as_sf(sites, coords = c('lon', 'lat'), remove = FALSE, crs = 4326, agr = 'constant')
+aoi <- aoi_get(sites_sf, union = TRUE)
+gridmetTmin <- getGridMET(AOI = sites_sf, varname = 'tmmn', startDate = '2023-01-01', endDate = '2023-11-30', ID = 'location', verbose = TRUE)
