@@ -3,7 +3,6 @@ library(AOI)
 library(climateR)
 library(zonal)
 library(sf)
-library(googleway)
 library(patchwork)
 library(MoMAColors)
 library(viridis)
@@ -12,20 +11,18 @@ library(grid)
 library(gridExtra)
 library(cowplot)
 
-API_KEY <- 'AIzaSyBx0dJsUYphK3y144m_ldAOhc7loeHZUOo'
-
 aoi <- aoi_get(state = c('NE', 'IA'), county = 'all')
 gridmetPrecip <- getGridMET(AOI = aoi, varname = 'pr', startDate = '2021-11-01', endDate = '2023-10-31') %>%
   execute_zonal(geom = aoi, ID = 'fip_code') %>%
   rowwise() %>%
   mutate(accumPrecip = sum(across(starts_with('mean.pr')), na.rm = TRUE))
 
-hipsLocations <- data.frame(state = rep(c('Nebraska', 'Iowa'), each = 3), 
-                            city = c('Scottsbluff', 'North Platte', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville'))
-coords <- apply(hipsLocations, 1, function(x){google_geocode(address = paste(x['city'], x['state'], sep = ', '), key = API_KEY)})
-hipsLocations <- cbind(hipsLocations, do.call(rbind, lapply(coords, geocode_coordinates)))
+hipsLocations <- tibble(location = c('Scottsbluff', 'North Platte', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville'),
+                lat = c(41.85, 41.08808149, 40.8606363814325, 41.66986803903, 41.9857796124525, 41.19451639818),
+                lon = c(-103.70, -100.775524839895, -96.5982886186525, -95.94593885585, -93.6916168881725, -91.479082779405))
 
-hipsLocations_sf <- st_as_sf(hipsLocations, coords = c('lng', 'lat'), remove = FALSE, crs = 4326, agr = 'constant') %>%
+
+hipsLocations_sf <- st_as_sf(hipsLocations, coords = c('lon', 'lat'), remove = FALSE, crs = 4326, agr = 'constant') %>%
   rowwise() %>%
   mutate(city = case_when(city=='Scottsbluff' ~ 'Scottsbluff*', 
                           city=='North Platte' ~ 'North Platte*',

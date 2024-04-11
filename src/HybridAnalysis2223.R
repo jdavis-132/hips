@@ -16,14 +16,14 @@ library(png)
 library(spFW)
 source('src/Functions.R')
 
-# hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv') %>%
-#   filter(location!='') %>%
-#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
-#   rowwise() %>%
-#   # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment,
-#   # let's have an option to keep 2022 NP as one location
-#   mutate(semanticLocation = case_when(location %in% c('North Platte1', 'North Platte2', 'North Platte3') ~ 'North Platte', .default = location),
-#          environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'))
+hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv') %>%
+  filter(location!='') %>%
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
+  rowwise() %>%
+  # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment,
+  # let's have an option to keep 2022 NP as one location
+  mutate(semanticLocation = case_when(location %in% c('North Platte1', 'North Platte2', 'North Platte3') ~ 'North Platte', .default = location),
+         environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'))
 
 # Now we need to spatially correct within an environment
 phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 

@@ -3,13 +3,15 @@ library(readxl)
 library(lubridate)
 source('src/Functions.R')
 
-df <- read.csv('../../../Downloads/2023_inbred_HIPS_data_04_08_2024.csv') %>% 
+df <- read.csv('../../../../../../../Downloads/2023_inbred_HIPS_data_04_11_2024 - 2023_inbred_HIPS_data_04_11_2024.csv') %>% 
   mutate(earHeight = as.numeric(earHeight), 
-         flagLeafHeight = as.numeric(flagLeafHeight)) %>%
+         flagLeafHeight = as.numeric(flagLeafHeight), 
+         plantDensity = as.numeric(plantDensity)) %>%
   mutate(flagLeafHeight = case_when(flagLeafHeight > 500 ~ NA, .default = flagLeafHeight), 
          earHeight = case_when(earHeight > 300 ~ NA, .default = earHeight))
 
-phenotypes <- c('earHeight', 'flagLeafHeight', 'daysToAnthesis', 'daysToSilk')
+phenotypes <- c('earHeight', 'flagLeafHeight', 'daysToAnthesis', 'daysToSilk', 'totalStandCount', 'anthesisSilkingInterval', 'GDDToAnthesis',
+                'GDDToSilk', 'anthesisSilkingIntervalGDD', 'plantDensity')
 
 plotRepCorr(df, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 
