@@ -13,6 +13,7 @@ library(jpeg)
 library(scales)
 library(grid)
 library(png)
+library(spFW)
 source('src/Functions.R')
 
 # hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv') %>%
@@ -1539,3 +1540,20 @@ fig3
 ggsave('../fig1HighRes.png', plot = fig1, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
 ggsave('../fig2HighRes.png', plot = fig2, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
 ggsave('../fig3HighRes.png', plot = fig3, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
+
+
+# Test spFW
+hybridsSummarized <- hybrids %>%
+  group_by(genotype, environment) %>%
+  summarise(yieldPerAcre.sp = mean(yieldPerAcre.sp, na.rm = TRUE))
+spFWModelSummarized <- HFWM_est(Y = hybridsSummarized$yieldPerAcre.sp, 
+                  VAR = hybridsSummarized$genotype,
+                  ENV = hybridsSummarized$environment,
+                  kin_info = FALSE,
+                  env_info = FALSE)
+
+spFWModelBalanced <- HFWM_est(Y= hybridsCommon$yieldPerAcre.sp,
+                              VAR = hybridsCommon$genotype,
+                              ENV = hybridsCommon$environment, 
+                              kin_info = FALSE,
+                              env_info = FALSE)
