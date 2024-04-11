@@ -1557,3 +1557,6 @@ spFWModelBalanced <- HFWM_est(Y= hybridsCommon$yieldPerAcre.sp,
                               ENV = hybridsCommon$environment, 
                               kin_info = FALSE,
                               env_info = FALSE)
+
+# Testing nlsr
+model <- nls(yieldPerAcre.sp ~ genotype + environment + genotype*environment, data = hybrids, na.action = na.omit, start = c(genotype=1, environment=1))

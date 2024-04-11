@@ -6,6 +6,8 @@ library(cowplot)
 library(MoMAColors)
 library(lme4)
 library(car)
+library(nasapower)
+library(weathermetrics)
 source('src/Functions.R')
 
 iaFieldDataHyb <- read_excel('data/2023/2023_yield_ICIA_v3.xlsx', 
@@ -1066,4 +1068,72 @@ hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
 write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
 
 
+# 2023 HIPS weather
+sites <- tibble(location = c('North Platte', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville'),
+                lat = c(41.08808149, 40.8606363814325, 41.66986803903, 41.9857796124525, 41.19451639818),
+                lon = c(-100.775524839895, -96.5982886186525, -95.94593885585, -93.6916168881725, -91.479082779405))
+weather.pwr <- tibble(location = NULL)
+for (i in 1:length(sites$location))
+{
+  siteWeather23 <- get_power(community = 'ag',
+                         pars = c('T2M_MAX', 'T2M_MIN'),
+                         temporal_api = 'daily', 
+                         lonlat = c(sites$lon[i], sites$lat[i]), 
+                         dates = c('2023-01-01', '2023-12-31')) %>%
+    mutate(location = sites$location[i]) %>%
+    rowwise() %>%
+    mutate(tmin = celsius.to.fahrenheit(T2M_MIN), 
+           tmax = celsius.to.fahrenheit(T2M_MAX)) %>%
+    select(location, LAT, LON, YYYYMMDD, tmin, tmax) %>%
+    mutate(GDD = getGDDs(tmin, tmax)) %>%
+    rename(date = YYYYMMDD,
+           lat = LAT,
+           lon = LON)
+  weather.pwr <- bind_rows(weather.pwr, siteWeather23)
+}
 
+npFieldWeather <- read_excel('data/2023/2023 Weather Stations/HIPS_North_Platte_2023.xlsx', skip = 2, col_names = FALSE)[, c(1, 8)]
+colnames(npFieldWeather) <- c('datetime', 'temp')
+npFieldWeather <- mutate(npFieldWeather, location='North Platte')
+
+lnkFieldWeather <- read_excel('data/2023/2023 Weather Stations/HIPS_Lincoln_true_2023.xlsx', skip = 2, col_names = FALSE)[, c(1, 8)]
+colnames(lnkFieldWeather) <- c('datetime', 'temp')
+lnkFieldWeather <- mutate(lnkFieldWeather, location='Lincoln')
+
+mvFieldWeather <- read_excel('data/2023/2023 Weather Stations/2023_HIPS_MO_Valley.xlsx', skip = 3, col_names = FALSE)[, c(1, 8)]
+colnames(mvFieldWeather) <- c('datetime', 'temp')
+mvFieldWeather <- mutate(mvFieldWeather, location='Missouri Valley')
+
+amesFieldWeather <- read_excel('data/2023/2023 Weather Stations/HIPS_Ames_2023.xlsx', skip = 2, col_names = FALSE)[, c(1, 8)]
+colnames(amesFieldWeather) <- c('datetime', 'temp')
+amesFieldWeather <- mutate(amesFieldWeather, location='Ames')
+
+cfFieldWeather <- read_excel('data/2023/2023 Weather Stations/HIPS_Crawordsville_2023.xlsx', skip = 2, col_names = FALSE)[, c(1, 8)]
+colnames(cfFieldWeather) <- c('datetime', 'temp')
+cfFieldWeather <- mutate(cfFieldWeather, location='Crawfordsville')
+
+fieldWeather <- bind_rows(npFieldWeather, lnkFieldWeather, mvFieldWeather, amesFieldWeather, cfFieldWeather) %>%
+  rowwise() %>%
+  mutate(date = date(datetime)) %>%
+  filter(!is.na(date)) %>%
+  ungroup() %>%
+  group_by(location, date) %>%
+  summarise(tmax = max(temp, na.rm = TRUE),
+            tmin = min(temp, na.rm = TRUE)) %>%
+  rowwise() %>%
+  mutate(GDD = getGDDs(tmin, tmax))
+
+npDays <- filter(fieldWeather, location=='North Platte')$date
+lnkDays <- filter(fieldWeather, location=='Lincoln')$date
+mvDays <- filter(fieldWeather, location=='Missouri Valley')$date
+amesDays <- filter(fieldWeather, location=='Ames')$date
+cfDays <- filter(fieldWeather, location=='Crawfordsville')$date
+
+pwr.impute <- filter(weather.pwr, !((location=='North Platte' & date %in% npDays) |
+                                      (location=='Lincoln' & date %in% lnkDays) | 
+                                      (location=='Missouri Valley' & date %in% mvDays) |
+                                      (location=='Ames' & date %in% amesDays) |
+                                      (location=='Crawfordsville' & date %in% cfDays)))
+
+weather23Imputed <- bind_rows(fieldWeather, pwr.impute)
+write.csv(weather23Imputed, 'outData/2023ImputedWeatherData.csv')
