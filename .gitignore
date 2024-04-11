@@ -4,3 +4,4 @@
 .Ruserdata
 src/.ipynb_checkpoints/reqMeasurements-checkpoint.ipynb
 analysis/significantCrossovers.csv
+src/__pycache__/Base.cpython-311.pyc
