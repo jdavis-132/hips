@@ -16,14 +16,14 @@ library(png)
 library(spFW)
 source('src/Functions.R')
 
-hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv') %>%
-  filter(location!='') %>%
-  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
-  rowwise() %>%
-  # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment,
-  # let's have an option to keep 2022 NP as one location
-  mutate(semanticLocation = case_when(location %in% c('North Platte1', 'North Platte2', 'North Platte3') ~ 'North Platte', .default = location),
-         environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'))
+# hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv') %>%
+#   filter(location!='') %>%
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
+#   rowwise() %>%
+#   # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment,
+#   # let's have an option to keep 2022 NP as one location
+#   mutate(semanticLocation = case_when(location %in% c('North Platte1', 'North Platte2', 'North Platte3') ~ 'North Platte', .default = location),
+#          environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'))
 
 # Now we need to spatially correct within an environment
 phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
@@ -166,12 +166,12 @@ ehvp <- vc_all %>%
 ehvp
 ggsave('analysis/variancePartitioning_20240224.png', width = 7.1, height = (7.1/12.57)*8.92, dpi=1000)
 # Estimate FW plasticity across all environments where phenotype was observed
-hybrids.pl <- estimatePlasticity2(hybrids, trait = paste0(yieldComponents[1], '.sp'), environment = 'environment', genotype = 'genotype')
+hybrids.pl <- estimatePlasticity3(hybrids, trait = paste0(yieldComponents[1], '.sp'), environment = 'environment', genotype = 'genotype')
 
 for(i in 2:length(yieldComponents))
 {
   hybrids.pl <- full_join(hybrids.pl, 
-                          estimatePlasticity2(hybrids, trait = paste0(yieldComponents[i], '.sp'), environment = 'environment', genotype = 'genotype'),
+                          estimatePlasticity3(hybrids, trait = paste0(yieldComponents[i], '.sp'), environment = 'environment', genotype = 'genotype'),
                           join_by(genotype),
                           suffix = c('', ''), 
                           keep = FALSE)
@@ -302,12 +302,12 @@ orderedViolins
 # Okay, let's run the plasticity without LNK 2022
 # Estimate FW plasticity across all environments where phenotype was observed
 hybridsNOLNK22 <- filter(hybrids, !(location=='Lincoln' & year=='2022'))
-hybridsNOLNK22.pl <- estimatePlasticity2(hybridsNOLNK22, trait = paste0(yieldComponents[1], '.sp'), environment = 'environment', genotype = 'genotype')
+hybridsNOLNK22.pl <- estimatePlasticity3(hybridsNOLNK22, trait = paste0(yieldComponents[1], '.sp'), environment = 'environment', genotype = 'genotype')
 
 for(i in 2:length(yieldComponents))
 {
   hybridsNOLNK22.pl <- full_join(hybridsNOLNK22.pl, 
-                          estimatePlasticity2(hybridsNOLNK22, trait = paste0(yieldComponents[i], '.sp'), environment = 'environment', genotype = 'genotype'),
+                          estimatePlasticity3(hybridsNOLNK22, trait = paste0(yieldComponents[i], '.sp'), environment = 'environment', genotype = 'genotype'),
                           join_by(genotype),
                           suffix = c('', ''), 
                           keep = FALSE)
@@ -582,12 +582,12 @@ hybridsCommon <- filter(hybrids, genotype %in% hybridsCommon)
 
 # Estimate plasticity and plot vs mean performance
 # Estimate FW plasticity across all environments where phenotype was observed
-hybridsCommon.pl <- estimatePlasticity2(hybridsCommon, trait = paste0(phenotypes[1], '.sp'), environment = 'environment', genotype = 'genotype')
+hybridsCommon.pl <- estimatePlasticity3(hybridsCommon, trait = paste0(phenotypes[1], '.sp'), environment = 'environment', genotype = 'genotype')
 
 for(i in 2:length(phenotypes))
 {
   hybridsCommon.pl <- full_join(hybridsCommon.pl, 
-                          estimatePlasticity2(hybridsCommon, trait = paste0(phenotypes[i], '.sp'), environment = 'environment', genotype = 'genotype'),
+                          estimatePlasticity3(hybridsCommon, trait = paste0(phenotypes[i], '.sp'), environment = 'environment', genotype = 'genotype'),
                           join_by(genotype),
                           suffix = c('', ''), 
                           keep = FALSE)
@@ -1067,16 +1067,16 @@ for(i in 6)
   traitMu <- paste0(yieldComponents[i], '.sp.mu')
   traitBestEnv <- paste0(yieldComponents[i], '.sp.FWB')
   traitWorstEnv <- paste0(yieldComponents[i], '.sp.FWW')
-  numhybridsCommon <- length(hybridsCommon.pl$genotype)
+  numhybridsCommon <- length(hybridsNOLNK22.pl$genotype)
   trait <- paste0(yieldComponents[i], '.sp')
   
-  blups <- lmer(as.formula(paste0(trait, ' ~ environment + (1|genotype)')), data = hybridsCommon) 
+  blups <- lmer(as.formula(paste0(trait, ' ~ environment + (1|genotype)')), data = hybridsNOLNK22) 
   blups <- ranef(blups)
   blups <- as_tibble(blups$genotype, rownames = 'genotype') %>%
     rename(blup = `(Intercept)`) %>%
     mutate(rankOrder = dense_rank(blup))
   
-  sortedhybridsCommon <- hybridsCommon.pl %>%
+  sortedhybridsCommon <- hybridsNOLNK22.pl %>%
     full_join(blups, join_by(genotype), keep = FALSE, suffix = c('', '')) %>%
     arrange(blup)
   
@@ -1197,8 +1197,7 @@ for(i in 6)
     select(c(genotype1A, genotype2, all_of(phenotypeScoreNormalized))) %>%
     rename(genotype1 = genotype1A)
   
-  df <-bind_rows(df1, df2) %>%
-    filter((genotype1 %in% hybridsCommon$genotype) & (genotype2 %in% hybridsCommon$genotype))
+  df <-bind_rows(df1, df2)
   
   blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = hybridsCommon) 
   blups <- ranef(blups)
@@ -1235,22 +1234,22 @@ for(i in 6)
     
 }
 
-highPlasticityGenotype <- hybridsCommon.pl %>%
+highPlasticityGenotype <- hybridsNOLNK22.pl %>%
   arrange(yieldPerAcre.sp.b)
 highPlasticityGenotype <- highPlasticityGenotype$genotype[length(highPlasticityGenotype$genotype)]
 
-lowPlasticityGenotype <- hybridsCommon.pl %>%
+lowPlasticityGenotype <- hybridsNOLNK22.pl %>%
   arrange(yieldPerAcre.sp.b)
 lowPlasticityGenotype <- lowPlasticityGenotype$genotype[1]
 
 averagePlasticityGenotype <- 'F42 X MO17'
 
-LAHPlasticities <- filter(hybridsCommon.pl, genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>% 
+LAHPlasticities <- filter(hybridsNOLNK22.pl, genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>% 
   select(genotype, yieldPerAcre.sp.b, yieldPerAcre.sp.FWW)
 
 meanYield <- mean(hybridsCommon$yieldPerAcre.sp, na.rm = TRUE)
 
-LAHData <- hybridsCommon %>%
+LAHData <- hybridsNOLNK22 %>%
   group_by(environment) %>%
   mutate(envIndex = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
   filter(genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>%
@@ -1285,9 +1284,9 @@ for(i in 1:length(phenotypes))
 {
   var <- paste0(phenotypes[i], '.sp.b')
   
-  if(!(var %in% colnames(hybridsCommon.pl))){next}
+  if(!(var %in% colnames(hybridsNOLNK22.pl))){next}
   
-  gca_vp <- bind_rows(gca_vp, partitionVariance3(hybridsCommon.pl, var, phenotypeLabelsGCAVP[i], '~ (1|earParent) + (1|pollenParent)'))
+  gca_vp <- bind_rows(gca_vp, partitionVariance3(hybridsNOLNK22.pl, var, phenotypeLabelsGCAVP[i], '~ (1|earParent) + (1|pollenParent)'))
 }
 
 gca_vp <- gca_vp %>%
@@ -1542,21 +1541,21 @@ ggsave('../fig2HighRes.png', plot = fig2, width = 21, height = 11.8, units = 'in
 ggsave('../fig3HighRes.png', plot = fig3, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
 
 
-# Test spFW
-hybridsSummarized <- hybrids %>%
-  group_by(genotype, environment) %>%
-  summarise(yieldPerAcre.sp = mean(yieldPerAcre.sp, na.rm = TRUE))
-spFWModelSummarized <- HFWM_est(Y = hybridsSummarized$yieldPerAcre.sp, 
-                  VAR = hybridsSummarized$genotype,
-                  ENV = hybridsSummarized$environment,
-                  kin_info = FALSE,
-                  env_info = FALSE)
-
-spFWModelBalanced <- HFWM_est(Y= hybridsCommon$yieldPerAcre.sp,
-                              VAR = hybridsCommon$genotype,
-                              ENV = hybridsCommon$environment, 
-                              kin_info = FALSE,
-                              env_info = FALSE)
-
-# Testing nlsr
-model <- nls(yieldPerAcre.sp ~ genotype + environment + genotype*environment, data = hybrids, na.action = na.omit, start = c(genotype=1, environment=1))
+# # Test spFW
+# hybridsSummarized <- hybrids %>%
+#   group_by(genotype, environment) %>%
+#   summarise(yieldPerAcre.sp = mean(yieldPerAcre.sp, na.rm = TRUE))
+# spFWModelSummarized <- HFWM_est(Y = hybridsSummarized$yieldPerAcre.sp, 
+#                   VAR = hybridsSummarized$genotype,
+#                   ENV = hybridsSummarized$environment,
+#                   kin_info = FALSE,
+#                   env_info = FALSE)
+# 
+# spFWModelBalanced <- HFWM_est(Y= hybridsCommon$yieldPerAcre.sp,
+#                               VAR = hybridsCommon$genotype,
+#                               ENV = hybridsCommon$environment, 
+#                               kin_info = FALSE,
+#                               env_info = FALSE)
+# 
+# # Testing nlsr
+# model <- nls(yieldPerAcre.sp ~ genotype + environment + genotype*environment, data = hybrids, na.action = na.omit, start = c(genotype=1, environment=1))

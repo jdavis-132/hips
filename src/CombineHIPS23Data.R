@@ -1137,3 +1137,5 @@ pwr.impute <- filter(weather.pwr, !((location=='North Platte' & date %in% npDays
 
 weather23Imputed <- bind_rows(fieldWeather, pwr.impute)
 write.csv(weather23Imputed, 'outData/2023ImputedWeatherData.csv', quote = FALSE, row.names = FALSE)
+
+

@@ -1,5 +1,6 @@
 library(tidyverse)
 library(SpATS)
+library(spFW)
 library(viridis)
 
 # Returns a data frame filtered to rows of data that have values for trait 
@@ -336,6 +337,40 @@ estimatePlasticity2 <- function(data, trait, environment, genotype)
   return(df)
 }
 
+estimatePlasticity3 <- function(data, trait, environment, genotype)
+{
+  df.compute <- data %>%
+    filter(!is.na(.data[[trait]]))
+  if(length(df.compute[[trait]]) < 1)
+  {
+    print(paste0('No data for ', trait, ' in this data.'))
+    return()
+  }
+  y <- df.compute[[trait]]
+  geno <- df.compute[[genotype]]
+  env <- df.compute[[environment]]
+  
+  model <- HFWM_est(Y = y,
+                    VAR = geno,
+                    ENV = env)
+  b <- as_tibble(model$b, rownames = 'genotype') %>%
+    rowwise() %>%
+    mutate(b = value + 1) %>%
+    select(!value)
+  g <- as_tibble(model$g, rownames = 'genotype') %>%
+    rename(g = value)
+  
+  mu <- model$mu
+  
+  df <- full_join(b, g, join_by(genotype), keep = FALSE, suffix = c('', '')) %>%
+    rowwise() %>%
+    mutate('{trait}.mu' := mu + g,
+           '{trait}.FWB' := mu + g + b*max(model$h), 
+           '{trait}.FWW' := mu + g + b*min(model$h)) %>%
+    rename('{trait}.b' := b)
+  return(df)
+}
+
 getNitrogenPlasticityByLocationYear <- function(data, trait, nitrogenTreatment, genotype)
 {
   dfCompute <- data %>%
@@ -354,7 +389,7 @@ getNitrogenPlasticityByLocationYear <- function(data, trait, nitrogenTreatment, 
       next
     }
     
-    pl <- estimatePlasticity2(dfLocationYear, trait, nitrogenTreatment, genotype) %>%
+    pl <- estimatePlasticity3(dfLocationYear, trait, nitrogenTreatment, genotype) %>%
       mutate(locationYear = currLocationYear)
     dfOut <- bind_rows(dfOut, pl)
   }
@@ -384,10 +419,10 @@ getNitrogenPlasticityByLocationYearBlock <- function(data, trait, nitrogenTreatm
     df1 <- filter(dfLocationYear, block %in% blocks1)
     df2 <- filter(dfLocationYear, block %in% blocks2)
     
-    pl1 <- estimatePlasticity2(df1, trait, nitrogenTreatment, genotype) %>%
+    pl1 <- estimatePlasticity3(df1, trait, nitrogenTreatment, genotype) %>%
       mutate(locationYear = currLocationYear,
              blockSet = 1)
-    pl2 <- estimatePlasticity2(df2, trait, nitrogenTreatment, genotype) %>%
+    pl2 <- estimatePlasticity3(df2, trait, nitrogenTreatment, genotype) %>%
       mutate(locationYear = currLocationYear,
              blockSet = 2)
     
