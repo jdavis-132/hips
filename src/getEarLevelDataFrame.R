@@ -6,7 +6,7 @@ ac.krn <- read_excel('data/2_KRN_trait_inbred_2022_Compiled_v3.xlsx',
                      sheet = 'compiled data',
                      skip = 4,
                      col_types = c('skip', 'text', 'skip', 'skip', 'numeric', 'text', 'text', 'text', 'text'),
-                     col_names = c('sampleID', 'kernelRowNumber', 'notes', 'smoothCob', 'sweetcorn', 'kernelRowNumberFile')) %>%
+                     col_names = c('samID', 'kernelRowNumber', 'notes', 'smoothCob', 'sweetcorn', 'kernelRowNumberFile')) %>%
   rowwise() %>%
   mutate(smoothCob = case_when(!is.na(smoothCob) ~ 'Smooth cob/ovule issue'),
          sweetcorn = case_when(!is.na(sweetcorn) ~ 'Sweetcorn')) %>%
