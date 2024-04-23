@@ -344,7 +344,7 @@ estimatePlasticity3 <- function(data, trait, environment, genotype)
   if(length(df.compute[[trait]]) < 1)
   {
     print(paste0('No data for ', trait, ' in this data.'))
-    return()
+    return(tibble('{genotype}' = NA, '{trait}.mu':= NA, '{trait}.FWB' := NA, '{trait}.FWW' := NA, '{trait}.b' := NA))
   }
   y <- df.compute[[trait]]
   geno <- df.compute[[genotype]]
@@ -367,7 +367,8 @@ estimatePlasticity3 <- function(data, trait, environment, genotype)
     mutate('{trait}.mu' := mu + g,
            '{trait}.FWB' := mu + g + b*max(model$h), 
            '{trait}.FWW' := mu + g + b*min(model$h)) %>%
-    rename('{trait}.b' := b)
+    rename('{trait}.b' := b) %>%
+    select(!g)
   return(df)
 }
 
@@ -382,16 +383,17 @@ getNitrogenPlasticityByLocationYear <- function(data, trait, nitrogenTreatment, 
   dfOut <- tibble(genotype = NULL, locationYear = NULL, '{trait}.b' := NULL, '{trait}.FWB' := NULL, '{trait}.FWW' := NULL, '{trait}.mu' := NULL)
   for(currLocationYear in locationYears)
   {
-    dfLocationYear <- filter(dfCompute, locationYear==currLocationYear)
+    dfLocationYear <- filter(dfCompute, locationYear==currLocationYear & !is.na(.data[[trait]]))
     
     if(length(unique(dfLocationYear[[nitrogenTreatment]])) < 2)
     {
       next
     }
     
-    pl <- estimatePlasticity3(dfLocationYear, trait, nitrogenTreatment, genotype) %>%
+    pl <- estimatePlasticity3(dfLocationYear, trait, nitrogenTreatment, genotype) %>% 
       mutate(locationYear = currLocationYear)
-    dfOut <- bind_rows(dfOut, pl)
+    dfOut <- bind_rows(dfOut, pl) %>%
+      filter(!is.na(.data[[genotype]]))
   }
   return(dfOut)
 }

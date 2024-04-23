@@ -647,7 +647,7 @@ sbHeight <- read_excel('data/Corn_data_Scottsbluff-2022_rk_11.11.2022.xlsx',
            round(digits = 2))
 sbInbreds <- full_join(sbInbreds, sbHeight, join_by(location, plotNumber), suffix = c('', ''), keep = FALSE)
 
-inbreds <- read.csv('outData/HIPS_2022_V4.8_INBREDS.csv')
+inbreds <- read.csv('outData/HIPS_2022_V4.9_INBREDS.csv')
 inbredsWithSB <- full_join(inbreds, sbInbreds, join_by(location, plotNumber), suffix = c('', '.sb'), keep = FALSE)
 inbredsWithSB <- inbredsWithSB %>%
   rowwise() %>%

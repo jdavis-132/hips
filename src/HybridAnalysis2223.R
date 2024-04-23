@@ -1067,18 +1067,19 @@ for(i in 6)
   traitMu <- paste0(yieldComponents[i], '.sp.mu')
   traitBestEnv <- paste0(yieldComponents[i], '.sp.FWB')
   traitWorstEnv <- paste0(yieldComponents[i], '.sp.FWW')
-  numhybridsCommon <- length(hybridsNOLNK22.pl$genotype)
   trait <- paste0(yieldComponents[i], '.sp')
   
   blups <- lmer(as.formula(paste0(trait, ' ~ environment + (1|genotype)')), data = hybridsNOLNK22) 
   blups <- ranef(blups)
   blups <- as_tibble(blups$genotype, rownames = 'genotype') %>%
     rename(blup = `(Intercept)`) %>%
-    mutate(rankOrder = dense_rank(blup))
+    mutate(rankOrder = row_number(blup))
   
   sortedhybridsCommon <- hybridsNOLNK22.pl %>%
     full_join(blups, join_by(genotype), keep = FALSE, suffix = c('', '')) %>%
-    arrange(blup)
+    arrange(blup) %>%
+    filter(!is.na(.data[[traitBestEnv]]))
+  numhybridsCommon <- length(sortedhybridsCommon$genotype)
   
   cxMatrix <- matrix(0, numhybridsCommon, numhybridsCommon)
   
@@ -1199,7 +1200,7 @@ for(i in 6)
   
   df <-bind_rows(df1, df2)
   
-  blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = hybridsCommon) 
+  blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = hybrids) 
   blups <- ranef(blups)
   blups <- as_tibble(blups$genotype, rownames = 'genotype') %>%
     rename(blup = `(Intercept)`) %>%
