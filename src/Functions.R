@@ -1,6 +1,6 @@
 library(tidyverse)
 library(SpATS)
-library(spFW)
+# library(spFW)
 library(viridis)
 
 # Returns a data frame filtered to rows of data that have values for trait 

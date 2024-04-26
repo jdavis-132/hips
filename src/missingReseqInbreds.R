@@ -5,7 +5,7 @@ genotypesData <- str_to_upper(df$genotype) %>%
   unique()
 phenotypeGenotype <- tibble(phenotypeGenotype = genotypesData) %>%
   rowwise() %>%
-  mutate(str_replace(phenotypeGenotype, 'KUI', 'KI'))
+  mutate(phenotypeGenotype = case_when(phenotypeGenotype=='NC234' ~ 'NC324', .default = phenotypeGenotype))
 reseqGenotypes <- read.table('../../../Downloads/genotypes_grzybowski.txt', row.names = NULL, quote = '', comment.char = '', header = TRUE)
 reseqGenotypes <- colnames(reseqGenotypes) %>% 
   str_remove('X')
@@ -78,4 +78,4 @@ samToReseq <- sam %>%
   filter(!(SAM2022 %in% c("MDF-13D", "PB80", "W22 R1-R", "WHITE VARIEGATED", 
                           "[WHITE VARIEGATED (ISO. FROM BM4 AC3252) (B73-1)]", "B73HTRHM", "PIONEER P1185AM"))) %>%
   arrange(SAM2022)
-write.csv(samToReseq, 'outData/conversionToGrzybowskiResequencing.csv', row.names = FALSE)
+write.csv(samToReseq, 'outData/conversionToGrzybowskiResequencing.csv', row.names = FALSE, quote = FALSE)
