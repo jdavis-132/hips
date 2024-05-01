@@ -1026,7 +1026,7 @@ hybridHIPS23 <- mutate(hybridHIPS23, year = '2023') %>%
          silkDate = as.character(silkDate), 
          harvestDate = as.character(harvestDate) %>%
            str_split_i(' ', 1))
-hybrids22 <- read.csv('outData/HIPS_2022_V3.6_HYBRIDS.csv') %>%
+hybrids22 <- read.csv('outData/HIPS_2022_V3.7_HYBRIDS.csv') %>%
   mutate(year = '2022') %>%
   rowwise() %>%
   mutate(pedigreeID = list(case_when(genotype %in% pedigreeIDKey$genotype ~ pedigreeIDKey$pedigreeID[pedigreeIDKey$genotype==genotype])) %>%
@@ -1037,37 +1037,6 @@ hybrids22 <- read.csv('outData/HIPS_2022_V3.6_HYBRIDS.csv') %>%
   mutate(harvestDate = case_when(str_detect(harvestDate, fixed('/')) ~ mdy(harvestDate), .default = ymd(harvestDate)) %>%
            as.character())
 
-hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
-  rowwise() %>%
-  mutate(percentLodging = round(percentLodging, 2),
-         earHeight = round(earHeight, 0),
-         flagLeafHeight = round(flagLeafHeight, 0),
-         plantDensity = round(plantDensity, 0), 
-         combineYield = round(combineYield, 2),
-         yieldPerAcre = round(yieldPerAcre, 2),
-         combineMoisture = round(combineMoisture, 1),
-         combineTestWeight = round(combineTestWeight, 1),
-         earLength = round(earLength, 3),
-         earFillLength = round(earFillLength, 3),
-         earWidth = round(earWidth, 3),
-         shelledCobWidth = round(shelledCobWidth, 3), 
-         kernelsPerRow = round(kernelsPerRow, 1), 
-         kernelRowNumber = round(kernelRowNumber, 1),
-         kernelsPerEar = round(kernelsPerEar, 0),
-         hundredKernelMass = round(hundredKernelMass, 3),
-         kernelMassPerEar = round(kernelMassPerEar, 1),
-         shelledCobMass = round(shelledCobMass, 3)) %>%
-  arrange(year, location, sublocation, block, plotNumber) %>%
-  relocate(qrCode, year, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range, plotNumber, 
-           genotype, pedigreeID, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, 
-           GDDToAnthesis, GDDToSilk, anthesisSilkingIntervalGDD, earHeight, flagLeafHeight, plantDensity, combineYield, yieldPerAcre, combineMoisture, combineTestWeight, 
-           earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber, kernelsPerEar, hundredKernelMass, kernelMassPerEar, shelledCobMass, 
-           percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes) %>%
-  select(!c(ERNumber, irrigationTreatment, plantHeight))
-
-write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
-
-
 # 2023 HIPS weather
 sites <- tibble(location = c('North Platte', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville'),
                 lat = c(41.08808149, 40.8606363814325, 41.66986803903, 41.9857796124525, 41.19451639818),
@@ -1076,10 +1045,10 @@ weather.pwr <- tibble(location = NULL)
 for (i in 1:length(sites$location))
 {
   siteWeather23 <- get_power(community = 'ag',
-                         pars = c('T2M_MAX', 'T2M_MIN'),
-                         temporal_api = 'daily', 
-                         lonlat = c(sites$lon[i], sites$lat[i]), 
-                         dates = c('2023-01-01', '2023-12-31')) %>%
+                             pars = c('T2M_MAX', 'T2M_MIN'),
+                             temporal_api = 'daily', 
+                             lonlat = c(sites$lon[i], sites$lat[i]), 
+                             dates = c('2023-01-01', '2023-12-31')) %>%
     mutate(location = sites$location[i]) %>%
     rowwise() %>%
     mutate(tmin = celsius.to.fahrenheit(T2M_MIN), 
@@ -1137,5 +1106,55 @@ pwr.impute <- filter(weather.pwr, !((location=='North Platte' & date %in% npDays
 
 weather23Imputed <- bind_rows(fieldWeather, pwr.impute)
 write.csv(weather23Imputed, 'outData/2023ImputedWeatherData.csv', quote = FALSE, row.names = FALSE)
+
+hybridHIPS23 <- hybridHIPS23 %>%
+  rowwise() %>%
+  mutate(plantingDate = case_when(location=='Lincoln' ~ '2023-05-16',
+                                  location=='North Platte' ~ '2023-05-10',
+                                  .default = plantingDate)) %>%
+  mutate(GDDToAnthesis = getCumulativeGDDs(plantingDate, anthesisDate, weather23Imputed, location),
+         GDDToSilk = getCumulativeGDDs(plantingDate, silkDate, weather23Imputed, location)) %>%
+  mutate(anthesisSilkingIntervalGDD = GDDToSilk - GDDToAnthesis) %>%
+  mutate(across(c(where(is.numeric), where(is.POSIXct)), ~case_when(.==-Inf ~ NA, .default = .))) %>%
+  # Remove outliers
+  mutate(anthesisSilkingIntervalGDD = case_when(anthesisSilkingIntervalGDD > 200|anthesisSilkingIntervalGDD < -50 ~ NA, 
+                                                .default = anthesisSilkingIntervalGDD),
+         GDDToSilk = case_when(GDDToSilk < 1100 ~ NA, .default = GDDToSilk),
+         GDDToAnthesis = case_when(GDDToAnthesis < 1100 ~ NA, .default = GDDToAnthesis))
+
+
+hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
+  rowwise() %>%
+  mutate(percentLodging = round(percentLodging, 2),
+         earHeight = round(earHeight, 0),
+         flagLeafHeight = round(flagLeafHeight, 0),
+         plantDensity = round(plantDensity, 0), 
+         combineYield = round(combineYield, 2),
+         yieldPerAcre = round(yieldPerAcre, 2),
+         combineMoisture = round(combineMoisture, 1),
+         combineTestWeight = round(combineTestWeight, 1),
+         earLength = round(earLength, 3),
+         earFillLength = round(earFillLength, 3),
+         earWidth = round(earWidth, 3),
+         shelledCobWidth = round(shelledCobWidth, 3), 
+         kernelsPerRow = round(kernelsPerRow, 1), 
+         kernelRowNumber = round(kernelRowNumber, 1),
+         kernelsPerEar = round(kernelsPerEar, 0),
+         hundredKernelMass = round(hundredKernelMass, 3),
+         kernelMassPerEar = round(kernelMassPerEar, 1),
+         shelledCobMass = round(shelledCobMass, 3)) %>%
+  arrange(year, location, sublocation, block, plotNumber) %>%
+  relocate(qrCode, year, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range, plotNumber, 
+           genotype, pedigreeID, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, 
+           GDDToAnthesis, GDDToSilk, anthesisSilkingIntervalGDD, earHeight, flagLeafHeight, plantDensity, combineYield, yieldPerAcre, combineMoisture, combineTestWeight, 
+           earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber, kernelsPerEar, hundredKernelMass, kernelMassPerEar, shelledCobMass, 
+           percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes) %>%
+  select(!c(ERNumber, irrigationTreatment, plantHeight))
+
+write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
+
+
+
+
 
 

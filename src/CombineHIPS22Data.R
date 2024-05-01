@@ -3453,7 +3453,7 @@ hips_v3.5 <- select(hips_v3.4, !c(latitude, longitude)) %>%
          yieldPerAcre = case_when(location=='Scottsbluff' & plotNumber %in% c(1094, 1095, 1265, 1435) ~ NA, .default = yieldPerAcre)) #
   
 # Export version 3.6 - FINAL version for hybrids
-write.table(hips_v3.5, 'outData/HIPS_2022_V3.6_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
+#write.table(hips_v3.5, 'outData/HIPS_2022_V3.6_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
 
 # # 2022 HIPS weather using NASA POWER
 sites <- tibble(location = c('Scottsbluff', 'North Platte1', 'North Platte2', 'North Platte3', 'Lincoln', 
@@ -3504,8 +3504,22 @@ write.csv(weather22Imputed, 'outData/2022ImputedWeatherData.csv', quote = FALSE,
 
 hips_v3.7 <- hips_v3.5 %>%
   rowwise() %>%
-  mutate(GDDToAnthesis = getCumulativeGDDs(plantingDate, anthesisDate, weather22Imputed, location),
+  mutate(GDDToAnthesis = case_when(!is.na(anthesisDate) ~ 
+                                     getCumulativeGDDs(plantingDate, anthesisDate, weather22Imputed, location)),
          GDDToSilk = getCumulativeGDDs(plantingDate, silkDate, weather22Imputed, location)) %>%
   mutate(anthesisSilkingIntervalGDD = GDDToSilk - GDDToAnthesis) %>%
   mutate(across(c(where(is.numeric), where(is.POSIXct)), ~case_when(.==-Inf ~ NA, .default = .))) %>%
   # Remove outliers
+  mutate(anthesisSilkingIntervalGDD = case_when(anthesisSilkingIntervalGDD > 500 ~ NA,
+                                                location=='North Platte1' & anthesisSilkingIntervalGDD > 250 ~ NA,
+                                                location=='Scottsbluff' & anthesisSilkingIntervalGDD > 375 ~ NA,
+                                                .default = anthesisSilkingIntervalGDD), 
+         GDDToSilk = case_when(GDDToSilk > 3500 ~ NA, .default = GDDToSilk),
+         GDDToAnthesis = case_when(location=='Lincoln' & GDDToAnthesis > 2250 ~ NA, 
+                                   location=='North Platte1' & GDDToAnthesis < 1750 ~ NA,
+                                   location=='North Platte3' & (GDDToAnthesis < 2250 | GDDToAnthesis > 3500) ~ NA,
+                                   location=='Scottsbluff' & GDDToAnthesis < 1500 ~ NA,
+                                   .default = GDDToAnthesis))
+# Export version 3.7 - FINAL version for hybrids
+write.table(hips_v3.7, 'outData/HIPS_2022_V3.7_HYBRIDS.csv', quote = FALSE, sep = ',', na = '', row.names = FALSE,
+            col.names = TRUE)

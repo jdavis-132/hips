@@ -44,7 +44,7 @@ mapResponse <- function(data, trait)
 # genotype is a string name of the genotype column
 # phenotypes is a string vector of the phenotypes to plot 
 # facet is a string name of the column to create plot facets by - I usually use location for this
-plotRepCorr <- function(data, treatmentVar, genotype, phenotypes, facet)
+plotRepCorr <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'genotype', phenotypes, facet = 'location')
 {
   df.wide <- data %>%
     group_by(.data[[genotype]], .data[[treatmentVar]], .data[[facet]]) %>%
@@ -577,7 +577,7 @@ getGDDs <- function(minTemp, maxTemp)
 }
 
 # Function to calculate GDDs between 2 dates
-getCumulativeGDDs <- function(start, end, weather, location)
+getCumulativeGDDs <- function(start, end, weather, loc)
 {
   if(is.na(start) | is.na(end))
   {
@@ -586,8 +586,8 @@ getCumulativeGDDs <- function(start, end, weather, location)
   start <- as.POSIXct(start, format = '%F')
   end <- as.POSIXct(end, format = '%F')
   # dates <- seq(min(start, end), max(start, end), 'days')
-  location <- as.character(location)
-  weather.df <- filter(weather, location==location)
+  loc <- as.character(loc)
+  weather.df <- filter(weather, location==loc)
   weather.df <- filter(weather.df, (start <= date) & (end >= date))
   cumulativeGDDs <- sum(weather.df$GDD)
   return(cumulativeGDDs)
