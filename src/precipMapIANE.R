@@ -17,16 +17,12 @@ gridmetPrecip <- getGridMET(AOI = aoi, varname = 'pr', startDate = '2021-11-01',
   rowwise() %>%
   mutate(accumPrecip = sum(across(starts_with('mean.pr')), na.rm = TRUE))
 
-hipsLocations <- tibble(location = c('Scottsbluff', 'North Platte', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville'),
+hipsLocations <- tibble(location = c('Scottsbluff*', 'North Platte*', 'Lincoln', 'Missouri Valley', 'Ames', 'Crawfordsville'),
                 lat = c(41.85, 41.08808149, 40.8606363814325, 41.66986803903, 41.9857796124525, 41.19451639818),
                 lon = c(-103.70, -100.775524839895, -96.5982886186525, -95.94593885585, -93.6916168881725, -91.479082779405))
 
 
-hipsLocations_sf <- st_as_sf(hipsLocations, coords = c('lon', 'lat'), remove = FALSE, crs = 4326, agr = 'constant') %>%
-  rowwise() %>%
-  mutate(city = case_when(city=='Scottsbluff' ~ 'Scottsbluff*', 
-                          city=='North Platte' ~ 'North Platte*',
-                          .default = city))
+hipsLocations_sf <- st_as_sf(hipsLocations, coords = c('lon', 'lat'), remove = FALSE, crs = 4326, agr = 'constant')
 
 nitrogenColors <- pal_brewer('seq', palette = 'YlOrRd')(3)
 # show_col(nitrogenColors)
@@ -83,9 +79,9 @@ nitrogenLegend <- ggplot(nitrogenDF3, aes(col, fill = col)) +
   scale_fill_manual(values = nitrogenColors) +
   labs(fill = str_wrap('Nitrogen Fertilizer (lbs/acre)', 9)) +
   theme_void() + 
-  theme(legend.position = 'right', 
-        legend.text = element_text(size = 10, color = 'black'),
-        text = element_text(color = 'black', size = 10))
+  theme(legend.position = 'bottom', 
+        legend.text = element_text(size = 11, color = 'black'),
+        text = element_text(color = 'black', size = 11))
 nitrogenLegend
 nitrogenLegend <- get_legend(nitrogenLegend)
 
@@ -96,9 +92,9 @@ irrigationLegend <- ggplot(irrigationLevels, aes(label, fill = label)) +
   scale_fill_manual(values = irrigationColors) + 
   labs(fill = str_wrap('Irrigation Provided (mm)', 11)) + 
   theme_void() +
-  theme(legend.position = 'right', 
-        legend.text = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10))
+  theme(legend.position = 'bottom', 
+        legend.text = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11))
 irrigationLegend
 irrigationLegend <- get_legend(irrigationLegend)
 # nitrogenLegend <- grid.draw(nitrogenLegend)
@@ -107,28 +103,28 @@ irrigationLegend <- get_legend(irrigationLegend)
 
 map <- ggplot(data = gridmetPrecip) +
   geom_sf(aes(fill = accumPrecip), color = NA) +
-  geom_sf(data = hipsLocations_sf, color = 'white') + 
-  geom_sf_text(data = hipsLocations_sf, aes(label = city), position = position_nudge(x = 0.05, y = -0.15), 
-               size.unit = 'pt', size = 9.25, color = 'white') +
+  geom_sf(data = hipsLocations_sf, color = 'white', size = 0.5) + 
+  geom_sf_text(data = hipsLocations_sf, aes(label = location), position = position_nudge(x = 0.05, y = -0.15), 
+               size = 4, color = 'white') +
   scale_fill_viridis_c(direction = -1) +
-  guides(fill = guide_colourbar(barwidth = 10,
+  guides(fill = guide_colourbar(barwidth = 12,
                                 barheight = 1)) +
   labs(fill = str_wrap("Total Precipitation (mm), November 2021 - October 2023", 28)) +
   theme_void() +
   theme(legend.position = 'top',
-        legend.text = element_text(size = 10, color = 'black'),
-        text = element_text(color = 'black', size = 10)) +
-  inset_element(sbPlot, left = 0.055, bottom = 0.55, right = 0.08, top = 0.65) + 
-  inset_element(np1Plot, left = 0.215, bottom = 0.37, right = 0.24, top = 0.47) +
-  inset_element(np2Plot, left = 0.245, bottom = 0.37, right = 0.27, top = 0.47) +
-  inset_element(np3LNKACPlot, left = 0.275, bottom = 0.37, right = 0.3, top = 0.47) +
-  inset_element(np3LNKACPlot, left = 0.51, bottom = 0.28, right = 0.535, top = 0.38) + 
-  inset_element(mvPlot, left = 0.565, bottom = 0.47, right = 0.59, top = 0.5) +
-  inset_element(np3LNKACPlot, left = 0.715, bottom = 0.6, right = 0.74, top = 0.7) +
-  inset_element(np3LNKACPlot, left = 0.85, bottom = 0.39, right = 0.875, top = 0.49) 
+        legend.text = element_text(size = 11, color = 'black'),
+        text = element_text(color = 'black', size = 11)) +
+  inset_element(sbPlot, left = 0.055, bottom = 0.535, right = 0.08, top = 0.635) + 
+  inset_element(np1Plot, left = 0.215, bottom = 0.345, right = 0.24, top = 0.445) +
+  inset_element(np2Plot, left = 0.245, bottom = 0.345, right = 0.27, top = 0.445) +
+  inset_element(np3LNKACPlot, left = 0.275, bottom = 0.345, right = 0.3, top = 0.445) +
+  inset_element(np3LNKACPlot, left = 0.522, bottom = 0.28, right = 0.547, top = 0.38) + 
+  inset_element(mvPlot, left = 0.563, bottom = 0.5, right = 0.588, top = 0.533) +
+  inset_element(np3LNKACPlot, left = 0.71, bottom = 0.575, right = 0.735, top = 0.675) +
+  inset_element(np3LNKACPlot, left = 0.855, bottom = 0.37, right = 0.88, top = 0.47) 
 map
 
-legends <- plot_grid(nitrogenLegend, irrigationLegend, ncol = 1)
-experimentalDesign <- plot_grid(map, legends, nrow = 1, rel_widths = c(1.127, 0.08))
+legends <- plot_grid(nitrogenLegend, irrigationLegend, nrow = 1)
+experimentalDesign <- plot_grid(map, legends, ncol = 1, rel_heights = c(1, 0.2))
 experimentalDesign
 

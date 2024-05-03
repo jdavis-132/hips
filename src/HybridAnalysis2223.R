@@ -4,7 +4,7 @@
 library(tidyverse)
 library(readxl)
 library(lubridate)
-library(daymetr)
+# library(daymetr)
 library(cowplot)
 library(MoMAColors)
 library(lme4)
@@ -16,7 +16,7 @@ library(png)
 library(spFW)
 source('src/Functions.R')
 
-# hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.2.csv') %>%
+# hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') %>%
 #   filter(location!='') %>%
 #   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
 #   rowwise() %>%
@@ -27,17 +27,16 @@ source('src/Functions.R')
 
 # Now we need to spatially correct within an environment
 phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
-                'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'kernelRowNumber', 'earWidth',
+                'GDDToAnthesis', 'GDDToSilk', 'anthesisSilkingIntervalGDD', 'kernelRowNumber', 'earWidth',
                 'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass',
-                'earFillLength', 
-                'kernelsPerRow')
+                'earFillLength', 'kernelsPerRow')
 phenotypeLabels <- c('Plant Density (plants/acre)', 'Test Weight (lbs/bushel)', 'Harvest Moisture (%)', 'Flag Leaf Height (cm)',
-                     'Ear Height (cm)', 'Yield (bushels/acre)', 'Days to Anthesis', 'Days To Silk', 
-                     'Anthesis Silking Interval (days)', 'Kernel Row Number', 'Ear Width (cm)', 'Ear Length (cm)',
+                     'Ear Height (cm)', 'Yield (bushels/acre)', 'GDD to Anthesis', 'GDD To Silk', 
+                     'Anthesis Silking Interval (GDD)', 'Kernel Row Number', 'Ear Width (cm)', 'Ear Length (cm)',
                      'Shelled Cob Width (cm)', 'Shelled Cob Mass (cm)', 'Kernel Mass Per Ear (g)', 'Kernels Per Ear', 
                      'Hundred Kernel Mass (g)', 'Ear Fill Length (cm)', 'Kernels Per Row')
 phenotypeLabelsVP <-  c('Plant Density (1)', 'Test Weight (2)', 'Harvest Moisture (2)', 'Flag Leaf Height (1)',
-                        'Ear Height (1)', 'Yield (2)', 'Days to Anthesis (1)', 'Days to Silk (1)', 
+                        'Ear Height (1)', 'Yield (2)', 'GDD to Anthesis (1)', 'GDD to Silk (1)', 
                         'Anthesis Silking Interval (1)', 'Kernel Row Number (3)', 'Ear Width (3)', 'Ear Length (3)',
                         'Shelled Cob Width (3)', 'Shelled Cob Mass (3)', 'Kernel Mass Per Ear (3)', 
                         'Kernels Per Ear (3)', 
@@ -74,13 +73,27 @@ yieldComponentsLabels <- c('Ear Fill Length (cm)', 'Ear Width (cm)', 'Shelled Co
 #     facet_wrap(vars(location, year)) +
 #     theme(legend.position = 'none')
 #   print(sp.correction.plot)
+#   
+#   shrinkBoxesData <- hybrids %>%
+#     pivot_longer(any_of(c(phenotypes[i], paste0(phenotypes[i], '.sp'))), names_to = 'col', values_to = 'val') %>%
+#     rowwise() %>%
+#     mutate(phenotype = str_remove(col, '.sp'),
+#            form = case_when(str_detect(col, '.sp') ~ 'spatial', .default = 'raw')) %>%
+#     pivot_wider(id_cols = c(environment, genotype, plotNumber, form, location, year, nitrogenTreatment), 
+#       names_from = phenotype, 
+#       values_from = val)
+#   
+#   shrinkBoxes <- ggplot(shrinkBoxesData, aes(nitrogenTreatment, .data[[phenotypes[i]]], fill = form)) +
+#     geom_boxplot() + 
+#     facet_wrap(vars(location, year))
+#   print(shrinkBoxes)
 # }
 # 
 # # Don't use spatially corrected values if there is shrinkage towards the mean of a treatment
 # hybrids <- hybrids %>%
 #   rowwise() %>%
-#   mutate(anthesisSilkingInterval.sp = case_when(location %in% c('North Platte1', 'North Platte2') & year=='2022' ~ anthesisSilkingInterval,
-#                                                 .default = anthesisSilkingInterval.sp),
+#   mutate(anthesisSilkingIntervalGDD.sp = case_when(location %in% c('North Platte1', 'North Platte2') & year=='2022' ~ anthesisSilkingInterval,
+#                                                 .default = anthesisSilkingIntervalGDD.sp),
 #          combineMoisture.sp = case_when(location=='Ames' & year=='2022' ~ combineMoisture, .default = combineMoisture.sp))
 # 
 # # Export spatial corrections so we don't have to run it again
@@ -136,35 +149,37 @@ vc_all <- mutate(vc_all, label = factor(label, levels = envImportanceOrder))
 vp.plot <- ggplot(vc_all, aes(label, pctVar, fill = grp)) +
   geom_col(position = 'stack') + 
   scale_fill_viridis(discrete = TRUE, labels = label_wrap(11)) +
-  scale_x_discrete(labels = label_wrap(8)) +
-  labs(x = 'Phenotype', y = 'Percent Variance', fill = '') +
+  scale_y_continuous(name = 'Variance', 
+                     breaks = c(0, 25, 50, 75, 100), 
+                     labels = c('0%', '25%', '50%', '75%', '100%')) +
+  labs(x = 'Phenotype', y = 'Variance', fill = '') +
   theme_minimal() +
-  theme(axis.text.x = element_text(size = 10, color = 'black'),
-        axis.text.y = element_text(size = 10, color = 'black'),
-        legend.text = element_text(size = 10, color = 'black'),
-        text = element_text(size = 10, color = 'black'),
+  theme(axis.text.x = element_text(size = 11, color = 'black', angle = 90),
+        axis.text.y = element_text(size = 11, color = 'black'),
+        legend.text = element_text(size = 11, color = 'black'),
+        text = element_text(size = 11, color = 'black'),
         legend.position = 'bottom',
         line = element_line(color = 'black', linewidth = 1),
         panel.grid = element_blank())
 vp.plot
 
-ehvp <- vc_all %>%
-  filter(responseVar=='earHeight.sp') %>%
-  ggplot(aes(label, pctVar, fill = grp)) +
-  geom_col(position = 'stack') + 
-  scale_fill_viridis(discrete = TRUE, labels = label_wrap(11)) +
-  scale_x_discrete(labels = label_wrap(8)) +
-  labs(x = '', y = 'Percent Variance', fill = '') +
-  theme_minimal() +
-  theme(axis.text.x = element_text(size = 10, color = 'black'),
-        axis.text.y = element_text(size = 10, color = 'black'),
-        legend.text = element_text(size = 10, color = 'black'),
-        text = element_text(size = 10, color = 'black'),
-        legend.position = 'right',
-        line = element_line(color = 'black', linewidth = 1),
-        panel.grid = element_blank())
-ehvp
-ggsave('analysis/variancePartitioning_20240224.png', width = 7.1, height = (7.1/12.57)*8.92, dpi=1000)
+# ehvp <- vc_all %>%
+#   filter(responseVar=='earHeight.sp') %>%
+#   ggplot(aes(label, pctVar, fill = grp)) +
+#   geom_col(position = 'stack') + 
+#   scale_fill_viridis(discrete = TRUE, labels = label_wrap(11)) +
+#   scale_x_discrete(labels = label_wrap(8)) +
+#   labs(x = '', y = 'Percent Variance', fill = '') +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(size = 11, color = 'black'),
+#         axis.text.y = element_text(size = 11, color = 'black'),
+#         legend.text = element_text(size = 11, color = 'black'),
+#         text = element_text(size = 11, color = 'black'),
+#         legend.position = 'right',
+#         line = element_line(color = 'black', linewidth = 1),
+#         panel.grid = element_blank())
+# ehvp
+# ggsave('analysis/variancePartitioning_20240224.png', width = 7.1, height = (7.1/12.57)*8.92, dpi=1000)
 # Estimate FW plasticity across all environments where phenotype was observed
 hybrids.pl <- estimatePlasticity3(hybrids, trait = paste0(yieldComponents[1], '.sp'), environment = 'environment', genotype = 'genotype')
 
@@ -672,10 +687,10 @@ for(i in 6)
     scale_color_viridis_c(direction = -1) +
     labs(x = meanLabel, y = plasticityLabel, color = str_wrap('Mean Parent Release Year', width = 1)) + 
     theme_minimal() +
-    theme(axis.text.x = element_text(color = 'black', size = 10),
-          axis.text.y = element_text(color = 'black', size = 10),
-          legend.text = element_text(color = 'black', size = 10),
-          text = element_text(color = 'black', size = 10),
+    theme(axis.text.x = element_text(color = 'black', size = 11),
+          axis.text.y = element_text(color = 'black', size = 11),
+          legend.text = element_text(color = 'black', size = 11),
+          text = element_text(color = 'black', size = 11),
           legend.position = 'none',
           panel.grid = element_blank())
   
@@ -738,7 +753,7 @@ nPlasticityCorYield <- ggplot(corData, aes(locationYear1, locationYear2, fill = 
                    labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
                               str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
   labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Yield (bushels/acre)') + 
-  theme(text = element_text(color = 'black', size = 10),
+  theme(text = element_text(color = 'black', size = 11),
         axis.text.x = element_text(color = 'black', size = rel(1)),
         axis.text = element_text(color = 'black', size = rel(1)),
         axis.line = element_blank(),
@@ -770,7 +785,7 @@ nPlasticityCorKRN <- ggplot(corData, aes(locationYear1, locationYear2, fill = nP
                    labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
                               str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
   labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Kernel Row Number') + 
-  theme(text = element_text(color = 'black', size = 10),
+  theme(text = element_text(color = 'black', size = 11),
         axis.text.x = element_text(color = 'black', size = rel(1)),
         axis.text = element_text(color = 'black', size = rel(1)),
         axis.line = element_blank(),
@@ -803,7 +818,7 @@ nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nP
                    labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
                               str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
   labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Hundred Kernel Mass (g)') + 
-  theme(text = element_text(color = 'black', size = 10),
+  theme(text = element_text(color = 'black', size = 11),
         axis.text.x = element_text(color = 'black', size = rel(1)),
         axis.text = element_text(color = 'black', size = rel(1)),
         axis.line = element_blank(),
@@ -827,7 +842,7 @@ nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nP
                    labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
                               str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
   labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Hundred Kernel Mass (g)') + 
-  theme(text = element_text(color = 'black', size = 10),
+  theme(text = element_text(color = 'black', size = 11),
         axis.text.x = element_text(color = 'black', size = rel(1)),
         axis.text = element_text(color = 'black', size = rel(1)),
         axis.line = element_blank(),
@@ -874,10 +889,10 @@ nPlasticitySBYield <- ggplot(sb22NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerA
   scale_y_continuous(limits = c(-2.5, 2.5)) + 
   labs(x = 'Mean Yield (bushels/acre)', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 10),
-        axis.text.y = element_text(color = 'black', size = 10),
-        legend.text = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10),
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        legend.text = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
         legend.position = 'right',
         panel.grid = element_blank())
  nPlasticitySBYield
@@ -891,10 +906,10 @@ nPlasticitySBYield <- ggplot(sb22NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerA
    scale_y_continuous(limits = c(-2.5, 2.5)) + 
    labs(x = 'Mean Yield (bushels/acre)', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
    theme_minimal() +
-   theme(axis.text.x = element_text(color = 'black', size = 10),
-         axis.text.y = element_text(color = 'black', size = 10),
-         legend.text = element_text(color = 'black', size = 10),
-         text = element_text(color = 'black', size = 10),
+   theme(axis.text.x = element_text(color = 'black', size = 11),
+         axis.text.y = element_text(color = 'black', size = 11),
+         legend.text = element_text(color = 'black', size = 11),
+         text = element_text(color = 'black', size = 11),
          legend.position = 'none',
          panel.grid = element_blank())
  nPlasticitySBYield
@@ -906,10 +921,10 @@ nPlasticitySBYield <- ggplot(sb22NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerA
    scale_y_continuous(limits = c(-2.5, 2.5)) + 
    labs(x = 'Mean Kernel Row Number', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
    theme_minimal() +
-   theme(axis.text.x = element_text(color = 'black', size = 10),
-         axis.text.y = element_text(color = 'black', size = 10),
-         legend.text = element_text(color = 'black', size = 10),
-         text = element_text(color = 'black', size = 10),
+   theme(axis.text.x = element_text(color = 'black', size = 11),
+         axis.text.y = element_text(color = 'black', size = 11),
+         legend.text = element_text(color = 'black', size = 11),
+         text = element_text(color = 'black', size = 11),
          legend.position = 'none',
          panel.grid = element_blank())
  nPlasticitySBKRN
@@ -921,10 +936,10 @@ nPlasticitySBYield <- ggplot(sb22NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerA
    scale_y_continuous(limits = c(-2.5, 2.5)) + 
    labs(x = 'Mean Hundred Kernel Mass (g)', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
    theme_minimal() +
-   theme(axis.text.x = element_text(color = 'black', size = 10),
-         axis.text.y = element_text(color = 'black', size = 10),
-         legend.text = element_text(color = 'black', size = 10),
-         text = element_text(color = 'black', size = 10),
+   theme(axis.text.x = element_text(color = 'black', size = 11),
+         axis.text.y = element_text(color = 'black', size = 11),
+         legend.text = element_text(color = 'black', size = 11),
+         text = element_text(color = 'black', size = 11),
          legend.position = 'none',
          panel.grid = element_blank())
  nPlasticitySBHKM
@@ -982,10 +997,10 @@ nPlasticityGenotypeLines <- ggplot() +
   scale_color_manual(values = viridis_pal()(4)[1:3]) + 
   labs(x = 'Nitrogen Fertilizer (lbs/acre)', y = 'Mean Yield (bushels/acre)', color = 'Genotype') + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 10),
-        axis.text.y = element_text(color = 'black', size = 10),
-        legend.text = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10),
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        legend.text = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
         legend.position = 'right',
         panel.grid = element_blank())
 nPlasticityGenotypeLines
@@ -998,10 +1013,10 @@ linetypePlot <- ggplot(linetypes, aes(x, y, linetype = environment)) +
   scale_linetype_manual(values = c('solid', 'dashed', 'dotted', 'dotdash')) +
   labs(linetype = 'Environment') +
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 10),
-        axis.text.y = element_text(color = 'black', size = 10),
-        legend.text = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10),
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        legend.text = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
         legend.position = 'right',
         panel.grid = element_blank())
 linetypePlot
@@ -1016,10 +1031,10 @@ nPlasticityGenotypeLines <- ggplot() +
   scale_color_manual(values = viridis_pal()(4)[1:3]) + 
   labs(x = 'Nitrogen Fertilizer (lbs/acre)', y = 'Mean Yield (bushels/acre)', color = 'Genotype') + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 10),
-        axis.text.y = element_text(color = 'black', size = 10),
-        legend.text = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10),
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        legend.text = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
         legend.position = 'none',
         panel.grid = element_blank())
 nPlasticityGenotypeLines
@@ -1132,8 +1147,8 @@ for(i in 6)
          y = 'Overall Hybrid Rank', 
          fill = str_wrap('Superior Hybrid in Best Environment', 8), 
          title = yieldComponentsLabels[i]) + 
-    theme(text = element_text(color = 'black', size = 10),
-          title = element_text(color = 'black', size = 10),
+    theme(text = element_text(color = 'black', size = 11),
+          title = element_text(color = 'black', size = 11),
           axis.text.x = element_text(color = 'black', size = rel(1)),
           axis.text = element_text(color = 'black', size = rel(1)),
           axis.line = element_blank(),
@@ -1217,7 +1232,7 @@ for(i in 6)
     geom_tile() + 
     scale_fill_viridis(direction = -1) +
     labs(x = 'Overall Hybrid Rank', y = 'Overall Hybrid Rank', fill = str_wrap('Normalized Interaction Importance Score', 1), title = phenotypeLabel) + 
-    theme(text = element_text(color = 'black', size = 10),
+    theme(text = element_text(color = 'black', size = 11),
           axis.text.x = element_text(color = 'black', size = rel(1)),
           axis.text = element_text(color = 'black', size = rel(1)),
           axis.line = element_blank(),
@@ -1265,10 +1280,10 @@ FWConceptualPlot <- ggplot(LAHData, aes(envIndex, yieldPerAcre.sp, color = genot
   scale_color_manual(values = viridis_pal()(4)[1:3]) + 
   labs(x = 'Mean Environment Yield (bushels/acre)', y = 'Yield (bushels/acre)', color = 'Genotype') + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 10),
-        axis.text.y = element_text(color = 'black', size = 10),
-        legend.text = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10),
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        legend.text = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
         legend.position = 'top',
         panel.grid = element_blank())
 FWConceptualPlot
@@ -1312,10 +1327,10 @@ gca_vp.plot <- ggplot(gca_vp, aes(label, pctVar, fill = grp)) +
   scale_x_discrete(labels = label_wrap(8)) +
   labs(x = 'Phenotype', y = 'Percent Variance of Linear Plasticity', fill = '') +
   theme_minimal() +
-  theme(axis.text.x = element_text(size = 10, color = 'black'),
-        axis.text.y = element_text(size = 10, color = 'black'),
-        legend.text = element_text(size = 10, color = 'black'),
-        text = element_text(size = 10, color = 'black'),
+  theme(axis.text.x = element_text(size = 11, color = 'black'),
+        axis.text.y = element_text(size = 11, color = 'black'),
+        legend.text = element_text(size = 11, color = 'black'),
+        text = element_text(size = 11, color = 'black'),
         legend.position = 'right',
         line = element_line(color = 'black', linewidth = 1),
         panel.grid = element_blank())
@@ -1363,9 +1378,9 @@ featureImportance <- ggplot(rfFeatures, aes(val, phenotypeLabel, fill = phenotyp
   scale_fill_viridis(discrete = TRUE) +
   labs(x = 'Mean Feature Importance', y = '') +
   theme_minimal() + 
-  theme(axis.text.x = element_text(color = 'black', size = 10),
-        axis.text.y = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10),
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
         panel.grid = element_blank(),
         legend.position = 'none')
 featureImportance
@@ -1407,10 +1422,10 @@ yieldPredictionsPlot <- ggplot(yieldPredictionsSubsample, aes(yieldPerAcre, pred
   scale_x_continuous(limits = c(0, 300)) +
   labs(x = 'Actual Yield (bushels/acre)', y = 'Predicted Yield (bushels/acre)', color = 'Method') + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 10),
-        axis.text.y = element_text(color = 'black', size = 10),
-        legend.text = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10),
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        legend.text = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
         legend.position = 'top',
         panel.grid = element_blank())
 yieldPredictionsPlot
@@ -1453,11 +1468,11 @@ featureImportance <- ggplot(rfFeatures, aes(val, phenotypeLabel, fill = phenotyp
   geom_boxplot(color = 'black') +
   scale_y_discrete(labels = str_wrap(levels(rfFeatures$phenotypeLabel), 9)) +
   scale_fill_viridis(discrete = TRUE) +
-  labs(x = 'Mean Feature Importance', y = '') +
+  labs(x = 'Feature Importance', y = '') +
   theme_minimal() + 
-  theme(axis.text.x = element_text(color = 'black', size = 10),
-        axis.text.y = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10),
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
         panel.grid = element_blank(),
         legend.position = 'none')
 featureImportance
@@ -1499,10 +1514,10 @@ yieldPredictionsPlot <- ggplot(yieldPredictionsSubsample, aes(yieldPerAcre, pred
   scale_x_continuous(limits = c(0, 300)) +
   labs(x = 'Actual Yield (bushels/acre)', y = 'Predicted Yield (bushels/acre)', color = 'Method') + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 10),
-        axis.text.y = element_text(color = 'black', size = 10),
-        legend.text = element_text(color = 'black', size = 10),
-        text = element_text(color = 'black', size = 10),
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        legend.text = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
         legend.position = 'top',
         panel.grid = element_blank())
 yieldPredictionsPlot
@@ -1510,11 +1525,13 @@ yieldPredictionsPlot
 
 workflow <- rasterGrob(readPNG('../workflow.png'))
 
-fig1top <- plot_grid(experimentalDesign, workflow, labels = c('A', 'B'), rel_widths = c(1, 0.5))
-fig1bottom <- plot_grid(vp.plot, yieldPredictionsPlot, featureImportance, nrow = 1, rel_widths = c(1, 0.4, 0.3), labels = c('C', 'D', 'E'))
-
-fig1 <- plot_grid(fig1top, fig1bottom, ncol = 1)
+fig1middle <- plot_grid(workflow, vp.plot, labels = c('B', 'C'), rel_widths = c(0.7, 1))
+fig1middle
+fig1bottom <- plot_grid(yieldPredictionsPlot, featureImportance, nrow = 1, labels = c('D', 'E'))
+fig1bottom
+fig1 <- plot_grid(experimentalDesign, fig1middle, fig1bottom, ncol = 1, labels = c('A', '', ''), rel_heights = c(0.25, 0.4, 0.2))
 fig1
+ggsave('../fig1HighRes.png', plot = fig1, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 fig2top <- plot_grid(FWConceptualPlot, meanParentPlot, cxHeatmap, heatmap, nrow = 1, labels = c('A', 'B', 'C', 'D'), rel_widths = c(0.31, 0.21, 0.31, 0.31))
 fig2top
@@ -1537,7 +1554,7 @@ fig3left
 fig3 <- plot_grid(fig3left, nPlasticityGenotypeLinesPlot, nrow = 1, rel_widths = c(1, 0.4), labels = c('', 'G'))
 fig3
 
-ggsave('../fig1HighRes.png', plot = fig1, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
+ggsave('../fig1HighRes.png', plot = fig1, width = 6.5, height = 4, units = 'in', dpi = 1000, bg = 'white')
 ggsave('../fig2HighRes.png', plot = fig2, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
 ggsave('../fig3HighRes.png', plot = fig3, width = 21, height = 11.8, units = 'in', dpi = 1000, bg = 'white')
 
