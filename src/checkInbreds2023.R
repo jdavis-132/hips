@@ -3,7 +3,7 @@ library(readxl)
 library(lubridate)
 source('src/Functions.R')
 
-df <- read.csv('../../../../../../../Downloads/2023_inbred_HIPS_data_04_17_2024.csv') %>% 
+df <- read.csv('../../../../../../../Downloads/2023_inbred_HIPS_data_05_08_2024.csv') %>% 
   mutate(earHeight = as.numeric(earHeight), 
          flagLeafHeight = as.numeric(flagLeafHeight), 
          plantDensity = as.numeric(plantDensity))

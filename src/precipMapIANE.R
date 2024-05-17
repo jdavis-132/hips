@@ -4,11 +4,11 @@ library(climateR)
 library(zonal)
 library(sf)
 library(patchwork)
-library(MoMAColors)
+# library(MoMAColors)
 library(viridis)
 library(scales)
-library(grid)
-library(gridExtra)
+# library(grid)
+# library(gridExtra)
 library(cowplot)
 
 aoi <- aoi_get(state = c('NE', 'IA'), county = 'all')
@@ -105,7 +105,7 @@ map <- ggplot(data = gridmetPrecip) +
   geom_sf(aes(fill = accumPrecip), color = NA) +
   geom_sf(data = hipsLocations_sf, color = 'white', size = 0.5) + 
   geom_sf_text(data = hipsLocations_sf, aes(label = location), position = position_nudge(x = 0.05, y = -0.15), 
-               size = 4, color = 'white') +
+               size = 3, color = 'white') +
   scale_fill_viridis_c(direction = -1) +
   guides(fill = guide_colourbar(barwidth = 12,
                                 barheight = 1)) +

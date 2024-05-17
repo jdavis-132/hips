@@ -1125,7 +1125,8 @@ hybridHIPS23 <- hybridHIPS23 %>%
 
 hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
   rowwise() %>%
-  mutate(percentLodging = round(percentLodging, 2),
+  mutate(genotype = case_when(genotype=="B73 x PHZ51" ~ 'B73 X PHZ51', .default = genotype),
+         percentLodging = round(percentLodging, 2),
          earHeight = round(earHeight, 0),
          flagLeafHeight = round(flagLeafHeight, 0),
          plantDensity = round(plantDensity, 0), 

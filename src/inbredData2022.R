@@ -1004,7 +1004,7 @@ inbreds <- inbreds %>%
                                       (location=='Lincoln' & shelledCobMass > 25) | 
                                       (location=='Missouri Valley' & shelledCobMass > 31) ~ NA,
                                     .default = shelledCobMass),
-         shelledCobMass = case_when((location=='Crawfordsville' & shelledCobWidth < 1) |
+         shelledCobWidth = case_when((location=='Crawfordsville' & shelledCobWidth < 1) |
                                       (location=='Lincoln' & (shelledCobWidth < 0.75 | shelledCobWidth > 3)) |
                                       (location=='Scottsbluff' & (shelledCobWidth < 1.25 | shelledCobWidth > 3.5)) ~ NA, 
                                     .default = shelledCobWidth))
