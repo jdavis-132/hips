@@ -1074,6 +1074,47 @@ inbreds4.9 <- inbreds %>%
 write.table(inbreds, 'outData/HIPS_2022_V4.9_INBREDS.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
 
 
+v5 <- read.csv('outData/HIPS_2022_V5_INBREDS.csv') %>%
+  rename(nitrogenTreatment = N,
+         row = column,
+         plotNumber = plot,
+         flagLeafHeight = plantH) %>%
+  rowwise() %>%
+  mutate(anthesisDate = mdy(anthesisDate),
+         silkDate = mdy(silkDate),
+         plantingDate = mdy(plantingDate)) %>%
+  select(!rep)
 
+v495 <- inbreds4.9 %>%
+  rowwise() %>%
+  mutate(range = case_when(location=='Scottsbluff' & row==13 & range < 49 ~ range - 1, .default = range))
 
+# compFix <- v5 %>%
+#   filter(location=='Scottsbluff') %>% 
+#   full_join(sb495, join_by(row, range), keep = FALSE, suffix = c('.5', '.495')) %>%
+#   select(qrCode.5, qrCode.495, row, range, genotype.5, genotype.495, plotNumber.5, plotNumber.495, kernelRowNumber.5, kernelRowNumber.495)
 
+weather22 <- read.csv('outData/2022ImputedWeatherData.csv')
+
+v51 <- v5 %>%
+  full_join(v495, join_by(sublocation, row, range), keep = FALSE, suffix = c('', '.fix')) %>%
+  mutate(shelledCobMass = shelledCobMass.fix, 
+         shelledCobWidth = shelledCobWidth.fix) %>% 
+  select(!ends_with('.fix')) %>%
+  rowwise() %>%
+  mutate(GDDToAnthesis = getCumulativeGDDs(plantingDate, anthesisDate, weather22, location),
+         GDDToSilk = getCumulativeGDDs(plantingDate, silkDate, weather22, location),
+         harvestDate = case_when(location=='Crawfordsville' ~ '2022-09-27',
+                                 location=='Ames' ~ '2022-10-23',
+                                 location=='Missouri Valley' ~ '2022-09-24', 
+                                 location=='Lincoln' ~ '2022-10-01',
+                                 location=='Scottsbluff' ~ '2022-11-04')) %>%
+  mutate(anthesisSilkingIntervalGDD = GDDToSilk - GDDToAnthesis) %>% 
+  mutate(across(c(where(is.numeric), where(is.POSIXct)), ~case_when(.==-Inf ~ NA, .default = .))) %>%
+  filter(!is.na(location)) %>% 
+  mutate(GDDToAnthesis = case_when(GDDToAnthesis > 3000 ~ NA, .default = GDDToAnthesis),
+         GDDToSilk = case_when(GDDToSilk > 3250 ~ NA, .default = GDDToSilk),
+         anthesisSilkingIntervalGDD = case_when(anthesisSilkingIntervalGDD < -250 | anthesisSilkingIntervalGDD > 750 ~ NA, .default = anthesisSilkingIntervalGDD))
+
+# Export v5.1  
+write.table(v51, 'outData/HIPS_2022_V5.1_INBREDS.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)

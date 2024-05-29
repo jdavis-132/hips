@@ -705,3 +705,101 @@ getSignificantCrossovers <- function(data, pheno, environments)
     mutate('{phenotypeScore}Normalized' := .data[[phenotypeScore]]/((.data[[phenotypeComparedEnvs]]*(.data[[phenotypeComparedEnvs]]))))
   return(genotypePairs)
 }
+
+plotInteractionImportanceGrid <- function(significantInteractionsData = sigCrossovers, 
+                                          performanceData = hybrids, trait, traitLabel, 
+                                          legendTitle = str_wrap('Normalized Interaction Importance Score', 1),
+                                          legendPosition = 'right', legendTextAngle = 0, 
+                                          legendTextHJust = 1, xAxisLabelAngle = 0)
+{
+  phenotype <- trait
+  phenotypeSpatial <- paste0(phenotype, '.sp')
+  phenotypeLabel <- traitLabel
+  phenotypeScoreNormalized <- paste0(phenotype, 'ScoreNormalized')
+  
+  df1 <- significantInteractionsData %>%
+    select(c(genotype1, genotype2, all_of(phenotypeScoreNormalized)))
+  df2 <- df1 %>%
+    rowwise() %>%
+    mutate(genotype1A = genotype2, 
+           genotype2 = genotype1) %>%
+    select(c(genotype1A, genotype2, all_of(phenotypeScoreNormalized))) %>%
+    rename(genotype1 = genotype1A)
+  
+  df <-bind_rows(df1, df2)
+  
+  blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = performanceData) 
+  blups <- ranef(blups)
+  blups <- as_tibble(blups$genotype, rownames = 'genotype') %>%
+    rename(blup = `(Intercept)`) %>%
+    mutate(rank = dense_rank(blup)) %>%
+    select(genotype, rank)
+  
+  df <- left_join(df, blups, join_by(genotype1==genotype), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
+    rename(rankG1 = rank) %>%
+    left_join(blups, join_by(genotype2==genotype), keep = FALSE, suffix = c('', '')) %>%
+    rename(rankG2 = rank) %>%
+    filter(!is.na(.data[[phenotypeScoreNormalized]]))
+  
+  heatmap <- ggplot(df, aes(rankG1, rankG2, fill = .data[[phenotypeScoreNormalized]])) + 
+    geom_tile() + 
+    scale_x_continuous(limits = c(0, 122)) +
+    scale_y_continuous(limits = c(0, 122)) +
+    scale_fill_viridis(direction = -1) +
+    labs(x = 'Hybrid Rank X', y = 'Hybrid Rank Y', fill = legendTitle, title = phenotypeLabel) + 
+    theme_minimal() +
+    theme(text = element_text(color = 'black', size = 11),
+          axis.text.x = element_text(color = 'black', size = 11, angle = xAxisLabelAngle),
+          axis.text = element_text(color = 'black', size = 11),
+          legend.text = element_text(color = 'black', size = 11, angle = legendTextAngle, hjust = legendTextHJust, vjust = 1),
+          axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(), 
+          plot.background = element_blank(), 
+          legend.position = legendPosition,
+          legend.background = element_blank(),
+          plot.title = element_text(hjust = 0.5))
+  return(heatmap)
+}
+
+plotNPlasticityCor <- function(nitrogenResponsePlasticityData = nResponse.pl, trait, traitLabel, 
+                           legendPosition = 'right')
+{
+  plasticity <- paste0(trait, '.sp.b')
+  dfWide <- nResponse.pl %>%
+    pivot_wider(id_cols = genotype, 
+                names_from = locationYear,
+                values_from = .data[[plasticity]])
+  
+  corData <- cor(dfWide[, 2:5], use = 'complete.obs', method = 'spearman') %>%
+    as.table() %>%
+    as.data.frame()
+  names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
+  
+  plot <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
+    geom_tile(color = 'white') +
+    scale_fill_viridis_c(direction = -1, limits = c(-0.3, 1)) + 
+    scale_x_discrete(breaks = unique(corData$locationYear1), 
+                     labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10), 
+                                str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 10))) +
+    scale_y_discrete(breaks = unique(corData$locationYear1), 
+                     labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10), 
+                                str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 10))) +
+    guides(fill = guide_colourbar(barwidth = 12,
+                                  barheight = 1)) +
+    labs(x = '', y = '', fill = 'Nitrogen Plasticity Correlation', title = traitLabel) + 
+    theme_minimal() +
+    theme(text = element_text(color = 'black', size = 11),
+          axis.text.x = element_text(color = 'black', size = 11, angle = 90, vjust = 0.5),
+          axis.text = element_text(color = 'black', size = 11, hjust = 1, margin = margin(0, 0, 0, 0)),
+          axis.line = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(), 
+          plot.background = element_blank(), 
+          legend.position = legendPosition,
+          plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
+          legend.background = element_blank())
+  return(plot)
+}

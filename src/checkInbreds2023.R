@@ -3,10 +3,30 @@ library(readxl)
 library(lubridate)
 source('src/Functions.R')
 
-df <- read.csv('../../../../../../../Downloads/2023_inbred_HIPS_data_05_08_2024.csv') %>% 
+df <- read.csv('../../../../../../../Downloads/2022_2023_inbred_HIPS_data_05_20_2024_v4.csv') %>% 
   mutate(earHeight = as.numeric(earHeight), 
          flagLeafHeight = as.numeric(flagLeafHeight), 
-         plantDensity = as.numeric(plantDensity))
+         plantDensity = as.numeric(plantDensity),
+         experiment = case_when(experiment=='' ~ NA, .default = experiment),
+         plantingDate = mdy(plantingDate),
+         harvestDate = mdy(harvestDate),
+         anthesisDate = mdy(anthesisDate),
+         silkDate = mdy(silkDate)) %>%
+  mutate(across(is.character, ~case_when(.=='' ~ NA, .default = .))) %>%
+  mutate(plantingDate = as.character(plantingDate),
+         harvestDate = as.character(harvestDate),
+         anthesisDate = as.character(anthesisDate),
+         silkDate = as.character(silkDate)) %>%
+  arrange(year, location, sublocation, block, plotNumber) %>%
+  relocate(qrCode, year, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range, plotNumber, 
+           genotype, pedigreeID, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, 
+           GDDToAnthesis, GDDToSilk, anthesisSilkingIntervalGDD, earHeight, flagLeafHeight, plantDensity, 
+           earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber, kernelsPerEar, hundredKernelMass, kernelMassPerEar, shelledCobMass, 
+           kernelColor, harvestDate, notes) %>%
+  select(!starts_with('percent'))
+
+# Export combined inbred data 
+write.csv(df, 'outData/INBREDS_2022_2023_v1.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
 
 phenotypes <- c('earHeight', 'flagLeafHeight', 'daysToAnthesis', 'daysToSilk', 'totalStandCount', 'anthesisSilkingInterval', 'GDDToAnthesis',
                 'GDDToSilk', 'anthesisSilkingIntervalGDD', 'plantDensity', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 
@@ -31,7 +51,7 @@ plotRepCorr(df, 'nitrogenTreatment', 'genotype', phenotypes, 'location')
 #          silkMonth = str_split_i(silkDate, '-', 2)) %>%
 #   mutate(anthesisDay = case_when(anthesisDate==' 7/20' ~ 20, .default = anthesisDay),
 #          anthesisMonth = case_when(anthesisDate==' 7/20' ~ '07', 
-#                                    anthesisMonth=='Jul' ~ '07',
+#      '                              anthesisMonth=='Jul' ~ '07',
 #                                    anthesisMonth=='Aug' ~ '08',
 #                                    anthesisMonth=='Sep' ~ '09', 
 #                                    anthesisMonth=='May' ~ '05'), 
