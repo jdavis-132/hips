@@ -93,3 +93,16 @@ df <- df %>%
          anthesisSilkingInterval, earHeight, flagLeafHeight, notes) %>%
   rowwise() %>%
   mutate(across(where(is.character), ~case_when(.=='' ~ NA, .default = .)))
+
+inbreds <- read.csv('outData/INBREDS_2022_2023_v1.csv')
+nonMissingVals <- 0
+totalPlots <- length(inbreds$qrCode)
+vars <- phenotypes
+inbreds <- inbreds %>%
+  mutate(across(is.character, ~case_when(.=='' ~ NA, .default = .)))
+for(var in vars)
+{
+  numMissingVals <- as.numeric(sum(is.na(inbreds[[var]])))
+  numNotMissing <- totalPlots - numMissingVals
+  nonMissingVals <- nonMissingVals + numNotMissing
+}

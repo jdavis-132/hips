@@ -2049,3 +2049,75 @@ nassYield <- read.csv('../NASSCornYield_2022_2023_IA_NE.csv') %>%
   mutate(lower = yield - 1.96*sem,
          upper = yield + 1.96*sem)
 min(nassYield$lower)
+
+g2f2014 <- read.csv('../g2f_2014_hybrid_data_clean.csv')
+g2f2015 <- read.csv('../g2f_2015_hybrid_data_clean.csv')
+g2f2016 <- read.csv('../g2f_2016_hybrid_data_clean.csv')
+g2f2017 <- read.csv('../g2f_2017_hybrid_data_clean.csv')
+g2f2018 <- read.csv('../g2f_2018_hybrid_data_clean.csv')
+g2f2019 <- read.csv('../g2f_2019_phenotypic_clean_data.csv')
+g2f2020 <- read.csv('../g2f_2020_phenotypic_clean_data.csv') %>%
+  mutate(Pass = as.integer(Pass))
+g2f2021 <- read.csv('../g2f_2021_phenotypic_clean_data.csv') %>%
+  mutate(Plot = as.integer(Plot))
+g2f2022 <- read.csv('../g2f_2022_phenotypic_clean_data.csv') %>%
+  mutate(Plot_ID = as.integer(Plot_ID))
+
+g2f <- bind_rows(g2f2014, g2f2015, g2f2016, g2f2017, g2f2018, g2f2019, g2f2020, g2f2021, g2f2022)
+g2fInbreds <- c("", "W22-UNIFORM MU STRAIN", "TX714", "PHZ51", "PHW65", "PI197", "PHTD5", "PHT69", "PHRE1", "PHR03", "PHP02", 
+                "PHK76", "PHJ89", "PHJ40", "PH207", "PHAJ0", "PHB47", "MO17", "LH244", "LH82", "LH185", "LH195", "LH145",
+                "B84", "B73")
+g2fHybrids <- filter(g2f, !(Pedigree %in% g2fInbreds)) %>%
+  rowwise() %>%
+  mutate(locationYear = str_c(Year, Field.Location, sep = ':'),
+         standCount = case_when(!is.na(Stand.Count..plants.) ~ Stand.Count..plants.,
+                                !is.na(Stand....) ~ Stand....,
+                                !is.na(Stand.Count....of.plants.) ~ Stand.Count....of.plants.),
+         anthesisDate = case_when(!is.na(Anthesis..date.) ~ Anthesis..date.,
+                                  !is.na(Anthesis..MM.DD.YY.) ~ Anthesis..MM.DD.YY.),
+         silkDate = case_when(!is.na(Silking..date.) ~ Silking..date.,
+                              !is.na(Silking..MM.DD.YY.) ~ Silking..MM.DD.YY.),
+         daysToAnthesis = case_when(!is.na(Pollen.DAP..days.) ~ Pollen.DAP..days.,
+                                    !is.na(Anthesis..days.) ~ Anthesis..days.),
+         daysToSilk = case_when(!is.na(Silk.DAP..days.) ~ Silk.DAP..days.,
+                                !is.na(Silking..days.) ~ Silking..days.),
+         rootLodging = case_when(!is.na(Root.Lodging..plants.) ~ Root.Lodging..plants.,
+                                 !is.na(Root.Lodging....of.plants.) ~ Root.Lodging....of.plants.),
+         stalkLodging = case_when(!is.na(Stalk.Lodging..plants.) ~ Stalk.Lodging..plants.,
+                                  !is.na(Stalk.Lodging....of.plants.) ~ Stalk.Lodging....of.plants.),
+         testWeight = case_when(!is.na(Test.Weight..lbs.bu.) ~ Test.Weight..lbs.bu.,
+                                !is.na(Test.Weight..lbs.) ~ Test.Weight..lbs.)) %>%
+  select(!c(Stand.Count..plants., Stand...., Stand.Count....of.plants., Anthesis..date., Anthesis..MM.DD.YY., Silking..date., 
+            Silking..MM.DD.YY., Pollen.DAP..days., Anthesis..days., Silk.DAP..days., Silking..days., Root.Lodging..plants.,
+            Root.Lodging....of.plants., Stalk.Lodging..plants., Stalk.Lodging....of.plants., Test.Weight..lbs.bu., Test.Weight..lbs.))
+g2fLocationYears <- unique(g2fHybrids$locationYear)
+locationYearData <- filter(g2fHybrids, locationYear==g2fLocationYears[1])
+g2fCommonHybrids <- unique(locationYearData$Pedigree)
+
+for(i in 2:length(g2fLocationYears))
+{
+  locationYearData <- filter(g2fHybrids, locationYear==g2fLocationYears[i])
+  locationYearHybrids <- unique(locationYearData$Pedigree)
+  g2fCommonHybrids <- intersect(g2fCommonHybrids, locationYearHybrids)
+}
+
+g2fPhenotypes <- colnames(g2fHybrids)[c(22:26, 50:53, 57, 59:66)]
+locationYearsPerPhenotype <- tibble(phenotype = g2fPhenotypes, numLocationYears = NULL)
+for(i in 1:length(g2fPhenotypes))
+{
+  phenotype <- filter(g2fHybrids, !is.na(.data[[g2fPhenotypes[i]]]))
+  locationYearsPerPhenotype$numLocationYears[i] <- length(unique(phenotype$locationYear))
+}
+
+locationYearsPerHybrid <- tibble(hybrid = unique(g2fHybrids$Pedigree), numLocationYears = NULL)
+for(i in 1:length(unique(locationYearsPerHybrid$hybrid)))
+{
+  hybridData <- filter(g2fHybrids, Pedigree==locationYearsPerHybrid$hybrid[i])
+  locationYearsPerHybrid$numLocationYears[i] <- length(unique(hybridData$locationYear))
+}
+
+locationYearsPerHybridPlot <- ggplot(locationYearsPerHybrid, aes(numLocationYears)) + 
+  geom_histogram(binwidth = 5) +
+  labs(x = 'Location Years', y = 'Number of Hybrids') +
+  theme_minimal()
+locationYearsPerHybridPlot
