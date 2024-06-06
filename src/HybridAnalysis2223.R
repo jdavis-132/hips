@@ -115,6 +115,8 @@ for(i in 1:length(unique(envsPerHybrid$hybrid)))
   envsPerHybrid$numEnvs[i] <- length(unique(hybridData$environment))
 }
 
+singleEnvHybrids <- envsPerHybrid$hybrid[envsPerHybrid$numEnvs<2]
+hybrids <- filter(hybrids, !(genotype %in% singleEnvHybrids))
 # # Location or irrigationProvided, which is mostly location, is most important for 15/19 traits when we don't count residual
 # vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
 # for(i in 1:length(phenotypes))

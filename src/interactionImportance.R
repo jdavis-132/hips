@@ -113,6 +113,18 @@ hybrids <- hybrids <- read.csv('analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.cs
   rowwise() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .)))
 
+envsPerHybrid <- tibble(hybrid = unique(hybrids$genotype), numEnvs = NULL)
+for(i in 1:length(unique(envsPerHybrid$hybrid)))
+{
+  hybridData <- filter(hybrids, genotype==envsPerHybrid$hybrid[i])
+  envsPerHybrid$numEnvs[i] <- length(unique(hybridData$environment))
+}
+
+singleEnvHybrids <- envsPerHybrid$hybrid[envsPerHybrid$numEnvs<2]
+hybrids <- filter(hybrids, !(genotype %in% singleEnvHybrids)) %>%
+  rowwise() %>%
+  mutate(genotype = str_remove_all(genotype, '-'))
+
 #phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
 #                'GDDToAnthesis', 'GDDToSilk', 'anthesisSilkingIntervalGDD', 'kernelRowNumber', 'earWidth',
 #                'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass',
@@ -150,5 +162,14 @@ for(i in phenotypes)
                              keep = FALSE,
                              suffix = c('', ''))
 }
+
+genotypePairs <- genotypePairs %>%
+  rowwise() %>%
+  mutate(genotype1 = case_when(genotype1=='SYNGENTA NK06593120EZ1' ~ 'SYNGENTA NK0659-3120-EZ1',
+                               genotype1=='SYNGENTA NK07603111' ~ 'SYNGENTA NK0760-3111', 
+                               .default = genotype1),
+         genotype2 = case_when(genotype2=='SYNGENTA NK06593120EZ1' ~ 'SYNGENTA NK0659-3120-EZ1',
+                               genotype2=='SYNGENTA NK07603111' ~ 'SYNGENTA NK0760-3111', 
+                               .default = genotype2))
 
 write.csv(genotypePairs, 'significantCrossovers.csv')
