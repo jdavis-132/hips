@@ -2,7 +2,7 @@ library(tidyverse)
 library(SpATS)
 library(spFW)
 library(viridis)
-
+SEED <- 101762103
 # Returns a data frame filtered to rows of data that have values for trait 
 # that are less than quantile 1 - 1.5*iqr or greater than quantile 3 + 1.5*iqr
 # data is a data frame
@@ -337,7 +337,7 @@ estimatePlasticity2 <- function(data, trait, environment, genotype)
   return(df)
 }
 
-estimatePlasticity3 <- function(data, trait, environment, genotype)
+estimatePlasticity3 <- function(data, trait, environment, genotype, seed = SEED)
 {
   df.compute <- data %>%
     filter(!is.na(.data[[trait]]))
@@ -352,7 +352,8 @@ estimatePlasticity3 <- function(data, trait, environment, genotype)
   
   model <- HFWM_est(Y = y,
                     VAR = geno,
-                    ENV = env)
+                    ENV = env, 
+                    seed = SEED)
   b <- as_tibble(model$b, rownames = 'genotype') %>%
     rowwise() %>%
     mutate(b = value + 1) %>%
@@ -739,7 +740,8 @@ plotInteractionImportanceGrid <- function(significantInteractionsData = sigCross
     rename(rankG1 = rank) %>%
     left_join(blups, join_by(genotype2==genotype), keep = FALSE, suffix = c('', '')) %>%
     rename(rankG2 = rank) %>%
-    filter(!is.na(.data[[phenotypeScoreNormalized]]))
+    # filter(!is.na(.data[[phenotypeScoreNormalized]]))
+    select(c(genotype1, genotype2, rankG1, rankG2, all_of(phenotypeScoreNormalized)))
   
   heatmap <- ggplot(df, aes(rankG1, rankG2, fill = .data[[phenotypeScoreNormalized]])) + 
     geom_tile() + 

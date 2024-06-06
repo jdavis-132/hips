@@ -1291,6 +1291,7 @@ for(i in 6)
 sigCrossovers <- read.csv('analysis/significantCrossovers.csv')
 
 heatmap <- plotInteractionImportanceGrid(trait = 'yieldPerAcre', traitLabel = 'Yield (bushels/acre)', legendPosition = 'right')
+heatmap
 
 highPlasticityGenotype <- hybridsNOLNK22.pl %>%
   arrange(yieldPerAcre.sp.b)
@@ -1982,37 +1983,63 @@ anova <- aov(val ~ phenotype, data = rfFeatures)
 tukey <- TukeyHSD(anova)
 
 # interaction importance supplemental figs
+interactionImportancePlantDensity <- plotInteractionImportanceGrid(trait = 'plantDensity', traitLabel = 'Plant Density', 
+                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportancePlantDensity
+interactionImportanceGDDToAnthesis <- plotInteractionImportanceGrid(trait = 'GDDToAnthesis', traitLabel = 'GDD to Anthesis*', 
+                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceGDDToAnthesis
+interactionImportanceGDDToSilk <- plotInteractionImportanceGrid(trait = 'GDDToSilk', traitLabel = 'GDD to Silk*', 
+                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceGDDToSilk
+interactionImportanceAnthesiSilkingIntervalGDD <- plotInteractionImportanceGrid(trait = 'anthesisSilkingIntervalGDD', traitLabel = ' Anthesis Silking Interval*', 
+                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceAnthesiSilkingIntervalGDD
 interactionImportanceShelledCobWidth <- plotInteractionImportanceGrid(trait = 'shelledCobWidth', traitLabel = 'Shelled Cob Width', 
                                                                       legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceShelledCobWidth
 interactionImportanceKRN <- plotInteractionImportanceGrid(trait = 'kernelRowNumber', traitLabel = 'Kernel Row Number', 
                                                           legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceKRN
 interactionImportanceEarLength <- plotInteractionImportanceGrid(trait = 'earLength', traitLabel = 'Ear Length', 
                                                                 legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceEarLength
 interactionImportanceEarFillLength <- plotInteractionImportanceGrid(trait = 'earFillLength', traitLabel = 'Ear Fill Length*', 
                                                                     legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceEarFillLength
 interactionImportanceKPR <- plotInteractionImportanceGrid(trait = 'kernelsPerRow', traitLabel = 'Kernels Per Row*', 
                                                           legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceKPR
 interactionImportanceKPE <- plotInteractionImportanceGrid(trait = 'kernelsPerEar', traitLabel = 'Kernels Per Ear', 
                                                           legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceKPE
 interactionImportanceEarWidth <- plotInteractionImportanceGrid(trait = 'earWidth', traitLabel = 'Ear Width', 
                                                                legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceEarWidth
 interactionImportanceHKM <- plotInteractionImportanceGrid(trait = 'hundredKernelMass', traitLabel = 'Hundred Kernel Mass', 
                                                           legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceHKM
 interactionImportanceKernelMass <- plotInteractionImportanceGrid(trait = 'kernelMassPerEar', traitLabel = 'Kernel Mass Per Ear', 
                                                                  legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceKernelMass
 interactionImportanceCombineTestWeight <- plotInteractionImportanceGrid(trait = 'combineTestWeight', traitLabel = 'Test Weight',
                                                                         legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceCombineTestWeight
 interactionImportanceCombineMoisture <- plotInteractionImportanceGrid(trait = 'combineMoisture', traitLabel = 'Harvest Moisture',
                                                                       legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceCombineMoisture
 interactionImportanceFlagLeafHeight <- plotInteractionImportanceGrid(trait = 'flagLeafHeight', traitLabel = 'Flag Leaf Height',
                                                                       legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceFlagLeafHeight
 interactionImportanceEarHeight <- plotInteractionImportanceGrid(trait = 'earHeight', traitLabel = 'Ear Height',
                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceEarHeight
 
-supplInteractionImportancePlots <- plot_grid(interactionImportanceCombineTestWeight, interactionImportanceFlagLeafHeight, interactionImportanceShelledCobWidth, 
-                                             interactionImportanceKRN, interactionImportanceEarLength,interactionImportanceKPE,
-                                             interactionImportanceEarWidth, interactionImportanceHKM, interactionImportanceKernelMass,
+supplInteractionImportancePlots <- plot_grid(interactionImportanceEarHeight, interactionImportanceAnthesiSilkingIntervalGDD, interactionImportanceCombineMoisture,
+                                             interactionImportanceCombineTestWeight, interactionImportanceKRN, interactionImportanceEarLength,
+                                             interactionImportanceKPE, interactionImportanceEarWidth, interactionImportanceHKM, 
                                              nrow = 3, ncol = 3, labels = 'AUTO')
+supplInteractionImportancePlots
 ggsave('../figSInteractionImportancePlots.png', plot = supplInteractionImportancePlots, width = 8.125, height = 11.25, units = 'in', dpi = 1000, bg = 'white')
 
 # N plasticity cor suppl figs
@@ -2121,3 +2148,4 @@ locationYearsPerHybridPlot <- ggplot(locationYearsPerHybrid, aes(numLocationYear
   labs(x = 'Location Years', y = 'Number of Hybrids') +
   theme_minimal()
 locationYearsPerHybridPlot
+

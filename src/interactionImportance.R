@@ -47,18 +47,25 @@ getSignificantCrossovers <- function(data, pheno, environments)
     envG2Suffix <- paste0(envSuffix, '.G2')
     
     genotypePairs <- left_join(genotypePairs, tukey, join_by(genotype1==genotype1, genotype2==genotype2), keep = FALSE, suffix = c('', '')) %>%
-      bind_rows(left_join(genotypePairs, tukey, join_by(genotype1==genotype2, genotype2==genotype1), keep = FALSE, suffix = c('', ''))) %>%
+      left_join(tukey, join_by(genotype1==genotype2, genotype2==genotype1), keep = FALSE, suffix = c('', '.t2')) %>%
+      rowwise() %>%
+      mutate('{phenotypeAdjustedP}' := case_when(!is.na(.data[[phenotypeAdjustedP]]) ~ .data[[phenotypeAdjustedP]],
+                                                 !is.na(.data[[paste0(phenotypeAdjustedP, '.t2')]]) ~ .data[[paste0(phenotypeAdjustedP, '.t2')]]),
+             '{phenotypeSigDiff}' := case_when(!is.na(.data[[phenotypeSigDiff]]) ~ .data[[phenotypeSigDiff]],
+                                               !is.na(.data[[paste0(phenotypeSigDiff, '.t2')]]) ~ .data[[paste0(phenotypeSigDiff, '.t2')]])) %>%
       distinct(genotype1, genotype2, .keep_all = TRUE) %>%
+      select(!ends_with('.t2')) %>%
       rename('{phenotypeAdjustedP}{envSuffix}' := .data[[phenotypeAdjustedP]],
              '{phenotypeSigDiff}{envSuffix}' := .data[[phenotypeSigDiff]]) %>%
       full_join(environmentDataSummary, join_by(genotype1==genotype), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
       rename('{phenotypeRank}{envG1Suffix}' := .data[[phenotypeRank]]) %>%
       full_join(environmentDataSummary, join_by(genotype2==genotype), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
-      rename('{phenotypeRank}{envG2Suffix}' := .data[[phenotypeRank]])
+      rename('{phenotypeRank}{envG2Suffix}' := .data[[phenotypeRank]]) %>%
+      filter(!is.na(genotype1) & !is.na(genotype2))
   }
   
   cols <- colnames(genotypePairs)
-  for(i in 1:totalEnvironments)
+  for(i in 1:(totalEnvironments - 1))
   {
     envI <- environments[i]
     if(is.na(envI)){next} 
@@ -94,22 +101,23 @@ getSignificantCrossovers <- function(data, pheno, environments)
   
   genotypePairs <- genotypePairs %>%
     rowwise() %>%
-    mutate('{phenotypeScore}' := rowSums(across(contains(phenotypeScore))), 
-           '{pheno}ComparedEnvs' := rowSums(!is.na(across(contains(phenotypeAdjustedP))))) %>%
-    mutate('{phenotypeScore}Normalized' := .data[[phenotypeScore]]/((.data[[phenotypeComparedEnvs]]*(.data[[phenotypeComparedEnvs]]))))
+    mutate('{phenotypeScore}' := rowSums(across(contains(phenotypeScore)), na.rm = TRUE), 
+           '{pheno}ComparedEnvs' := rowSums(!is.na(across(contains(phenotypeAdjustedP))), na.rm = TRUE)) %>%
+    mutate('{phenotypeScore}Normalized' := .data[[phenotypeScore]]/((.data[[phenotypeComparedEnvs]]*(.data[[phenotypeComparedEnvs]] - 1))))
   return(genotypePairs)
 }
 
-hybrids <- hybrids <- read.csv('HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
+hybrids <- hybrids <- read.csv('analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
   filter(location!='') %>% 
   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
   rowwise() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .)))
 
-phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
-                'GDDToAnthesis', 'GDDToSilk', 'anthesisSilkingIntervalGDD', 'kernelRowNumber', 'earWidth',
-                'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass',
-                'earFillLength', 'kernelsPerRow')
+#phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
+#                'GDDToAnthesis', 'GDDToSilk', 'anthesisSilkingIntervalGDD', 'kernelRowNumber', 'earWidth',
+#                'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass',
+#                'earFillLength', 'kernelsPerRow')
+phenotypes <- c('yieldPerAcre')
 # How often are interactions between a pair of hybrids crossover interactions AND represent significant differences in the phenotype?
 genotypePairs <- tibble(genotype1 = NULL, genotype2 = NULL)
 hybridEnvs <- hybrids %>%
@@ -119,12 +127,13 @@ hybrids <- full_join(hybrids, hybridEnvs, join_by(environment), keep = FALSE, su
 
 hybridsSigCrossovers <- hybrids %>%
   rowwise() %>%
-  mutate(genotype = str_replace_all(genotype, '-', ' '))
+  mutate(genotype = str_replace_all(genotype, '-', ' ')) %>%
+  filter(!is.na(genotype))
 
 allGenotypes <- unique(hybridsSigCrossovers$genotype)
 totalGenotypes <- length(allGenotypes)
 
-for(i in 1:totalGenotypes)
+for(i in 1:(totalGenotypes - 1))
 {
   df <- tibble(genotype1 = allGenotypes[i], genotype2 = allGenotypes[(i + 1):totalGenotypes])
   genotypePairs <- bind_rows(genotypePairs, df)
