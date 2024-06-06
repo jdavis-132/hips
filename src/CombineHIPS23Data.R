@@ -1147,7 +1147,7 @@ hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
   mutate(plantingDate = case_when(location=='Ames' & year=='2023' ~ '2023-05-19',
                                   location=='Crawfordsville' & year=='2023' ~ '2023-05-04',
                                   .default = plantingDate), 
-         plotLength = case_when(location=='Missouri Valley' & year=='2023' ~ 17.5, .default = plotLength))
+         plotLength = case_when(location=='Missouri Valley' & year=='2023' ~ 17.5, .default = plotLength)) %>%
   arrange(year, location, sublocation, block, plotNumber) %>%
   relocate(qrCode, year, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range, plotNumber, 
            genotype, pedigreeID, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, 

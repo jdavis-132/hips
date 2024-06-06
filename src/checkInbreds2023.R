@@ -17,6 +17,11 @@ df <- read.csv('../../../../../../../Downloads/2022_2023_inbred_HIPS_data_05_20_
          harvestDate = as.character(harvestDate),
          anthesisDate = as.character(anthesisDate),
          silkDate = as.character(silkDate)) %>%
+  mutate(genotype = case_when(genotype=='IC I740' ~ 'ICI 740', 
+                              genotype=='CI3A' ~ 'CI 3A',
+                              gentoype=='I205' ~ "'IOWA I205'",
+                              genotype=='IL101' ~ 'IL101T', 
+                              .default = genotype)) %>%
   arrange(year, location, sublocation, block, plotNumber) %>%
   relocate(qrCode, year, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range, plotNumber, 
            genotype, pedigreeID, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, 
@@ -26,7 +31,7 @@ df <- read.csv('../../../../../../../Downloads/2022_2023_inbred_HIPS_data_05_20_
   select(!starts_with('percent'))
 
 # Export combined inbred data 
-write.csv(df, 'outData/INBREDS_2022_2023_v1.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
+write.csv(df, 'outData/INBREDS_2022_2023_v1.5.csv', quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
 
 phenotypes <- c('earHeight', 'flagLeafHeight', 'daysToAnthesis', 'daysToSilk', 'totalStandCount', 'anthesisSilkingInterval', 'GDDToAnthesis',
                 'GDDToSilk', 'anthesisSilkingIntervalGDD', 'plantDensity', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 
