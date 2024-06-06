@@ -101,12 +101,19 @@ yieldComponentsLabels <- c('Ear Fill Length* (cm)', 'Ear Width (cm)', 'Shelled C
 #          combineMoisture.sp = case_when(location=='Ames' & year=='2022' ~ combineMoisture, .default = combineMoisture.sp))
 # 
 # # Export spatial corrections so we don't have to run it again
-# write.csv(hybrids, 'analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv')
+# write.csv(hybrids, 'analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv', row.names = FALSE, quote = FALSE)
 hybrids <- read.csv('analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
   filter(location!='') %>% 
   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
   rowwise() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .)))
+
+envsPerHybrid <- tibble(hybrid = unique(hybrids$genotype), numEnvs = NULL)
+for(i in 1:length(unique(envsPerHybrid$hybrid)))
+{
+  hybridData <- filter(hybrids, genotype==envsPerHybrid$hybrid[i])
+  envsPerHybrid$numEnvs[i] <- length(unique(hybridData$environment))
+}
 
 # # Location or irrigationProvided, which is mostly location, is most important for 15/19 traits when we don't count residual
 # vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)

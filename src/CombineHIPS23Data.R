@@ -1144,6 +1144,10 @@ hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
          hundredKernelMass = round(hundredKernelMass, 3),
          kernelMassPerEar = round(kernelMassPerEar, 1),
          shelledCobMass = round(shelledCobMass, 3)) %>%
+  mutate(plantingDate = case_when(location=='Ames' & year=='2023' ~ '2023-05-19',
+                                  location=='Crawfordsville' & year=='2023' ~ '2023-05-04',
+                                  .default = plantingDate), 
+         plotLength = case_when(location=='Missouri Valley' & year=='2023' ~ 17.5, .default = plotLength))
   arrange(year, location, sublocation, block, plotNumber) %>%
   relocate(qrCode, year, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range, plotNumber, 
            genotype, pedigreeID, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, 
@@ -1152,7 +1156,7 @@ hybridHIPS <- bind_rows(hybrids22, hybridHIPS23) %>%
            percentMoisture, percentStarch, percentProtein, percentOil, percentFiber, percentAsh, kernelColor, percentLodging, harvestDate, notes) %>%
   select(!c(ERNumber, irrigationTreatment, plantHeight))
 
-write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv',  quote = FALSE, sep = ',', na = '', row.names = FALSE, col.names = TRUE)
+write.csv(hybridHIPS, 'outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv',  quote = FALSE, sep = ',', row.names = FALSE, col.names = TRUE)
 
 
 
