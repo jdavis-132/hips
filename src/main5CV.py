@@ -14,6 +14,7 @@ k = 5
 # Assuming you have a DataFrame named 'data' with columns: plantDensity, kernelRowNumber, kernelsPerRow, hundredKernelMass, yieldPerAcre
 # Adjust the file path or loading mechanism as needed
 data = pd.read_csv("../analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv")
+data = data[~data['genotype'].isin(['ND203 X I159', 'OS426 X A12', 'B7 X I159', 'B7 X KYS', 'A344 X KYS'])]
 data = data[['yieldPerAcre.sp', 'genotype', 'environment', 'plotNumber', 'plantDensity.sp', 'kernelRowNumber.sp', 'kernelsPerRow.sp', 'hundredKernelMass.sp']]
 data = data.dropna()
 
