@@ -115,7 +115,7 @@ for(i in 1:length(unique(envsPerHybrid$hybrid)))
   envsPerHybrid$numEnvs[i] <- length(unique(hybridData$environment))
 }
 
-singleEnvHybrids <- envsPerHybrid$hybrid[envsPerHybrid$numEnvs<2]
+singleEnvHybrids <- envsPerHybrid$hybrid[envsPerHybrid$numEnvs<4]
 hybrids <- filter(hybrids, !(genotype %in% singleEnvHybrids))
 # # Location or irrigationProvided, which is mostly location, is most important for 15/19 traits when we don't count residual
 # vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
@@ -345,34 +345,34 @@ orderedViolins <- hybrids %>%
     geom_text(aes(275,'2022:North Platte:4.3:High'), label = 'bc', size = 3.88, color = 'black', hjust = 1) +
     geom_text(aes(275,'2022:North Platte:4.3:Medium'), label = 'cd', size = 3.88, color = 'black', hjust = 1) +
     geom_text(aes(275,'2022:North Platte:8.6:Low'), label = 'cde', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Crawfordsville:0:Medium'), label = 'de', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Crawfordsville:0:High'), label = 'ef', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Ames:0:Medium'), label = 'f', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Crawfordsville:0:High'), label = 'f', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Scottsbluff:16.9:High'), label = 'f', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Missouri Valley:0:Medium'), label = 'f', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Crawfordsville:0:Low'), label = 'fg', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:4.3:Low'), label = 'gh', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Missouri Valley:0:Medium'), label = 'gh', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Scottsbluff:16.9:Medium'), label = 'hi', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Ames:0:Low'), label = 'hij', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Ames:0:Low'), label = 'hij', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Crawfordsville:0:Low'), label = 'ij', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Crawfordsville:0:Medium'), label = 'j', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Ames:0:High'), label = 'k', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Ames:0:Medium'), label = 'k', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Scottsbluff:16.9:Low'), label = 'k', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:0:Low'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:North Platte:4.5:Medium'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Lincoln:0:High'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:0:High'), label = 'lm', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Lincoln:0:Low'), label = 'lm', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Lincoln:0:Medium'), label = 'mn', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:North Platte:0:Medium'), label = 'n', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:0:Medium'), label = 'n', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Lincoln:0:Medium'), label = 'o', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Lincoln:0:Low'), label = 'p', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Lincoln:0:High'), label = 'q', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Crawfordsville:0:Medium'), label = 'def', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:Crawfordsville:0:High'), label = 'efg', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:Ames:0:Medium'), label = 'fg', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Crawfordsville:0:High'), label = 'g', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Scottsbluff:16.9:High'), label = 'g', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:Missouri Valley:0:Medium'), label = 'g', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Crawfordsville:0:Low'), label = 'gh', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:North Platte:4.3:Low'), label = 'hi', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Missouri Valley:0:Medium'), label = 'hi', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Scottsbluff:16.9:Medium'), label = 'ij', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:Ames:0:Low'), label = 'ijk', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Ames:0:Low'), label = 'ijk', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:Crawfordsville:0:Low'), label = 'jk', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:Crawfordsville:0:Medium'), label = 'k', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Ames:0:High'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Ames:0:Medium'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Scottsbluff:16.9:Low'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:North Platte:0:Low'), label = 'm', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:North Platte:4.5:Medium'), label = 'm', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:Lincoln:0:High'), label = 'm', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:North Platte:0:High'), label = 'mn', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:Lincoln:0:Low'), label = 'mn', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:Lincoln:0:Medium'), label = 'no', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2023:North Platte:0:Medium'), label = 'o', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:North Platte:0:Medium'), label = 'o', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Lincoln:0:Medium'), label = 'p', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Lincoln:0:Low'), label = 'q', size = 3.88, color = 'black', hjust = 1) +
+    geom_text(aes(275,'2022:Lincoln:0:High'), label = 'r', size = 3.88, color = 'black', hjust = 1) +
     scale_fill_manual(values = nitrogenColors) + 
     scale_color_manual(values = irrigationColors) +
     labs(x = 'Yield (Bushels/Acre)', y = 'Environment', fill = 'Nitrogen Fertilizer (lbs/acre)', color = 'Irrigation Provided') + 
@@ -1569,12 +1569,14 @@ yieldPredictions <- read.csv('analysis/RFpredictions5CV.csv') %>%
 rfRegressionModel <- lm(predictedYieldRF ~ yieldPerAcre, data = yieldPredictions)
 rfIntercept <- rfRegressionModel$coefficients[1]
 rfSlope <- rfRegressionModel$coefficients[2]
+summary(rfRegressionModel)
 # Adjusted R2 from summary(model)
-rfR2 <-  0.113 
+rfR2 <-  0.1098
 
 extensionRegressionModel <- lm(predictedYieldExtension ~ yieldPerAcre, data = yieldPredictions)
 extensionIntercept <- extensionRegressionModel$coefficients[1]
 extensionSlope <- extensionRegressionModel$coefficients[2]
+summary(extensionRegressionModel)
 # Adjusted R2 from summary(model)
 extensionR2 <- 0.4567
 
@@ -1713,8 +1715,8 @@ nResponseBlockRho <- cor(nResponseBlockWide$b1, nResponseBlockWide$b2, use = 'co
 nResponseCorr <- ggplot(nResponseBlockWide, aes(b1, b2)) +
   geom_point(color = viridis_pal()(4)[1]) + 
   labs(x = 'Nitrogen Plasticity - Block 1', y = 'Nitrogen Plasticity - Block 2', title = paste0('Spearman Rank Correlation: ', round(nResponseBlockRho, 4))) + 
-  scale_x_continuous(limits = c(-1.25, 2)) +
-  scale_y_continuous(limits = c(-1.25, 2)) +
+  scale_x_continuous(limits = c(-1.15, 1.75)) +
+  scale_y_continuous(limits = c(-1.15, 1.75)) +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 11),
         axis.text.y = element_text(color = 'black', size = 11),
@@ -1906,33 +1908,44 @@ ggsave('../figSMeanParentPlots.svg', plot = supplMeanParentPlots, width = 6.5, h
 # Model relationships: are they significant?
 meanPerformanceByPlasticityYield <- lm(yieldPerAcre.sp.mu ~ yieldPerAcre.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityYield)
+summary(meanPerformanceByPlasticityYield)
 
 meanPerformanceByPlasticityShelledCobWidth <- lm(shelledCobWidth.sp.mu ~ shelledCobWidth.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityShelledCobWidth)
+summary(meanPerformanceByPlasticityShelledCobWidth)
 
 meanPerformanceByPlasticityKRN <- lm(kernelRowNumber.sp.mu ~ kernelRowNumber.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityKRN)
+summary(meanPerformanceByPlasticityKRN)
 
 meanPerformanceByPlasticityEarLength <- lm(earLength.sp.mu ~ earLength.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityEarLength)
+summary(meanPerformanceByPlasticityEarLength)
 
 meanPerformanceByPlasticityEarFillLength <- lm(earFillLength.sp.mu ~ earFillLength.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityEarFillLength)
+summary(meanPerformanceByPlasticityEarFillLength)
 
 meanPerformanceByPlasticityKPR <- lm(kernelsPerRow.sp.mu ~ kernelsPerRow.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityKPR)
+summary(meanPerformanceByPlasticityKPR)
 
 meanPerformanceByPlasticityKPE <- lm(kernelsPerEar.sp.mu ~ kernelsPerEar.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityKPE)
+summary(meanPerformanceByPlasticityKPE)
 
 meanPerformanceByPlasticityEarWidth <- lm(earWidth.sp.mu ~ earWidth.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityEarWidth)
+summary(meanPerformanceByPlasticityEarWidth)
 
 meanPerformanceByPlasticityHKM <- lm(hundredKernelMass.sp.mu ~ hundredKernelMass.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityHKM)
+summary(meanPerformanceByPlasticityHKM)
 
 meanPerformanceByPlasticityKernelMass <- lm(kernelMassPerEar.sp.mu ~ kernelMassPerEar.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityKernelMass)
+summary(meanPerformanceByPlasticityKernelMass)
+
 
 # How far apart in rank are the hybrids predicted to crossover by FW?
 FWRankChangeRankDistance <- cxData %>%
