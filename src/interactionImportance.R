@@ -107,7 +107,7 @@ getSignificantCrossovers <- function(data, pheno, environments)
   return(genotypePairs)
 }
 
-hybrids <- hybrids <- read.csv('analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
+hybrids <- hybrids <- read.csv('HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
   filter(location!='') %>% 
   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
   rowwise() %>%
@@ -120,16 +120,16 @@ for(i in 1:length(unique(envsPerHybrid$hybrid)))
   envsPerHybrid$numEnvs[i] <- length(unique(hybridData$environment))
 }
 
-singleEnvHybrids <- envsPerHybrid$hybrid[envsPerHybrid$numEnvs<2]
+singleEnvHybrids <- envsPerHybrid$hybrid[envsPerHybrid$numEnvs<4]
 hybrids <- filter(hybrids, !(genotype %in% singleEnvHybrids)) %>%
   rowwise() %>%
   mutate(genotype = str_remove_all(genotype, '-'))
 
-#phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
-#                'GDDToAnthesis', 'GDDToSilk', 'anthesisSilkingIntervalGDD', 'kernelRowNumber', 'earWidth',
-#                'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass',
-#                'earFillLength', 'kernelsPerRow')
-phenotypes <- c('yieldPerAcre')
+phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
+                'GDDToAnthesis', 'GDDToSilk', 'anthesisSilkingIntervalGDD', 'kernelRowNumber', 'earWidth',
+                'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass',
+                'earFillLength', 'kernelsPerRow')
+#phenotypes <- c('yieldPerAcre')
 # How often are interactions between a pair of hybrids crossover interactions AND represent significant differences in the phenotype?
 genotypePairs <- tibble(genotype1 = NULL, genotype2 = NULL)
 hybridEnvs <- hybrids %>%

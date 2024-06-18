@@ -59,14 +59,14 @@ plotRepCorr <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'ge
     rep1 <- paste0(i, '.1')
     rep2 <- paste0(i, '.2')
     print(i)
-    print(cor(df.wide[[rep1]], df.wide[[rep2]], use = 'complete.obs'))
+    print(cor(df.wide[[rep1]], df.wide[[rep2]], use = 'complete.obs', method = 'spearman'))
     
     p <- ggplot(df.wide, aes(.data[[rep1]], .data[[rep2]], color = .data[[treatmentVar]])) + 
       geom_point() + 
       facet_wrap(vars(all_of(.data[[facet]]))) +
-      labs(subtitle = paste0('r=', cor(df.wide[[rep1]], df.wide[[rep2]], use='complete.obs')))
+      labs(subtitle = paste0('r=', cor(df.wide[[rep1]], df.wide[[rep2]], use='complete.obs', method = 'spearman')))
     print(p)
-    ggsave(paste0('analysis/repCorrelationByLocationInbreds', i, '.png'))
+    # ggsave(paste0('analysis/repCorrelationByLocationInbreds', i, '.png'))
   }
   return(df.wide)
 }
@@ -727,7 +727,8 @@ plotInteractionImportanceGrid <- function(significantInteractionsData = sigCross
     select(c(genotype1A, genotype2, all_of(phenotypeScoreNormalized))) %>%
     rename(genotype1 = genotype1A)
   
-  df <-bind_rows(df1, df2)
+  df <-bind_rows(df1, df2) %>% 
+    filter(!is.na(.data[[phenotypeScoreNormalized]]))
   
   blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = performanceData) 
   blups <- ranef(blups)
@@ -745,8 +746,8 @@ plotInteractionImportanceGrid <- function(significantInteractionsData = sigCross
   
   heatmap <- ggplot(df, aes(rankG1, rankG2, fill = .data[[phenotypeScoreNormalized]])) + 
     geom_tile() + 
-    scale_x_continuous(limits = c(0, 122)) +
-    scale_y_continuous(limits = c(0, 122)) +
+    scale_x_continuous(limits = c(0, 120)) +
+    scale_y_continuous(limits = c(0, 120)) +
     scale_fill_viridis(direction = -1) +
     labs(x = 'Hybrid Rank X', y = 'Hybrid Rank Y', fill = legendTitle, title = phenotypeLabel) + 
     theme_minimal() +
@@ -772,21 +773,23 @@ plotNPlasticityCor <- function(nitrogenResponsePlasticityData = nResponse.pl, tr
   dfWide <- nResponse.pl %>%
     pivot_wider(id_cols = genotype, 
                 names_from = locationYear,
-                values_from = .data[[plasticity]])
+                values_from = .data[[plasticity]]) #%>% 
+    # select(where(~!all(is.na(.))))
   
-  corData <- cor(dfWide[, 2:5], use = 'complete.obs', method = 'spearman') %>%
+  corData <- cor(dfWide[, 2:length(colnames(dfWide))], use = 'complete.obs', method = 'spearman') %>%
     as.table() %>%
     as.data.frame()
   names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
+  print(paste0(trait, ':', min(corData$nPlasticityCor, na.rm = TRUE), '-', max(corData$nPlasticityCor[corData$nPlasticityCor!=1], na.rm = TRUE)))
   
   plot <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
     geom_tile(color = 'white') +
-    scale_fill_viridis_c(direction = -1, limits = c(-0.3, 1)) + 
-    scale_x_discrete(breaks = unique(corData$locationYear1), 
-                     labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10), 
+    scale_fill_viridis_c(direction = -1, limits = c(-0.2, 1)) + 
+    scale_x_discrete(breaks = unique(corData$locationYear1),
+                     labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10),
                                 str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 10))) +
-    scale_y_discrete(breaks = unique(corData$locationYear1), 
-                     labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10), 
+    scale_y_discrete(breaks = unique(corData$locationYear1),
+                     labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10),
                                 str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 10))) +
     guides(fill = guide_colourbar(barwidth = 12,
                                   barheight = 1)) +
@@ -804,4 +807,27 @@ plotNPlasticityCor <- function(nitrogenResponsePlasticityData = nResponse.pl, tr
           plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
           legend.background = element_blank())
   return(plot)
+}
+
+plotNitrogenPlasticityBlockCor <- function(nitrogenBlockPlasticity, phenotype, phenotypeLabel)
+{
+  phenotype.pl <- paste0(phenotype, '.sp.b')
+  nResponseBlockWide <- nitrogenBlockPlasticity %>%
+    pivot_wider(id_cols = c(genotype, locationYear), names_from = blockSet, values_from = .data[[phenotype.pl]], names_prefix = 'b')
+  
+  nResponseBlockRho <- cor(nResponseBlockWide$b1, nResponseBlockWide$b2, use = 'complete.obs', method = 'spearman')
+  
+  nResponseCorr <- ggplot(nResponseBlockWide, aes(b1, b2)) +
+    geom_point(color = viridis_pal()(4)[1]) + 
+    labs(x = 'Nitrogen Plasticity - Block 1', y = 'Nitrogen Plasticity - Block 2', title = phenotypeLabel,
+         subtitle = paste0('Spearman Rank Correlation: ', round(nResponseBlockRho, 4))) + 
+    scale_x_continuous(limits = c(-1.15, 1.75)) +
+    scale_y_continuous(limits = c(-1.15, 1.75)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(color = 'black', size = 11),
+          axis.text.y = element_text(color = 'black', size = 11),
+          plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
+          text = element_text(color = 'black', size = 11),
+          panel.grid = element_blank())
+  print(nResponseCorr)
 }

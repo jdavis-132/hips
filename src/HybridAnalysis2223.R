@@ -375,7 +375,7 @@ orderedViolins <- hybrids %>%
     geom_text(aes(275,'2022:Lincoln:0:High'), label = 'r', size = 3.88, color = 'black', hjust = 1) +
     scale_fill_manual(values = nitrogenColors) + 
     scale_color_manual(values = irrigationColors) +
-    labs(x = 'Yield (Bushels/Acre)', y = 'Environment', fill = 'Nitrogen Fertilizer (lbs/acre)', color = 'Irrigation Provided') + 
+    labs(x = 'Yield (bushels/acre)', y = 'Environment', fill = 'Nitrogen Fertilizer (lbs/acre)', color = 'Irrigation Provided') + 
     theme_minimal() + 
     theme(axis.text.x = element_text(color = 'black', size = 11),
         axis.text.y = element_text(color = 'black', size = 11),
@@ -384,6 +384,105 @@ orderedViolins <- hybrids %>%
         legend.position = 'right')
 orderedViolins
 ggsave('../orderedViolins.png', plot = orderedViolins, width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
+
+yieldBLUPS <- lmer(yieldPerAcre.sp ~ environment + (1|genotype), data = hybrids) 
+yieldBLUPS <- ranef(yieldBLUPS)
+yieldBLUPS <- as_tibble(yieldBLUPS$genotype, rownames = 'genotype') %>%
+  rename(blup = `(Intercept)`) %>%
+  mutate(rankOrder = row_number(blup))
+top10Percent <- round(max(yieldBLUPS$rankOrder) * 0.9)
+top10PercentOverallGenotypes <- yieldBLUPS$genotype[yieldBLUPS$rankOrder %in% top10Percent:max(yieldBLUPS$rankOrder)]
+lower10PercentOverallGenotypes <- yieldBLUPS$genotype[yieldBLUPS$rankOrder %in% 1:round(max(yieldBLUPS$rankOrder)*0.1)]
+top10PercentOverallPerformance <- hybrids %>%
+  rowwise() %>%
+  mutate(top10Percent = (genotype %in% top10PercentOverallGenotypes), 
+         environment = factor(environment, levels = orderedEnvironments$environment))
+
+top10PercentOverallAnova <- aov(yieldPerAcre.sp ~ factor(top10Percent)*environment, data = top10PercentOverallPerformance)
+top10PercentOverallTukey <- TukeyHSD(top10PercentOverallAnova)
+sigOverallGroupEnvs <- top10PercentOverallTukey[["factor(top10Percent):environment"]] %>%
+  as_tibble(rownames = 'comp') %>%
+  filter(`p adj` < 0.05) %>%
+  rowwise() %>%
+  mutate(grp1 = str_split_i(comp, '-', 1),
+         grp2 = str_split_i(comp, '-', 2)) %>%
+  mutate(overallRank1 = str_split_i(grp1, ':', 1),
+         overallRank2 = str_split_i(grp2, ':', 1),
+         env1 = str_split_fixed(grp1, ':', 2)[2],
+         env2 = str_split_fixed(grp2, ':', 2)[2]) %>%
+  filter(env1==env2)
+
+sigAnnotations10PercentOverall <- tibble(environment = sigOverallGroupEnvs$env1)
+                                           
+top10PercentOverallPerformancePlot <- ggplot(top10PercentOverallPerformance, aes(top10Percent, yieldPerAcre.sp, fill = top10Percent)) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), color = 'white') +
+  geom_text(data = sigAnnotations10PercentOverall, mapping = aes(y = 0, x = FALSE, fill = FALSE), label = '*') +
+  facet_wrap(~factor(environment, levels = orderedEnvironments$environment), strip.position = 'left', ncol = 9) + 
+  scale_x_discrete(labels = c('', '')) +
+  scale_fill_manual(values = viridis_pal()(4)[1:2], 
+                    labels = c('Lower 90%', 'Upper 10%')) + 
+  labs(x = '', y = 'Yield (bushels/acre)', fill = 'Overall Hybrid Rank') +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11),
+        panel.grid = element_blank(),
+        legend.position = 'top')
+top10PercentOverallPerformancePlot
+ggsave('../top10PercentOverallPerformance.svg', plot = top10PercentOverallPerformancePlot, 
+       width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
+
+hybrids <- hybrids %>%
+  rowwise() %>%
+  mutate(genotype = str_to_upper(genotype),
+         earParent = str_split_i(genotype, ' X ', 1),
+         pollenParent = str_split_i(genotype, ' X ', 2)) %>%
+  left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(earParentAge = age) %>%
+  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(pollenParentAge = age) %>%
+  rowwise() %>%
+  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
+         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
+         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+
+# # How important is mean parent age to explaining yield in each environment
+# vc_meanParentAge <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL, environment = NULL)
+# for(env in orderedEnvironments$environment)
+# {
+#   envData <- filter(hybrids, environment==env)
+#   plot <- ggplot(envData, aes(meanParentAge, yieldPerAcre.sp)) + 
+#     geom_point() + 
+#     labs(title = env)
+#   print(plot)
+#   print(env)
+#   print(cor(envData$yieldPerAcre.sp, envData$meanParentAge, use = 'complete.obs', method = 'spearman'))
+#   vc_env <- partitionVariance3(envData, 'yieldPerAcre.sp', 'Yield', '~ (1|earParentAge) + (1|pollenParentAge) + (1|earParentAge:pollenParentAge)') %>%
+#     mutate(environment = env)
+#   vc_meanParentAge <- bind_rows(vc_meanParentAge, vc_env)
+# }
+# 
+# vc_meanParentAge <- mutate(vc_meanParentAge, 
+#                            environment = factor(environment, levels = orderedEnvironments$environment))
+# 
+# meanParentAge_vp.plot <- ggplot(vc_meanParentAge, aes(environment, pctVar, fill = grp)) +
+#   geom_col(position = 'stack') + 
+#   scale_fill_viridis(discrete = TRUE, labels = label_wrap(11)) +
+#   scale_y_continuous(name = 'Variance', 
+#                      breaks = c(0, 25, 50, 75, 100), 
+#                      labels = c('0%', '25%', '50%', '75%', '100%')) +
+#   labs(x = 'Environment', y = 'Variance', fill = '') +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(size = 11, color = 'black', angle = 90, hjust = 1, vjust = 0.5),
+#         axis.text.y = element_text(size = 11, color = 'black'),
+#         legend.text = element_text(size = 11, color = 'black'),
+#         text = element_text(size = 11, color = 'black'),
+#         legend.position = 'bottom',
+#         line = element_line(color = 'black', linewidth = 1),
+#         panel.grid = element_blank())
+# meanParentAge_vp.plot
 # Okay, let's run the plasticity without LNK 2022
 # Estimate FW plasticity across all environments where phenotype was observed
 hybridsNOLNK22 <- filter(hybrids, !(location=='Lincoln' & year=='2022'))
@@ -774,12 +873,12 @@ for(var in vars)
 # Subset to the locations where we got a significant, classical N response on a population level and estimate plasticity --> does N plasticity correlate across location years?
 nResponse <- filter(hybrids, str_detect(environment, '2023:Ames')|str_detect(environment, '2023:Crawfordsville')|location %in% c('North Platte2', 'Scottsbluff'))
 
-nResponse.pl <- getNitrogenPlasticityByLocationYear(nResponse, paste0(yieldComponents[1], '.sp'), 'nitrogenTreatment', 'genotype')
+nResponse.pl <- getNitrogenPlasticityByLocationYear(nResponse, paste0(phenotypes[1], '.sp'), 'nitrogenTreatment', 'genotype')
 
-for(i in 2:length(yieldComponents))
+for(i in 2:length(phenotypes))
 {
   nResponse.pl <- full_join(nResponse.pl, 
-                            getNitrogenPlasticityByLocationYear(nResponse, paste0(yieldComponents[i], '.sp'), 'nitrogenTreatment', 'genotype'),
+                            getNitrogenPlasticityByLocationYear(nResponse, paste0(phenotypes[i], '.sp'), 'nitrogenTreatment', 'genotype'),
                             join_by(genotype, locationYear),
                             suffix = c('', ''),
                             keep = FALSE)
@@ -874,7 +973,7 @@ nPlasticityCorYield
 nResponse.plWideHKM <- nResponse.pl %>%
   pivot_wider(id_cols = genotype, 
               names_from = locationYear,
-              values_from = yieldPerAcre.sp.b)
+              values_from = hundredKernelMass.sp.b)
 
 corData <- cor(nResponse.plWideHKM[, 2:5], use = 'complete.obs', method = 'spearman') %>%
   as.table() %>%
@@ -883,7 +982,8 @@ names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
 
 nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
   geom_tile(color = 'white') +
-  scale_fill_viridis_c(direction = -1) + 
+  scale_fill_viridis_c(direction = -1,
+                       limits = c( -0.2, 1)) + 
   guides(fill = guide_colourbar(barwidth = 12,
                                 barheight = 1)) +
   scale_x_discrete(breaks = unique(corData$locationYear1), 
@@ -961,6 +1061,12 @@ nPlasticityCorHKM
 # }
 
 ames23NResponse.pl <- filter(nResponse.pl, locationYear=='2023:Ames')
+ames23YieldByNResponse <- lm(yieldPerAcre.sp.mu~ yieldPerAcre.sp.b + meanParentAge, data = ames23NResponse.pl)
+anova(ames23YieldByNResponse)
+summary(ames23YieldByNResponse)
+
+ames23HKMByNResponse <- lm(hundredKernelMass.sp.mu ~ hundredKernelMass.sp.b + meanParentAge, data = ames23NResponse.pl)
+anova(ames23HKMByNResponse)
 
 nPlasticityAmesYield <- ggplot(ames23NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
   geom_point() +
@@ -1124,10 +1230,10 @@ linetypePlot
 nPlasticityLinesLinetypeLegend <- get_legend(linetypePlot)
 
 nPlasticityGenotypeLines <- ggplot() + 
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHAmes, linetype = 'solid') +
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHCF, linetype = 'dashed') +
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHNP2, linetype = 'dotted') +
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHSB, linetype = 'dotdash') +
+  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHNP2, linetype = 'solid') +
+  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHSB, linetype = 'dashed') +
+  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHAmes, linetype = 'dotted') +
+  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHCF, linetype = 'dotdash') +
   scale_color_manual(values = viridis_pal()(4)[c(1, 3, 4)]) + 
   labs(x = 'Nitrogen Fertilizer (lbs/acre)', y = 'Mean Yield (bushels/acre)', color = 'Genotype') + 
   theme_minimal() +
@@ -1145,12 +1251,12 @@ nPlasticityGenotypeLinesLegends
 nPlasticityGenotypeLinesPlot <- plot_grid(nPlasticityGenotypeLines, nPlasticityGenotypeLinesLegends, ncol = 2, rel_widths = c(1, 0.4))
 nPlasticityGenotypeLinesPlot
 # How well does N plasticity correlate between reps within a location
-nResponseBlock.pl <- getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(yieldComponents[1], '.sp'), 'nitrogenTreatment', 'genotype')
+nResponseBlock.pl <- getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(phenotypes[1], '.sp'), 'nitrogenTreatment', 'genotype')
 
-for(i in 2:length(yieldComponents))
+for(i in 2:length(phenotypes))
 {
   nResponseBlock.pl <- full_join(nResponseBlock.pl, 
-                            getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(yieldComponents[i], '.sp'), 'nitrogenTreatment', 'genotype'),
+                            getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(phenotypes[i], '.sp'), 'nitrogenTreatment', 'genotype'),
                             join_by(genotype, locationYear, blockSet),
                             suffix = c('', ''),
                             keep = FALSE)
@@ -1299,15 +1405,19 @@ for(i in 6)
 # write.csv(genotypePairs, 'analysis/significantCrossovers.csv')
 sigCrossovers <- read.csv('analysis/significantCrossovers.csv')
 
-heatmap <- plotInteractionImportanceGrid(trait = 'yieldPerAcre', traitLabel = 'Yield (bushels/acre)', legendPosition = 'right')
+heatmap <- plotInteractionImportanceGrid(trait = 'yieldPerAcre', 
+                                         traitLabel = 'Yield (bushels/acre)', 
+                                         legendPosition = 'right')
 heatmap
 
 highPlasticityGenotype <- hybridsNOLNK22.pl %>%
   arrange(yieldPerAcre.sp.b)
+mostPlastic10PercentGenotypes <- highPlasticityGenotype$genotype[round(0.9*length(highPlasticityGenotype$genotype)):length(highPlasticityGenotype$genotype)]
 highPlasticityGenotype <- highPlasticityGenotype$genotype[length(highPlasticityGenotype$genotype)]
 
 lowPlasticityGenotype <- hybridsNOLNK22.pl %>%
   arrange(yieldPerAcre.sp.b)
+leastPlastic10PercentGenotypes <- lowPlasticityGenotype$genotype[1:round(0.1*length(lowPlasticityGenotype$genotype))]
 lowPlasticityGenotype <- lowPlasticityGenotype$genotype[1]
 
 averagePlasticityGenotype <- hybridsNOLNK22.pl %>%
@@ -1362,6 +1472,109 @@ FWConceptualPlot <- ggplot(LAHData, aes(envIndex, yieldPerAcre.sp, color = genot
         panel.grid = element_blank()) +
   inset_element(FWConceptualPlotLegend, left = 0.25, bottom = 0.6, right = 0.35, top = 1.05, on_top = FALSE)
 FWConceptualPlot
+
+hybrids <- hybrids %>%
+  rowwise() %>%
+  mutate(mostPlastic10Percent = (genotype %in% mostPlastic10PercentGenotypes),
+         environment = factor(environment, levels = orderedEnvironments$environment))
+
+mostPlasticAnova <- aov(yieldPerAcre.sp ~ factor(mostPlastic10Percent)*environment, data = hybrids)
+mostPlasticTukey <- TukeyHSD(mostPlasticAnova)
+sigPlasticityGroupEnvs <- mostPlasticTukey[["factor(mostPlastic10Percent):environment"]] %>%
+  as_tibble(rownames = 'comp') %>%
+  filter(`p adj` < 0.05) %>%
+  rowwise() %>%
+  mutate(grp1 = str_split_i(comp, '-', 1),
+         grp2 = str_split_i(comp, '-', 2)) %>%
+  mutate(plasticity1 = str_split_i(grp1, ':', 1),
+         plasticity2 = str_split_i(grp2, ':', 1),
+         env1 = str_split_fixed(grp1, ':', 2)[2],
+         env2 = str_split_fixed(grp2, ':', 2)[2]) %>%
+  filter(env1==env2)
+
+sigAnnotations10PercentMostPlastic <- tibble(environment = factor(sigPlasticityGroupEnvs$env1, levels = orderedEnvironments$environment))
+mostPlastic10PercentPerformance <- ggplot(hybrids, aes(mostPlastic10Percent, yieldPerAcre.sp, fill = mostPlastic10Percent)) + 
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), color = 'white') +
+  geom_text(data = sigAnnotations10PercentMostPlastic, mapping = aes(y = 0, x = FALSE, fill = FALSE), label = '*') +
+  facet_wrap(vars(environment), strip.position = 'left', ncol = 9) + 
+  scale_x_discrete(labels = c('', '')) +
+  scale_fill_manual(values = viridis_pal()(4)[1:2], 
+                    labels = c('Lower 90%', 'Upper 10%')) + 
+  labs(x = '', y = 'Yield (bushels/acre)', fill = 'Plasticity Rank') +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(color = 'black', size = 11),
+        axis.text.y = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11, hjust = 0.5),
+        panel.grid = element_blank(),
+        legend.position = 'top')
+mostPlastic10PercentPerformance
+ggsave('../mostPlastic10PercentPerformance.svg', plot = mostPlastic10PercentPerformance, 
+       width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
+
+
+# How does yield as % of env mean change with env mean for plastic vs less plastic genotypes?
+percentMeanData <- hybrids %>%
+  rowwise() %>%
+  mutate(leastPlastic10Percent = (genotype %in% leastPlastic10PercentGenotypes),
+         best10PercentOverall = (genotype %in% top10PercentOverallGenotypes), 
+         worst10PercentOverall = (genotype %in% lower10PercentOverallGenotypes), 
+         environment = factor(environment, levels = orderedEnvironments$environment)) %>%
+  group_by(environment, genotype) %>%
+  mutate(hybridEnvMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  group_by(environment) %>%
+  mutate(envMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  rowwise() %>% 
+  mutate(hybridPercentEnvMean = (hybridEnvMean/envMean)*100) %>%
+  ungroup()
+
+percentMeanPlotExtremePlasticity <- percentMeanData %>%
+  filter(mostPlastic10Percent|leastPlastic10Percent) %>%
+  ggplot(aes(envMean, hybridPercentEnvMean, group = genotype,
+                                               color = meanParentAge)) +
+  geom_smooth() + 
+  geom_point() + 
+  scale_color_viridis(direction = -1) + 
+  scale_y_continuous(breaks = c(50, 100, 150, 200),
+                     labels = c('50%', '100%', '150%', '200%')) +
+  labs(x = 'Environment Mean Yield (bushels/acre)', y = 'Hybrid Mean Yield As Percent of Environment Mean', 
+       color = 'Mean Parent Release Year', title = '10% Most & Least Plastic Hybrids') +
+  theme_minimal() +  
+  theme(axis.text.x = element_text(color = 'black', size = 11, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
+        panel.grid = element_blank())
+percentMeanPlotExtremePlasticity
+
+percentMeanPlotOverallPerformance <- percentMeanData %>%
+  filter(best10PercentOverall|worst10PercentOverall) %>%
+ggplot(aes(envMean, hybridPercentEnvMean, group = genotype,
+                            color = meanParentAge)) +
+  geom_smooth() + 
+  geom_point() + 
+  scale_color_viridis(direction = -1) + 
+  scale_y_continuous(breaks = c(50, 100, 150, 200), 
+                     labels = c('50%', '100%', '150%', '200%')) +
+  labs(x = 'Environment Mean Yield (bushels/acre)', y = 'Hybrid Mean Yield As Percent of Environment Mean', 
+       color = 'Mean Parent Release Year', title = '10% Highest & Lowest Overall Yielding Hybrids') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 11, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 11),
+        text = element_text(color = 'black', size = 11, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
+        panel.grid = element_blank())
+percentMeanPlotOverallPerformance
+
+percentMeanPlots <- plot_grid(percentMeanPlotExtremePlasticity, percentMeanPlotOverallPerformance, 
+                              ncol = 1, labels = 'AUTO')
+ggsave('../percentMeanPlots.png', plot = percentMeanPlots, width = 6.5, height = 9, units = 'in',
+       dpi = 1000, bg = 'white')
+
+
+
+
+
 
 phenotypeLabelsGCAVP <- c('Plant Density', 'Test Weight', 'Harvest Moisture', 'Flag Leaf Height',
                         'Ear Height', 'Yield', 'GDD To Anthesis*', 'GDD to Silk*', 
@@ -1546,8 +1759,8 @@ featureImportance <- ggplot(rfFeatures, aes(val, phenotypeLabel)) +
   geom_boxplot(color = 'black', fill = nitrogenColors[3]) +
   geom_text(aes(0.85, 'Hundred Kernel Mass (g)'), label = 'a', size = 3.88) +
   geom_text(aes(0.85, 'Kernels Per Row*'), label = 'b', size = 3.88) +
-  geom_text(aes(0.85, 'Plant Density (plants/acre)'), label = 'b', size = 3.88) +
-  geom_text(aes(0.85, 'Kernel Row Number'), label = 'c', size = 3.88) +
+  geom_text(aes(0.85, 'Plant Density (plants/acre)'), label = 'c', size = 3.88) +
+  geom_text(aes(0.85, 'Kernel Row Number'), label = 'd', size = 3.88) +
   scale_y_discrete(labels = str_wrap(levels(rfFeatures$phenotypeLabel), 9)) +
   labs(x = 'Feature Importance', y = '') +
   theme_minimal() + 
@@ -1571,14 +1784,14 @@ rfIntercept <- rfRegressionModel$coefficients[1]
 rfSlope <- rfRegressionModel$coefficients[2]
 summary(rfRegressionModel)
 # Adjusted R2 from summary(model)
-rfR2 <-  0.1098
+rfR2 <-  0.1111
 
 extensionRegressionModel <- lm(predictedYieldExtension ~ yieldPerAcre, data = yieldPredictions)
 extensionIntercept <- extensionRegressionModel$coefficients[1]
 extensionSlope <- extensionRegressionModel$coefficients[2]
 summary(extensionRegressionModel)
 # Adjusted R2 from summary(model)
-extensionR2 <- 0.4567
+extensionR2 <- 0.4564
 
 yieldPredictionsSubsample <- yieldPredictions %>%
   slice_sample(prop = 0.5) %>%
@@ -1726,6 +1939,11 @@ nResponseCorr <- ggplot(nResponseBlockWide, aes(b1, b2)) +
 nResponseCorr
 
 ggsave('../figSNResponseBlockCorr.png', plot = nResponseCorr, width = 6.5, height = 6.5, units = 'in', dpi = 1000, bg = 'white')
+
+for(i in 1:length(phenotypes))
+{
+  plotNitrogenPlasticityBlockCor(nResponseBlock.pl, phenotypes[i], phenotypeLabels[i])
+}
 
 meanParentPlotShelledCobWidth <- ggplot(hybridsNOLNK22.pl, aes(shelledCobWidth.sp.mu, shelledCobWidth.sp.b, color = meanParentAge)) +
   geom_point() +
@@ -2057,12 +2275,17 @@ interactionImportanceEarHeight <- plotInteractionImportanceGrid(trait = 'earHeig
                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceEarHeight
 
-supplInteractionImportancePlots <- plot_grid(interactionImportanceEarHeight, interactionImportanceAnthesiSilkingIntervalGDD, interactionImportanceCombineMoisture,
-                                             interactionImportanceCombineTestWeight, interactionImportanceKRN, interactionImportanceEarLength,
-                                             interactionImportanceKPE, interactionImportanceEarWidth, interactionImportanceHKM, 
+supplInteractionImportancePlots <- plot_grid(interactionImportanceFlagLeafHeight, interactionImportanceAnthesiSilkingIntervalGDD, interactionImportanceCombineMoisture,
+                                             interactionImportanceCombineTestWeight, interactionImportanceKRN, interactionImportanceKPR, 
+                                             interactionImportanceEarWidth, interactionImportanceHKM, interactionImportanceKernelMass,
                                              nrow = 3, ncol = 3, labels = 'AUTO')
 supplInteractionImportancePlots
 ggsave('../figSInteractionImportancePlots.png', plot = supplInteractionImportancePlots, width = 8.125, height = 11.25, units = 'in', dpi = 1000, bg = 'white')
+
+for(i in 1:length(phenotypes))
+{
+  print(plotNPlasticityCor(trait = phenotypes[i], traitLabel = phenotypeLabels[i], legendPosition = 'bottom'))
+}
 
 # N plasticity cor suppl figs
 nPlasticityCorShelledCobWidth <- plotNPlasticityCor(trait = 'shelledCobWidth', traitLabel = 'Shelled Cob Width',
@@ -2170,4 +2393,59 @@ locationYearsPerHybridPlot <- ggplot(locationYearsPerHybrid, aes(numLocationYear
   labs(x = 'Location Years', y = 'Number of Hybrids') +
   theme_minimal()
 locationYearsPerHybridPlot
+
+hybridsPerLocationYear <- g2fHybrids %>%
+  group_by(locationYear, Pedigree) %>% 
+  summarise(n = n()) %>% 
+  summarise(n = n())
+
+# which phenotypes are N-responsive?
+nResponseViolinData <- filter(hybrids, !(str_detect(environment, 'Missouri Valley')|str_detect(environment, '2023:North Platte'))) %>%
+  rowwise() %>%
+  mutate(locationYear = str_c(year, location, sep = ':'))
+
+plotPhenotypeNitrogenResponseViolins <- function(data = nResponseViolinData, phenotype, phenotypeLabel)
+{
+  AOV <- aov(as.formula(paste0(phenotype, ' ~ locationYear*nitrogenTreatment')), data = nResponseViolinData)
+  Tukey <- TukeyHSD(AOV)
+  sigComp <- Tukey[["locationYear:nitrogenTreatment"]] %>%
+    as_tibble(rownames = 'comp', .name_repair = ~str_remove_all(., ' '))
+  sigComp <- filter(sigComp, padj < 0.05) %>% 
+    rowwise() %>%
+    mutate(env1 = str_split_i(comp, '-', 1),
+           env2 = str_split_i(comp, '-', 2)) %>%
+    mutate(locationYear1 = str_split_fixed(env1, ':', 3) %>%
+             str_flatten(':'),
+           locationYear2 = str_split_fixed(env2, ':', 3) %>%
+             str_flatten(':'),
+           nitrogenTreatment1 = str_split_i(env1, ':', 3),
+           nitrogenTreatment2 = str_split_i(env2, ':', 3)) %>%
+    filter(locationYear1==locationYear2)
+  
+  # if(length(sigComp$locationYear1 > 0))
+  # {
+    p <- ggplot(nResponseViolinData, aes(nitrogenTreatment, .data[[phenotype]], fill = nitrogenTreatment)) + 
+      geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) + 
+      # geom_text(data = sigComp, mapping = aes(x = 'Low', y = 0), label = nitrogenTreatment1) +
+      # geom_text(data = sigComp, mapping = aes(x = 'High', y = 0), label = nitrogenTreatment2) +
+      scale_fill_manual(values = nitrogenColors) + 
+      facet_wrap(vars(locationYear)) + 
+      labs(x = 'Nitrogen Level', y = phenotypeLabel, fill = '') + 
+      theme_minimal() +
+      theme(axis.text.x = element_text(color = 'black', size = 11),
+            axis.text.y = element_text(color = 'black', size = 11),
+            text = element_text(color = 'black', size = 11),
+            legend.position = 'none',
+            panel.grid = element_blank())
+    print(p)
+  # }
+}
+
+for(i in 1:length(phenotypes))
+{
+  trait <- paste0(phenotypes[i], '.sp')
+  plotPhenotypeNitrogenResponseViolins(phenotype = trait, phenotypeLabel = phenotypeLabels[i])
+}
+
+
 
