@@ -1,11 +1,21 @@
 library(tidyverse)
 
 df <- read.csv('../../../Downloads/2023_inbred_HIPS_data_04_17_2024.csv')
+hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') %>%
+  rowwise() %>%
+  mutate(earParent = str_split_i(genotype, ' X ', 1),
+         pollenParent = str_split_i(genotype, ' X ', 2))
+hybridParents <- union(hybrids$earParent, hybrids$pollenParent)
 genotypesData <- str_to_upper(df$genotype) %>%
   unique()
+
 phenotypeGenotype <- tibble(phenotypeGenotype = genotypesData) %>%
   rowwise() %>%
   mutate(phenotypeGenotype = case_when(phenotypeGenotype=='NC234' ~ 'NC324', .default = phenotypeGenotype))
+
+hybridParentsNotInSAM <- setdiff(hybridParents, phenotypeGenotype$phenotypeGenotype)
+
+
 reseqGenotypes <- read.table('../../../Downloads/genotypes_grzybowski.txt', row.names = NULL, quote = '', comment.char = '', header = TRUE)
 reseqGenotypes <- colnames(reseqGenotypes) %>% 
   str_remove('X')
@@ -79,3 +89,28 @@ samToReseq <- sam %>%
                           "[WHITE VARIEGATED (ISO. FROM BM4 AC3252) (B73-1)]", "B73HTRHM", "PIONEER P1185AM"))) %>%
   arrange(SAM2022)
 write.csv(samToReseq, 'outData/conversionToGrzybowskiResequencing.csv', row.names = FALSE, quote = FALSE)
+
+hybridParentsToReseq <- hybridParents %>%
+  as_tibble() %>%
+  rename(hybridParent = value) %>%
+  full_join(reseqGenotypes, join_by(hybridParent==phenotypeGenotype), keep = TRUE) %>%
+  filter(!(hybridParent %in% c('HOEGEMEYER 8065RR', 'SYNGENTA NK0760-3111', 'PIONEER 1311 AMXT', 'HOEGEMEYER 7089 AMXT', 'PIONEER P0589 AMXT', 'SYNGENTA NK0659-3120-EZ1', 
+                               'WYFFELS W1782', "", NA))) %>%
+  rowwise() %>%
+  mutate(vcfGenotype = case_when(hybridParent=="'IOWA I 205'" ~ 'I_205', 
+                                 hybridParent=="C.I. 540" ~ 'CI_540',
+                                 hybridParent=="CI 3A" ~ 'CI_3A',
+                                 hybridParent=="L 289" ~ 'L_289', 
+                                 .default = vcfGenotype))
+
+hybridParentsMissing <- hybridParentsToReseq %>%
+  filter(is.na(vcfGenotype))
+sort(hybridParentsMissing$hybridParent)
+
+hybridParentsToReseq <- hybridParentsToReseq %>%
+  rename(hybridHIPS = hybridParent,
+         reseq = vcfGenotype) %>% 
+  select(hybridHIPS, reseq) %>% 
+  arrange(hybridHIPS)
+
+write.csv(hybridParentsToReseq, 'outData/hybridParentalLinesConversionToGrzybowskiResequencing.csv', row.names = FALSE, quote = FALSE)
