@@ -223,10 +223,77 @@ mv22 <- hybridEars22UNL %>%
   filter(str_detect(qrCode, 'MV')) %>%
   parseMissouriValleyHybrid2022QR()
 
-hybridEars22UNL <- bind_rows(sb22, np22, lnk22, mv22)
+hybridEars22UNL <- bind_rows(sb22, np22, lnk22, mv22) %>%
+  mutate(across(c(earWidth, earFillLength, kernelRowNumber, kernelsPerRow, earMass, kernelsPerEar, shelledCobWidth, earLength, shelledCobMass, 
+                  hundredKernelMass), as.numeric)) %>%
+  rowwise() %>%
+  mutate(kernelMassPerEar = earMass - shelledCobMass)
 
-acKRN22 <- read_excel('data/2_KRN_trait_inbred_2022_Compiled_v3.xlsx', 
-                      sheet = 'compiled data', 
+# 2022 hybrid ears phenotyped at ISU
+acKRN22 <- read_excel('data/2_KRN_trait_Hybrid_2022_Compiled.xlsx', 
                       skip = 4,
-                      col_types = c('skip', 'text', 'skip', 'skip', 'numeric', 'text', 'text', 'text', 'skip'),
-                      col_names = c('qrCode', 'kernelRowNumber', 'notes', 'smoothCob', 'sweetcorn'))
+                      col_types = c('skip', 'text', 'numeric', 'text', 'text', 'skip'),
+                      col_names = c('qrCode', 'kernelRowNumber', 'smoothCob', 'sweetcorn')) %>%
+  rowwise() %>%
+  mutate(qrCode = str_split_i(qrCode, ' ', 1) %>%
+           str_to_upper(), 
+         smoothCob = case_when(!is.na(smoothCob) ~ 'smooth cob/ovule issue'),
+         sweetcorn = case_when(!is.na(sweetcorn) ~ 'sweetcorn'))
+
+acEar22 <- read_excel('data/3_ear_trait_HYBRID_2022_compiled.xlsx',
+                      sheet = 'compiled data set',
+                      range = 'B2:H4188', 
+                      col_types = c('text', 'skip', 'numeric', 'numeric', 'skip', 'skip', 'text'), 
+                      col_names = c('qrCode', 'earWidth', 'earMass', 'seedMissing')) %>%
+  rowwise() %>%
+  mutate(qrCode = str_split_i(qrCode, ' ', 1) %>%
+           str_to_upper(),
+         earWidth = 0.1*earWidth,
+         seedMissing = case_when(!is.na(seedMissing) ~ 'Seed missing on both sides of widest part of ear'))
+
+acCob22 <- read_excel('data/5_cob_trait_HYBRID_2022_compiled.xlsx',
+                      sheet = 'compiled data sets',
+                      range = 'B2:H3075', 
+                      col_types = c('text', 'numeric', 'numeric', 'numeric', 'skip', 'text', 'text'),
+                      col_names = c('qrCode', 'earLength', 'shelledCobWidth', 'shelledCobMass', 'cobBroke', 'string')) %>%
+  rowwise() %>%
+  mutate(qrCode = str_split_i(qrCode, ' ', 1) %>%
+           str_to_upper(),
+         earLength = 0.1*earLength, 
+         shelledCobWidth = 0.1*shelledCobWidth,
+         cobBroke = case_when(!is.na(cobBroke) ~ 'Cob broke in pieces'), 
+         string = case_when(!is.na(string) ~ 'Severe bend in cob - string used to measure length'))
+
+acSeed22 <- read_excel('data/6_Seed_trait_HYBRID_2022_Compiled.xlsx', 
+                       sheet = 'COMPILED',
+                       range = 'A5:E3157', 
+                       col_types = c('text', 'numeric', 'numeric', 'skip', 'text'),
+                       col_names = c('qrCode', 'kernelsPerEar', 'kernelMassPerEar', 'notes')) %>%
+  rowwise() %>%
+  mutate(qrCode = str_split_i(qrCode, ' ', 1) %>%
+           str_to_upper())
+
+ac22 <- full_join(acKRN22, acEar22, join_by(qrCode), keep = FALSE, suffix = c('', '')) %>%
+  full_join(acCob22, join_by(qrCode), keep = FALSE, suffix = c('', '')) %>%
+  full_join(acSeed22, join_by(qrCode), keep = FALSE, suffix = c('', '')) %>%
+  rowwise() %>%
+  mutate(location = case_when(str_detect(qrCode, 'A') ~ 'Ames', 
+                              str_detect(qrCode, 'C') ~ 'Crawfordsville'),
+         plotNumber = str_split_i(qrCode, fixed('-'), 3),
+         earNumber = str_split_i(qrCode, fixed('-'), 4), 
+         kernelMassPerEar = case_when(str_detect(notes, 'shelling') ~ earMass - shelledCobMass, 
+                                      .default = kernelMassPerEar)) %>%
+  mutate(hundredKernelMass = (kernelMassPerEar/kernelsPerEar)*100) %>%
+  unite('notes', smoothCob, sweetcorn, seedMissing, cobBroke, string, notes, sep = ';', remove = TRUE, na.rm = TRUE)
+
+ac22Index <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx', 
+                        sheet = 'RawData (4-Row)', 
+                        range = 'E2:R1227', 
+                        col_types = c('text', 'skip', 'skip', 'skip', 'text', 'skip', 'text', 'text', 'skip', 'skip', 'skip', 'numeric', 'numeric', 'numeric'), 
+                        col_names = c('experiment', 'qrCode', 'genotype', 'genotypeNote', 'row', 'range', 'rep')) %>%
+  filter(experiment!='LC_4211') %>%
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode), 
+         genotype = str_to_upper(genotype), 
+         genotypeNote = str_to_upper(genotypeNote), 
+         sublocation = case_when(experiment %in% c('LC_')))
