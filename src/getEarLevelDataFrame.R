@@ -296,4 +296,35 @@ ac22Index <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx',
   mutate(qrCode = str_to_upper(qrCode), 
          genotype = str_to_upper(genotype), 
          genotypeNote = str_to_upper(genotypeNote), 
-         sublocation = case_when(experiment %in% c('LC_')))
+         sublocation = case_when(experiment=='LC_4233' ~ 'Ames E1',
+                                 experiment=='LC_4353' ~ 'Crawfordsville B',
+                                 experiment %in% c('LC_4351', 'LC_4352') ~ 'Crawfordsville A',
+                                 experiment %in% c('LC_4231', 'LC_4232') ~ 'Ames B1'), 
+         nitrogenTreatment = case_when(experiment %in% c('LC_4233', 'LC_4352') ~ 'Low',
+                                       experiment %in% c('LC_4351', 'LC_4231') ~ 'High',
+                                       experiment %in% c('LC _4353', 'LC_4232') ~ 'Medium'), 
+         irrigationProvided = 0,
+         poundsOfNitrogenPerAcre = case_when(experiment=='LC_4231' ~ 250,
+                                             experiment=='LC_4351' ~ 225,
+                                             experiment %in% c('LC_4232', 'LC_4353') ~ 150, 
+                                             experiment %in% c('LC_4233', 'LC_4352') ~ 75)) %>%
+  mutate(genotype = case_when(str_detect(genotype, 'SOLAR') ~ 'SOLAR', 
+                       is.na(genotype) & !is.na(genotypeNote) ~ genotypeNote, 
+                       .default = genotype)) %>%
+  select(!genotypeNote)
+ac22 <- left_join(ac22, ac22Index, join_by(qrCode), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
+  mutate(across(c(plotNumber, earNumber), as.numeric))
+
+hybrid22Ears <- bind_rows(ac22, hybridEars22UNL) %>%
+  rowwise() %>%
+  mutate(genotype = case_when(genotype %in% c('', 'BORDER') ~ NA,
+                              genotype %in% c('2369 X PHZ52', '2369 X PHZ53', '2369 X PHZ54') ~ '2369 X PHZ51', 
+                              genotype=='4N506 X 3IIH!6' ~ '4N506 X 3IIH6', 
+                              genotype=='COMMERCIAL HYBRID 1' ~ 'PIONEER 1311 AMXT',
+                              genotype=='COMMERCIAL HYBRID 2' ~ 'PIONEER P0589 AMXT', 
+                              genotype=='COMMERCIAL HYBRID 3' ~ 'HOEGEMEYER 8065RR',
+                              genotype=='COMMERCIAL HYBRID 4' ~ 'HOEGEMEYER 7089 AMXT',
+                              genotype=='COMMERCIAL HYBRID 5' ~ 'SYNGENTA NK0760-3111', 
+                              genotype %in% c('PHB47 X 311H7', 'PHB47 X 3IIH8', 'PHB47 X 3IIH9') ~ 'PHB47 X 3IIH6',
+                              .default = genotype))
+unique(hybrid22Ears$genotype) %>% sort()
