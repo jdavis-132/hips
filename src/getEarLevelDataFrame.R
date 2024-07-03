@@ -293,7 +293,7 @@ ac22Index <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx',
                         col_names = c('experiment', 'qrCode', 'genotype', 'genotypeNote', 'row', 'range', 'rep')) %>%
   filter(experiment!='LC_4211') %>%
   rowwise() %>%
-  mutate(qrCode = str_to_upper(qrCode), 
+  mutate(qrCode = str_to_upper(qrCode),
          genotype = str_to_upper(genotype), 
          genotypeNote = str_to_upper(genotypeNote), 
          sublocation = case_when(experiment=='LC_4233' ~ 'Ames E1',
@@ -310,9 +310,11 @@ ac22Index <- read_excel('data/YTMC_ Lisa_Plot_Coordinates_v4.xlsx',
                                              experiment %in% c('LC_4233', 'LC_4352') ~ 75)) %>%
   mutate(genotype = case_when(str_detect(genotype, 'SOLAR') ~ 'SOLAR', 
                        is.na(genotype) & !is.na(genotypeNote) ~ genotypeNote, 
-                       .default = genotype)) %>%
+                       .default = genotype),
+         location = str_split_i(sublocation, fixed(' '), 1), 
+         plotNumber = str_split_i(qrCode, fixed('-'), 3)) %>%
   select(!genotypeNote)
-ac22 <- left_join(ac22, ac22Index, join_by(qrCode), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
+ac22 <- left_join(ac22, ac22Index, join_by(plotNumber, location), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
   mutate(across(c(plotNumber, earNumber), as.numeric))
 
 hybrid22Ears <- bind_rows(ac22, hybridEars22UNL) %>%
@@ -325,6 +327,69 @@ hybrid22Ears <- bind_rows(ac22, hybridEars22UNL) %>%
                               genotype=='COMMERCIAL HYBRID 3' ~ 'HOEGEMEYER 8065RR',
                               genotype=='COMMERCIAL HYBRID 4' ~ 'HOEGEMEYER 7089 AMXT',
                               genotype=='COMMERCIAL HYBRID 5' ~ 'SYNGENTA NK0760-3111', 
-                              genotype %in% c('PHB47 X 311H7', 'PHB47 X 3IIH8', 'PHB47 X 3IIH9') ~ 'PHB47 X 3IIH6',
+                              genotype %in% c('PHB47 X 3IIH7', 'PHB47 X 3IIH8', 'PHB47 X 3IIH9') ~ 'PHB47 X 3IIH6',
+                              genotype %in% c("PHK56 X LH199", "PHK56 X LH200", "PHK56 X LH201") ~ 'PHK56 X LH198',
+                              genotype %in% c("PHK76 X LH146", "PHK76 X LH147",  "PHK76 X LH148") ~ 'PHK76 X LH145', 
+                              genotype %in% c("PHK76 X LH199", "PHK76 X LH200",  "PHK76 X LH201") ~ 'PHK76 X LH198', 
+                              genotype %in% c("PHK76 X LH83", "PHK76 X LH84", "PHK76 X LH85") ~ "PHK76 X LH82",
+                              genotype %in% c("PHP02 X LH199", "PHP02 X LH200", "PHP02 X LH201") ~ "PHP02 X LH198",
+                              genotype=="PHP02 X PHJ894" ~ "PHP02 X PHJ89", 
+                              genotype %in% c("PHP02 X PHK77", "PHP02 X PHK78", "PHP02 X PHK79") ~ "PHP02 X PHK76", 
+                              str_detect(genotype, 'SOLAR') ~ 'SOLAR', 
                               .default = genotype))
 unique(hybrid22Ears$genotype) %>% sort()
+
+hybridEars23UNL <- read_excel('data/2023/hybrids/2023_Hyb_HIPS_LNK_MV_NP_Final_KL_Curated.xlsx', 
+                       sheet = 'Data Entry Sheet - NoEmptyRows', 
+                       skip = 1, 
+                       col_types = c(rep('skip', 2), rep('text', 4), rep('skip', 3), 'text', rep('numeric', 10), 'text',
+                                     'text'),
+                       col_names = c('qrCode', 'topBox', 'bottomBox', 'rowBandNotes', 'earNotes', 'earWidth', 
+                                     'earFillLength', 'kernelRowNumber', 'kernelsPerRow', 'earMass', 'shelledCobWidth', 
+                                     'earLength', 'shelledCobMass', 'hundredKernelMass', 'kernelsPerEar', 'kernelColor', 'adminNotes')) %>%
+  rowwise() %>%
+  mutate(qrCode = case_when(str_detect(earNotes, 'Missing QR Code') ~ 'Missing QR Code', .default = qrCode)) %>%
+  ungroup() %>%
+  fill(qrCode) %>%
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode), 
+         kernelColor = str_remove(kernelColor, fixed('$')), 
+         location = case_when(str_detect(qrCode, 'NORTH PLATTE') ~ 'North Platte',
+                              str_detect(qrCode, 'SCOTTSBLUFF') ~ 'Scottsbluff',
+                              str_detect(qrCode, 'LINCOLN') ~ 'Lincoln',
+                              str_detect(qrCode, 'MISSOURI VALLEY') ~ 'Missouri Valley'),
+         range = str_split_i(qrCode, fixed('$'), 8) %>%
+           str_remove('RANGE') %>%
+           as.numeric(),
+         plotNumber = str_split_i(qrCode, fixed('$'), 7) %>%
+           str_split_i('ROW', 1) %>%
+           str_remove('PLOT') %>%
+           as.numeric() %>%
+           case_when(range > 17 & location=='Missouri Valley' ~ . + 200, .default = .), 
+         nitrogenTreatment = case_when(str_detect(qrCode, '150N') ~ 'Medium',
+                                       str_detect(qrCode, '75N') ~ 'Low',
+                                       str_detect(qrCode, '225N') ~ 'High'),
+         row = str_split_i(qrCode, fixed('$'), 7) %>%
+           str_split_i('ROW', 2) %>%
+           as.numeric(),
+         genotype = str_split_i(qrCode, fixed('@'), 2),
+         kernelMassPerEar = earMass - shelledCobMass,
+         topBox = case_when(!is.na(topBox) ~ 'Plants not completely dried down at harvest'),
+         bottomBox = case_when(!is.na(bottomBox) ~ 'Less than 4 ears available to harvest')) %>%
+  unite('notes', topBox, bottomBox, rowBandNotes, sep = ';', remove = TRUE, na.rm = TRUE) %>%
+  unite('earNotes', earNotes, adminNotes, sep = ';', remove = TRUE, na.rm = TRUE) %>%
+  group_by(qrCode, plotNumber, location, nitrogenTreatment, range, row, genotype) %>%
+  summarise(earNotes = str_flatten(earNotes, collapse = ';', na.rm = TRUE),
+            notes = max(notes, na.rm = TRUE),
+            earWidth = mean(earWidth, na.rm = TRUE)*0.1, 
+            earFillLength = mean(earFillLength, na.rm = TRUE)*0.1,
+            kernelRowNumber = mean(kernelRowNumber, na.rm = TRUE),
+            kernelsPerRow = mean(kernelsPerRow, na.rm = TRUE), 
+            kernelMassPerEar = mean(kernelMassPerEar, na.rm = TRUE), 
+            shelledCobWidth = mean(shelledCobWidth, na.rm = TRUE)*0.1,
+            earLength = mean(earLength, na.rm = TRUE)*0.1,
+            shelledCobMass = mean(shelledCobMass, na.rm = TRUE), 
+            hundredKernelMass = mean(hundredKernelMass, na.rm = TRUE), 
+            kernelsPerEar = mean(kernelsPerEar, na.rm = TRUE), 
+            kernelColor = max(kernelColor, na.rm = TRUE)) %>%
+  unite('notes', notes, earNotes, sep = ';', remove = TRUE, na.rm = TRUE)
