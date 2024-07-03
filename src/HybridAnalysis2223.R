@@ -933,9 +933,11 @@ nPlasticityCorYield <- ggplot(corData, aes(locationYear1, locationYear2, fill = 
         panel.border = element_blank(),
         panel.grid = element_blank(), 
         plot.background = element_blank(), 
-        legend.position = 'none',
+        legend.position = 'left',
         legend.background = element_blank())
 nPlasticityCorYield
+
+# ggsave('../nPlasticityCorYield.png', dpi = 1000)
 # # Kernel Row Number
 # nResponse.plWideKRN <- nResponse.pl %>%
 #   pivot_wider(id_cols = genotype, 
@@ -1409,6 +1411,7 @@ heatmap <- plotInteractionImportanceGrid(trait = 'yieldPerAcre',
                                          traitLabel = 'Yield (bushels/acre)', 
                                          legendPosition = 'right')
 heatmap
+# ggsave('../interactionImportance.png', dpi = 1000)
 
 highPlasticityGenotype <- hybridsNOLNK22.pl %>%
   arrange(yieldPerAcre.sp.b)
@@ -1473,6 +1476,8 @@ FWConceptualPlot <- ggplot(LAHData, aes(envIndex, yieldPerAcre.sp, color = genot
   inset_element(FWConceptualPlotLegend, left = 0.25, bottom = 0.6, right = 0.35, top = 1.05, on_top = FALSE)
 FWConceptualPlot
 
+# ggsave('../FWConceptualPlot.png', dpi = 1000)
+
 hybrids <- hybrids %>%
   rowwise() %>%
   mutate(mostPlastic10Percent = (genotype %in% mostPlastic10PercentGenotypes),
@@ -1532,9 +1537,11 @@ percentMeanPlotExtremePlasticity <- percentMeanData %>%
   filter(mostPlastic10Percent|leastPlastic10Percent) %>%
   ggplot(aes(envMean, hybridPercentEnvMean, group = genotype,
                                                color = meanParentAge)) +
-  geom_smooth() + 
+  geom_smooth(method = 'lm') + 
   geom_point() + 
   scale_color_viridis(direction = -1) + 
+  guides(fill = guide_colourbar(barwidth = 1000,
+                                barheight = 1)) +
   scale_y_continuous(breaks = c(50, 100, 150, 200),
                      labels = c('50%', '100%', '150%', '200%')) +
   labs(x = 'Environment Mean Yield (bushels/acre)', y = 'Hybrid Mean Yield As Percent of Environment Mean', 
@@ -1544,8 +1551,12 @@ percentMeanPlotExtremePlasticity <- percentMeanData %>%
         axis.text.y = element_text(color = 'black', size = 11),
         text = element_text(color = 'black', size = 11, hjust = 0.5),
         plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
+        # legend.text = element_text(color = 'black', size = 11, vjust = 0.5, angle = 90),legend.text = element_text(color = 'black', size = 11, vjust = 0.5, angle = 90),
+        # legend.position = 'bottom', 
         panel.grid = element_blank())
 percentMeanPlotExtremePlasticity
+
+# ggsave('../percentMeanExtremePlasticity.png', dpi = 1000)
 
 percentMeanPlotOverallPerformance <- percentMeanData %>%
   filter(best10PercentOverall|worst10PercentOverall) %>%
@@ -1825,15 +1836,16 @@ meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre
     scale_color_viridis_c(direction = -1) +
     guides(color = guide_colourbar(barwidth = 6,
                                 barheight = 1)) +
-    labs(x = 'Hybrid Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = str_wrap('Mean Parent Release Year', 
-                                                                                          width = 15)) + 
+    labs(x = 'Hybrid Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = 'Mean Parent Release Year') + 
     theme_minimal() +
     theme(axis.text.x = element_text(color = 'black', size = 11),
           axis.text.y = element_text(color = 'black', size = 11),
           legend.text = element_text(color = 'black', size = 11, margin = margin(0, 0, 0, 0)),
-          text = element_text(color = 'black', size = 11),
+          text = element_text(color = 'black', size = 24),
           legend.position = 'top',
           panel.grid = element_blank())
+meanParentPlot
+# ggsave('../meanParentPlot.png', dpi = 1000)
 # meanParentPlotLegend <- get_legend(meanParentPlot)
 # meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
 #   geom_point() +
@@ -1848,7 +1860,7 @@ meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre
 #         legend.position = 'none',
 #         panel.grid = element_blank()) +
 #   inset_element(meanParentPlotLegend, left = 0.125, bottom = 0.43, right = 0.225, top = 1, on_top = TRUE)
-meanParentPlot
+
 
 workflow <- rasterGrob(readPNG('../workflow.png'))
 
@@ -2287,6 +2299,7 @@ for(i in 1:length(phenotypes))
   print(plotNPlasticityCor(trait = phenotypes[i], traitLabel = phenotypeLabels[i], legendPosition = 'bottom'))
 }
 
+
 # N plasticity cor suppl figs
 nPlasticityCorShelledCobWidth <- plotNPlasticityCor(trait = 'shelledCobWidth', traitLabel = 'Shelled Cob Width',
                                                     legendPosition = 'bottom')
@@ -2446,6 +2459,4 @@ for(i in 1:length(phenotypes))
   trait <- paste0(phenotypes[i], '.sp')
   plotPhenotypeNitrogenResponseViolins(phenotype = trait, phenotypeLabel = phenotypeLabels[i])
 }
-
-
 

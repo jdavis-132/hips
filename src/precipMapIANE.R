@@ -80,8 +80,8 @@ nitrogenLegend <- ggplot(nitrogenDF3, aes(col, fill = col)) +
   labs(fill = str_wrap('Nitrogen Fertilizer (lbs/acre)', 9)) +
   theme_void() + 
   theme(legend.position = 'bottom', 
-        legend.text = element_text(size = 11, color = 'black'),
-        text = element_text(color = 'black', size = 11))
+        legend.text = element_text(size = 24, color = 'black'),
+        text = element_text(color = 'black', size = 24))
 nitrogenLegend
 nitrogenLegend <- get_legend(nitrogenLegend)
 
@@ -93,8 +93,8 @@ irrigationLegend <- ggplot(irrigationLevels, aes(label, fill = label)) +
   labs(fill = str_wrap('Irrigation Provided (mm)', 11)) + 
   theme_void() +
   theme(legend.position = 'bottom', 
-        legend.text = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11))
+        legend.text = element_text(color = 'black', size = 24),
+        text = element_text(color = 'black', size = 24))
 irrigationLegend
 irrigationLegend <- get_legend(irrigationLegend)
 # nitrogenLegend <- grid.draw(nitrogenLegend)
@@ -112,8 +112,8 @@ map <- ggplot(data = gridmetPrecip) +
   labs(fill = str_wrap("Total Precipitation (mm), November 2021 - October 2023", 28)) +
   theme_void() +
   theme(legend.position = 'top',
-        legend.text = element_text(size = 11, color = 'black'),
-        text = element_text(color = 'black', size = 11)) +
+        legend.text = element_text(size = 24, color = 'black'),
+        text = element_text(color = 'black', size = 24)) +
   inset_element(sbPlot, left = 0.055, bottom = 0.535, right = 0.08, top = 0.635) + 
   inset_element(np1Plot, left = 0.215, bottom = 0.345, right = 0.24, top = 0.445) +
   inset_element(np2Plot, left = 0.245, bottom = 0.345, right = 0.27, top = 0.445) +
