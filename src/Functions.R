@@ -373,11 +373,9 @@ estimatePlasticity3 <- function(data, trait, environment, genotype, seed = SEED)
   return(df)
 }
 
-getNitrogenPlasticityByLocationYear <- function(data, trait, nitrogenTreatment, genotype)
+getNitrogenPlasticityByLocationYear <- function(data, trait, nitrogenTreatment, genotype, locationYear)
 {
-  dfCompute <- data %>%
-    rowwise() %>%
-    mutate(locationYear = str_c(year, semanticLocation, sep = ':'))
+  dfCompute <- data
   locationYears <- unique(dfCompute$locationYear)
   
   # Initialize tibble to save computed data to
@@ -481,7 +479,8 @@ getCumulativeGDDs <- function(start, end, weather, location)
   {
     return(NA)
   }
-  weather.df <- filter(weather, location==location & date %in% seq(min(start, end), max(start, end), 'days'))
+  weather.df <- filter(weather, location==location & date %in% 
+                         seq(ymd(min(start, end, na.rm = TRUE)), ymd(max(start, end, na.rm = TRUE)), 'days'))
   cumulativeGDDs <- sum(weather.df$GDD)
   return(cumulativeGDDs)
 }
@@ -703,13 +702,13 @@ getSignificantCrossovers <- function(data, pheno, environments)
     rowwise() %>%
     mutate('{phenotypeScore}' := rowSums(across(contains(phenotypeScore))), 
            '{pheno}ComparedEnvs' := rowSums(!is.na(across(contains(phenotypeAdjustedP))))) %>%
-    mutate('{phenotypeScore}Normalized' := .data[[phenotypeScore]]/((.data[[phenotypeComparedEnvs]]*(.data[[phenotypeComparedEnvs]]))))
+    mutate('{phenotypeScore}Normalized' := .data[[phenotypeScore]]/((.data[[phenotypeComparedEnvs]]*(.data[[phenotypeComparedEnvs]] - 1))))
   return(genotypePairs)
 }
 
 plotInteractionImportanceGrid <- function(significantInteractionsData = sigCrossovers, 
                                           performanceData = hybrids, trait, traitLabel, 
-                                          legendTitle = str_wrap('Normalized Interaction Importance Score', 1),
+                                          legendTitle = str_wrap('Normalized Interaction Importance Score', 25),
                                           legendPosition = 'right', legendTextAngle = 0, 
                                           legendTextHJust = 1, xAxisLabelAngle = 0)
 {
@@ -746,23 +745,30 @@ plotInteractionImportanceGrid <- function(significantInteractionsData = sigCross
   
   heatmap <- ggplot(df, aes(rankG1, rankG2, fill = .data[[phenotypeScoreNormalized]])) + 
     geom_tile() + 
-    scale_x_continuous(limits = c(0, 120)) +
-    scale_y_continuous(limits = c(0, 120)) +
-    scale_fill_viridis(direction = -1) +
-    labs(x = 'Hybrid Rank X', y = 'Hybrid Rank Y', fill = legendTitle, title = phenotypeLabel) + 
+    scale_x_continuous(limits = c(0, 120), 
+                      # breaks = seq.int(0, 120, by = 2)
+                      ) +
+    scale_y_continuous(limits = c(0, 120), 
+                       # breaks = seq.int(0, 120, by = 2)
+                       ) +
+    # guides(fill = guide_colourbar(barheight = 0.5)) +
+    scale_fill_viridis(direction = -1, 
+                       limits = c(0, 0.5)
+                       ) +
+    labs(x = 'Hybrid Rank', y = 'Hybrid Rank', fill = legendTitle, title = phenotypeLabel) + 
     theme_minimal() +
-    theme(text = element_text(color = 'black', size = 11),
-          axis.text.x = element_text(color = 'black', size = 11, angle = xAxisLabelAngle),
-          axis.text = element_text(color = 'black', size = 11),
-          legend.text = element_text(color = 'black', size = 11, angle = legendTextAngle, hjust = legendTextHJust, vjust = 1),
+    theme(text = element_text(color = 'black', size = 9),
+          axis.text.x = element_text(color = 'black', size = 9, angle = xAxisLabelAngle),
+          axis.text = element_text(color = 'black', size = 9),
+          legend.text = element_text(color = 'black', size = 9, angle = legendTextAngle, hjust = legendTextHJust, vjust = 1),
           axis.line = element_blank(),
           panel.background = element_blank(),
           panel.border = element_blank(),
-          panel.grid = element_blank(), 
+          panel.grid = element_blank(),
           plot.background = element_blank(), 
           legend.position = legendPosition,
           legend.background = element_blank(),
-          plot.title = element_text(hjust = 0.5))
+          plot.title = element_text(hjust = 0.5, size = 9))
   return(heatmap)
 }
 
@@ -784,27 +790,26 @@ plotNPlasticityCor <- function(nitrogenResponsePlasticityData = nResponse.pl, tr
   
   plot <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
     geom_tile(color = 'white') +
-    scale_fill_viridis_c(direction = -1, limits = c(-0.2, 1)) + 
+    scale_fill_viridis_c(direction = -1, limits = c(-0.25, 1)) + 
     scale_x_discrete(breaks = unique(corData$locationYear1),
-                     labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10),
-                                str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 10))) +
+                     labels = label_wrap(10)) +
     scale_y_discrete(breaks = unique(corData$locationYear1),
-                     labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10),
-                                str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 10))) +
-    guides(fill = guide_colourbar(barwidth = 12,
-                                  barheight = 1)) +
-    labs(x = '', y = '', fill = 'Nitrogen Plasticity Correlation', title = traitLabel) + 
+                     labels = label_wrap(10)) +
+    guides(fill = guide_colourbar(barwidth = 1,
+                                  barheight = 8)) +
+    labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = traitLabel) + 
     theme_minimal() +
-    theme(text = element_text(color = 'black', size = 11),
-          axis.text.x = element_text(color = 'black', size = 11, angle = 90, vjust = 0.5),
-          axis.text = element_text(color = 'black', size = 11, hjust = 1, margin = margin(0, 0, 0, 0)),
+    theme(text = element_text(color = 'black', size = 9),
+          axis.text.x = element_text(color = 'black', size = 9, angle = 90, vjust = 0.5),
+          axis.text = element_text(color = 'black', size = 9, hjust = 1, margin = margin(0, 0, 0, 0)),
           axis.line = element_blank(),
           panel.background = element_blank(),
           panel.border = element_blank(),
           panel.grid = element_blank(), 
           plot.background = element_blank(), 
           legend.position = legendPosition,
-          plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
+          legend.title.align = 0,
+          plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
           legend.background = element_blank())
   return(plot)
 }
@@ -824,10 +829,10 @@ plotNitrogenPlasticityBlockCor <- function(nitrogenBlockPlasticity, phenotype, p
     scale_x_continuous(limits = c(-1.15, 1.75)) +
     scale_y_continuous(limits = c(-1.15, 1.75)) +
     theme_minimal() +
-    theme(axis.text.x = element_text(color = 'black', size = 11),
-          axis.text.y = element_text(color = 'black', size = 11),
-          plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
-          text = element_text(color = 'black', size = 11),
+    theme(axis.text.x = element_text(color = 'black', size = 9),
+          axis.text.y = element_text(color = 'black', size = 9),
+          plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+          text = element_text(color = 'black', size = 9),
           panel.grid = element_blank())
   print(nResponseCorr)
 }

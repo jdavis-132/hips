@@ -30,21 +30,24 @@ nitrogenColors <- pal_brewer('seq', palette = 'YlOrRd')(3)
 irrigationColors <- pal_brewer('seq', palette = 'Greys')(3)
 # show_col(irrigationColors)
 # Now we need to spatially correct within an environment
-phenotypes <- c("plantDensity", "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
+phenotypes <- c(#"plantDensity", 
+                "combineTestWeight", "combineMoisture", "flagLeafHeight", "earHeight", "yieldPerAcre", 
                 'GDDToAnthesis', 'GDDToSilk', 'anthesisSilkingIntervalGDD', 'kernelRowNumber', 'earWidth',
                 'earLength', 'shelledCobWidth', 'shelledCobMass', 'kernelMassPerEar', 'kernelsPerEar', 'hundredKernelMass',
                 'earFillLength', 'kernelsPerRow')
-phenotypeLabels <- c('Plant Density (plants/acre)', 'Test Weight (lbs/bushel)', 'Harvest Moisture (%)', 'Flag Leaf Height (cm)',
+phenotypeLabels <- c(#'Plant Density (plants/acre)', 
+                     'Test Weight (lbs/bushel)', 'Harvest Moisture (%)', 'Flag Leaf Height (cm)',
                      'Ear Height (cm)', 'Yield (bushels/acre)', 'GDD to Anthesis*', 'GDD To Silk*', 
                      'Anthesis Silking Interval* (GDD)', 'Kernel Row Number', 'Ear Width (cm)', 'Ear Length (cm)',
                      'Shelled Cob Width (cm)', 'Shelled Cob Mass (cm)', 'Kernel Mass Per Ear (g)', 'Kernels Per Ear', 
                      'Hundred Kernel Mass (g)', 'Ear Fill Length* (cm)', 'Kernels Per Row*')
-phenotypeLabelsVP <-  c('Plant Density (1)', 'Test Weight (2)', 'Harvest Moisture (2)', 'Flag Leaf Height (1)',
-                        'Ear Height (1)', 'Yield (2)', 'GDD to Anthesis* (1)', 'GDD to Silk* (1)', 
-                        'Anthesis Silking Interval* (1)', 'Kernel Row Number (3)', 'Ear Width (3)', 'Ear Length (3)',
-                        'Shelled Cob Width (3)', 'Shelled Cob Mass (3)', 'Kernel Mass Per Ear (3)', 
-                        'Kernels Per Ear (3)', 
-                        'Hundred Kernel Mass (3)', 'Ear Fill Length* (3)', 'Kernels Per Row* (3)')
+phenotypeLabelsVP <-  c(#'Plant Density (1)', 
+                        'Test Weight', 'Harvest Moisture', 'Flag Leaf Height',
+                        'Ear Height', 'Yield', 'GDD to Anthesis*', 'GDD to Silk*', 
+                        'Anthesis Silking Interval*', 'Kernel Row Number', 'Ear Width', 'Ear Length',
+                        'Shelled Cob Width', 'Shelled Cob Mass', 'Kernel Mass Per Ear', 
+                        'Kernels Per Ear', 
+                        'Hundred Kernel Mass', 'Ear Fill Length*', 'Kernels Per Row*')
 
 
 yieldComponents <- c('earFillLength', 'earWidth', 'shelledCobWidth', 'earLength', 'kernelsPerEar', 'yieldPerAcre', 
@@ -106,7 +109,16 @@ hybrids <- read.csv('analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
   filter(location!='') %>% 
   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
   rowwise() %>%
+  mutate(genotype = case_when(genotype=="HOEGEMEYER 7089 AMXT" ~ 'COMMERCIAL HYBRID 1',
+                              genotype=="HOEGEMEYER 8065RR" ~ 'COMMERCIAL HYBRID 2', 
+                              genotype=="PIONEER 1311 AMXT" ~ 'COMMERCIAL HYBRID 3',
+                              genotype=="PIONEER P0589 AMXT" ~ 'COMMERCIAL HYBRID 4',
+                              genotype=="SYNGENTA NK0659-3120-EZ1" ~ 'COMMERCIAL HYBRID 5', 
+                              genotype=="SYNGENTA NK0760-3111" ~ 'COMMERCIAL HYBRID 6',
+                              genotype=="WYFFELS W1782" ~ 'COMMERCIAL HYBRID 7', 
+                              .default = genotype)) %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .)))
+
 
 envsPerHybrid <- tibble(hybrid = unique(hybrids$genotype), numEnvs = NULL)
 for(i in 1:length(unique(envsPerHybrid$hybrid)))
@@ -116,7 +128,16 @@ for(i in 1:length(unique(envsPerHybrid$hybrid)))
 }
 
 singleEnvHybrids <- envsPerHybrid$hybrid[envsPerHybrid$numEnvs<4]
-hybrids <- filter(hybrids, !(genotype %in% singleEnvHybrids))
+hybrids <- filter(hybrids, !(genotype %in% singleEnvHybrids)) %>%
+  rowwise() %>%
+  mutate(locationYear = str_c(year, semanticLocation, sep = ' ')) %>%
+  mutate(locationYear = case_when(location=='North Platte1' ~ str_c(locationYear, ' FI'),
+                                  location=='North Platte2' ~ str_c(locationYear, ' LI'),
+                                  location=='North Platte3' ~ str_c(locationYear, ' NI'),
+                                  locationYear=='2023 North Platte' & irrigationProvided==0 ~ str_c(locationYear, ' NI'),
+                                  locationYear=='2023 North Platte' & irrigationProvided > 0 ~ str_c(locationYear, ' LI'),
+                                  .default = locationYear)) %>%
+  mutate(environment = str_c(locationYear, nitrogenTreatment, sep = ' '))
 # # Location or irrigationProvided, which is mostly location, is most important for 15/19 traits when we don't count residual
 # vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
 # for(i in 1:length(phenotypes))
@@ -165,12 +186,12 @@ vp.plot <- ggplot(vc_all, aes(label, pctVar, fill = grp)) +
   scale_y_continuous(name = 'Variance', 
                      breaks = c(0, 25, 50, 75, 100), 
                      labels = c('0%', '25%', '50%', '75%', '100%')) +
-  labs(x = 'Phenotype', y = 'Variance', fill = '') +
+  labs(x = NULL, y = 'Variance', fill = '') +
   theme_minimal() +
-  theme(axis.text.x = element_text(size = 11, color = 'black', angle = 90, hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 11, color = 'black'),
-        legend.text = element_text(size = 11, color = 'black'),
-        text = element_text(size = 11, color = 'black'),
+  theme(axis.text.x = element_text(size = 9, color = 'black', angle = 90, hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 9, color = 'black'),
+        legend.text = element_text(size = 9, color = 'black'),
+        text = element_text(size = 9, color = 'black'),
         legend.position = 'bottom',
         line = element_line(color = 'black', linewidth = 1),
         panel.grid = element_blank())
@@ -184,10 +205,10 @@ vp.plot
 #   scale_x_discrete(labels = label_wrap(8)) +
 #   labs(x = '', y = 'Percent Variance', fill = '') +
 #   theme_minimal() +
-#   theme(axis.text.x = element_text(size = 11, color = 'black'),
-#         axis.text.y = element_text(size = 11, color = 'black'),
-#         legend.text = element_text(size = 11, color = 'black'),
-#         text = element_text(size = 11, color = 'black'),
+#   theme(axis.text.x = element_text(size = 9, color = 'black'),
+#         axis.text.y = element_text(size = 9, color = 'black'),
+#         legend.text = element_text(size = 9, color = 'black'),
+#         text = element_text(size = 9, color = 'black'),
 #         legend.position = 'right',
 #         line = element_line(color = 'black', linewidth = 1),
 #         panel.grid = element_blank())
@@ -323,67 +344,92 @@ orderedEnvironments <- hybrids %>%
   group_by(environment) %>%
   summarise(yieldMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
   arrange(yieldMean)
-envAnova <- aov(yieldPerAcre.sp ~ environment, data = hybrids)
-envTukey <- TukeyHSD(envAnova)$environment
+# envAnova <- aov(yieldPerAcre.sp ~ environment, data = hybrids)
+# envTukey <- TukeyHSD(envAnova)$environment
 
-orderedViolins <- hybrids %>%
-  rowwise() %>%
-  mutate(environment = factor(environment, levels = orderedEnvironments$environment),
-         irrigationLevel = case_when(irrigationProvided==0 ~ '0.0',
-                                     irrigationProvided > 3.93 & irrigationProvided < 7.87 ~ '100-200',
-                                     irrigationProvided > 7.87 ~ '>200'),
-         nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
-                                       nitrogenTreatment=='Medium' ~ '150-175',
-                                       nitrogenTreatment=='High' ~ '225-250')) %>%
-  mutate(irrigationLevel = factor(irrigationLevel, levels = c('0.0', '100-200', '>200')),
-         nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250'))) %>%
-  ggplot(aes(yieldPerAcre.sp, environment, fill = nitrogenTreatment, color = irrigationLevel)) +
-    geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) +
-    geom_text(aes(275,'2023:Ames:0:High'), label = 'a', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:8.6:High'), label = 'ab', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:8.6:Medium'), label = 'ab', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:4.3:High'), label = 'bc', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:4.3:Medium'), label = 'cd', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:8.6:Low'), label = 'cde', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Crawfordsville:0:Medium'), label = 'def', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Crawfordsville:0:High'), label = 'efg', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Ames:0:Medium'), label = 'fg', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Crawfordsville:0:High'), label = 'g', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Scottsbluff:16.9:High'), label = 'g', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Missouri Valley:0:Medium'), label = 'g', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Crawfordsville:0:Low'), label = 'gh', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:4.3:Low'), label = 'hi', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Missouri Valley:0:Medium'), label = 'hi', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Scottsbluff:16.9:Medium'), label = 'ij', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Ames:0:Low'), label = 'ijk', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Ames:0:Low'), label = 'ijk', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Crawfordsville:0:Low'), label = 'jk', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Crawfordsville:0:Medium'), label = 'k', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Ames:0:High'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Ames:0:Medium'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Scottsbluff:16.9:Low'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:0:Low'), label = 'm', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:North Platte:4.5:Medium'), label = 'm', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Lincoln:0:High'), label = 'm', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:0:High'), label = 'mn', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Lincoln:0:Low'), label = 'mn', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:Lincoln:0:Medium'), label = 'no', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2023:North Platte:0:Medium'), label = 'o', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:North Platte:0:Medium'), label = 'o', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Lincoln:0:Medium'), label = 'p', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Lincoln:0:Low'), label = 'q', size = 3.88, color = 'black', hjust = 1) +
-    geom_text(aes(275,'2022:Lincoln:0:High'), label = 'r', size = 3.88, color = 'black', hjust = 1) +
-    scale_fill_manual(values = nitrogenColors) + 
-    scale_color_manual(values = irrigationColors) +
-    labs(x = 'Yield (bushels/acre)', y = 'Environment', fill = 'Nitrogen Fertilizer (lbs/acre)', color = 'Irrigation Provided') + 
+orderedLocationYears <- hybrids %>%
+  group_by(locationYear) %>%
+  summarise(yieldMedian = median(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  arrange(desc(yieldMedian))
+
+environmentMedians <- hybrids %>%
+  group_by(locationYear, nitrogenTreatment) %>%
+  summarise(yieldMedian = median(yieldPerAcre.sp, na.rm = TRUE))
+
+orderedBoxplots <- hybrids %>%
+  mutate(locationYear = factor(locationYear, levels = orderedLocationYears$locationYear)) %>%
+  ggplot(aes(locationYear, yieldPerAcre.sp)) +
+    geom_boxplot(color = 'black') +
+    geom_point(aes(locationYear, yieldMedian, color = nitrogenTreatment), data = environmentMedians, size = 2) +
+    geom_point(aes(locationYear, yieldMedian), data = environmentMedians, shape = 1, size = 2, color = "black") +
+    scale_x_discrete(labels = label_wrap(10)) +
+    scale_color_manual(values = nitrogenColors) + 
+    labs(x = NULL, y = 'Yield (bushels/acre)') + 
     theme_minimal() + 
-    theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
-        panel.grid = element_blank(),
-        legend.position = 'right')
-orderedViolins
-ggsave('../orderedViolins.png', plot = orderedViolins, width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
+    theme(axis.text.x = element_text(color = 'black', size = 9, angle = 90, vjust = 0.5, hjust = 1, margin = margin(0, 0, 0, 0)),
+          axis.text.y = element_text(color = 'black', size = 9),
+          text = element_text(color = 'black', size = 9, vjust = 0.5),
+          panel.grid = element_blank(),
+          legend.position = 'none')
+orderedBoxplots
+# orderedViolins <- hybrids %>%
+#   rowwise() %>%
+#   mutate(environment = factor(environment, levels = orderedEnvironments$environment),
+#          irrigationLevel = case_when(irrigationProvided==0 ~ '0.0',
+#                                      irrigationProvided > 3.93 & irrigationProvided < 7.87 ~ '100-200',
+#                                      irrigationProvided > 7.87 ~ '>200'),
+#          nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
+#                                        nitrogenTreatment=='Medium' ~ '150-175',
+#                                        nitrogenTreatment=='High' ~ '225-250')) %>%
+#   mutate(irrigationLevel = factor(irrigationLevel, levels = c('0.0', '100-200', '>200')),
+#          nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250'))) %>%
+#   ggplot(aes(yieldPerAcre.sp, environment, fill = nitrogenTreatment, color = irrigationLevel)) +
+#     geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) +
+#     geom_text(aes(275,'2023:Ames:0:High'), label = 'a', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:North Platte:8.6:High'), label = 'ab', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:North Platte:8.6:Medium'), label = 'ab', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:North Platte:4.3:High'), label = 'bc', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:North Platte:4.3:Medium'), label = 'cd', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:North Platte:8.6:Low'), label = 'cde', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Crawfordsville:0:Medium'), label = 'def', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:Crawfordsville:0:High'), label = 'efg', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:Ames:0:Medium'), label = 'fg', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Crawfordsville:0:High'), label = 'g', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Scottsbluff:16.9:High'), label = 'g', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:Missouri Valley:0:Medium'), label = 'g', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Crawfordsville:0:Low'), label = 'gh', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:North Platte:4.3:Low'), label = 'hi', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Missouri Valley:0:Medium'), label = 'hi', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Scottsbluff:16.9:Medium'), label = 'ij', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:Ames:0:Low'), label = 'ijk', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Ames:0:Low'), label = 'ijk', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:Crawfordsville:0:Low'), label = 'jk', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:Crawfordsville:0:Medium'), label = 'k', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Ames:0:High'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Ames:0:Medium'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Scottsbluff:16.9:Low'), label = 'l', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:North Platte:0:Low'), label = 'm', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:North Platte:4.5:Medium'), label = 'm', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:Lincoln:0:High'), label = 'm', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:North Platte:0:High'), label = 'mn', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:Lincoln:0:Low'), label = 'mn', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:Lincoln:0:Medium'), label = 'no', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2023:North Platte:0:Medium'), label = 'o', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:North Platte:0:Medium'), label = 'o', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Lincoln:0:Medium'), label = 'p', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Lincoln:0:Low'), label = 'q', size = 3.88, color = 'black', hjust = 1) +
+#     geom_text(aes(275,'2022:Lincoln:0:High'), label = 'r', size = 3.88, color = 'black', hjust = 1) +
+#     scale_fill_manual(values = nitrogenColors) + 
+#     scale_color_manual(values = irrigationColors) +
+#     labs(x = 'Yield (bushels/acre)', y = 'Environment', fill = 'Nitrogen Fertilizer (lbs/acre)', color = 'Irrigation Provided') + 
+#     theme_minimal() + 
+#     theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
+#         panel.grid = element_blank(),
+#         legend.position = 'right')
+# orderedViolins
+# ggsave('../orderedViolins.png', plot = orderedViolins, width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
 
 yieldBLUPS <- lmer(yieldPerAcre.sp ~ environment + (1|genotype), data = hybrids) 
 yieldBLUPS <- ranef(yieldBLUPS)
@@ -423,14 +469,15 @@ top10PercentOverallPerformancePlot <- ggplot(top10PercentOverallPerformance, aes
                     labels = c('Lower 90%', 'Upper 10%')) + 
   labs(x = '', y = 'Yield (bushels/acre)', fill = 'Overall Hybrid Rank') +
   theme_minimal() + 
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        strip.text = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         panel.grid = element_blank(),
         legend.position = 'top')
 top10PercentOverallPerformancePlot
-ggsave('../top10PercentOverallPerformance.svg', plot = top10PercentOverallPerformancePlot, 
-       width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
+# ggsave('../top10PercentOverallPerformance.svg', plot = top10PercentOverallPerformancePlot,
+       # width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
 
 hybrids <- hybrids %>%
   rowwise() %>%
@@ -475,10 +522,10 @@ hybrids <- hybrids %>%
 #                      labels = c('0%', '25%', '50%', '75%', '100%')) +
 #   labs(x = 'Environment', y = 'Variance', fill = '') +
 #   theme_minimal() +
-#   theme(axis.text.x = element_text(size = 11, color = 'black', angle = 90, hjust = 1, vjust = 0.5),
-#         axis.text.y = element_text(size = 11, color = 'black'),
-#         legend.text = element_text(size = 11, color = 'black'),
-#         text = element_text(size = 11, color = 'black'),
+#   theme(axis.text.x = element_text(size = 9, color = 'black', angle = 90, hjust = 1, vjust = 0.5),
+#         axis.text.y = element_text(size = 9, color = 'black'),
+#         legend.text = element_text(size = 9, color = 'black'),
+#         text = element_text(size = 9, color = 'black'),
 #         legend.position = 'bottom',
 #         line = element_line(color = 'black', linewidth = 1),
 #         panel.grid = element_blank())
@@ -486,17 +533,17 @@ hybrids <- hybrids %>%
 # Okay, let's run the plasticity without LNK 2022
 # Estimate FW plasticity across all environments where phenotype was observed
 hybridsNOLNK22 <- filter(hybrids, !(location=='Lincoln' & year=='2022'))
-hybridsNOLNK22.pl <- estimatePlasticity3(hybridsNOLNK22, trait = paste0(yieldComponents[1], '.sp'), environment = 'environment', genotype = 'genotype')
+hybridsNOLNK22.pl <- estimatePlasticity3(hybridsNOLNK22, trait = paste0(phenotypes[1], '.sp'), environment = 'environment', genotype = 'genotype')
 
-for(i in 2:length(yieldComponents))
+for(i in 2:length(phenotypes))
 {
   hybridsNOLNK22.pl <- full_join(hybridsNOLNK22.pl, 
-                          estimatePlasticity3(hybridsNOLNK22, trait = paste0(yieldComponents[i], '.sp'), environment = 'environment', genotype = 'genotype'),
+                          estimatePlasticity3(hybridsNOLNK22, trait = paste0(phenotypes[i], '.sp'), environment = 'environment', genotype = 'genotype'),
                           join_by(genotype),
                           suffix = c('', ''), 
                           keep = FALSE)
   # Print mean of the b column so we know we are getting reasonable values
-  print(mean(hybridsNOLNK22.pl[[paste0(yieldComponents[i], '.sp.b')]], na.rm = TRUE))
+  print(mean(hybridsNOLNK22.pl[[paste0(phenotypes[i], '.sp.b')]], na.rm = TRUE))
 }
 
 hybridsNOLNK22.pl <- hybridsNOLNK22.pl %>%
@@ -533,62 +580,62 @@ hybridsNOLNK22.pl <- left_join(hybridsNOLNK22.pl, parentInfo, join_by(earParent=
   ungroup() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
 
-for(i in 1:length(yieldComponents))
-{
-  traitMu <- paste0(yieldComponents[i], '.sp.mu')
-  traitB <- paste0(yieldComponents[i], '.sp.b')
-  meanLabel <- paste0('Mean ', yieldComponentsLabels[i])
-  plasticityLabel <- paste0(yieldComponentsLabels[i], ' Linear Plasticity')
-
-  oldestParentPlot <- ggplot(hybridsNOLNK22.pl, aes(.data[[traitMu]], .data[[traitB]], color = oldestParentAge)) +
-    geom_point() +
-    geom_hline(yintercept=1) +
-    scale_color_viridis_c() +
-    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Oldest Parent Release Year', width = 1)) +
-    theme(text = element_text(color = 'black', size = 14),
-          axis.text = element_text(color = 'black', size = rel(1)),
-          axis.line = element_line(color = 'black', size = 1),
-          panel.background = element_blank(),
-          panel.border = element_blank(),
-          panel.grid = element_blank(),
-          plot.background = element_blank(),
-          legend.position = 'right',
-          legend.background = element_rect(color = 'black'))
-
-  youngestParentPlot <- ggplot(hybridsNOLNK22.pl, aes(.data[[traitMu]], .data[[traitB]], color = youngestParentAge)) +
-    geom_point() +
-    geom_hline(yintercept=1) +
-    scale_color_viridis_c() +
-    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Youngest Parent Release Year', width = 1)) +
-    theme(text = element_text(color = 'black', size = 14),
-          axis.text = element_text(color = 'black', size = rel(1)),
-          axis.line = element_line(color = 'black', size = 1),
-          panel.background = element_blank(),
-          panel.border = element_blank(),
-          panel.grid = element_blank(),
-          plot.background = element_blank(),
-          legend.position = 'right',
-          legend.background = element_rect(color = 'black'))
-
-  meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(.data[[traitMu]], .data[[traitB]], color = meanParentAge)) +
-    geom_point() +
-    geom_hline(yintercept=1) +
-    scale_color_viridis_c() +
-    labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Mean Parent Release Year', width = 1)) +
-    theme(text = element_text(color = 'black', size = 14),
-          axis.text = element_text(color = 'black', size = rel(1)),
-          axis.line = element_line(color = 'black', size = 1),
-          panel.background = element_blank(),
-          panel.border = element_blank(),
-          panel.grid = element_blank(),
-          plot.background = element_blank(),
-          legend.position = 'right',
-          legend.background = element_rect(color = 'black'))
-
-  print(oldestParentPlot)
-  print(youngestParentPlot)
-  print(meanParentPlot)
-}
+# for(i in 1:length(yieldComponents))
+# {
+#   traitMu <- paste0(yieldComponents[i], '.sp.mu')
+#   traitB <- paste0(yieldComponents[i], '.sp.b')
+#   meanLabel <- paste0('Mean ', yieldComponentsLabels[i])
+#   plasticityLabel <- paste0(yieldComponentsLabels[i], ' Linear Plasticity')
+# 
+#   oldestParentPlot <- ggplot(hybridsNOLNK22.pl, aes(.data[[traitMu]], .data[[traitB]], color = oldestParentAge)) +
+#     geom_point() +
+#     geom_hline(yintercept=1) +
+#     scale_color_viridis_c() +
+#     labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Oldest Parent Release Year', width = 1)) +
+#     theme(text = element_text(color = 'black', size = 14),
+#           axis.text = element_text(color = 'black', size = rel(1)),
+#           axis.line = element_line(color = 'black', size = 1),
+#           panel.background = element_blank(),
+#           panel.border = element_blank(),
+#           panel.grid = element_blank(),
+#           plot.background = element_blank(),
+#           legend.position = 'right',
+#           legend.background = element_rect(color = 'black'))
+# 
+#   youngestParentPlot <- ggplot(hybridsNOLNK22.pl, aes(.data[[traitMu]], .data[[traitB]], color = youngestParentAge)) +
+#     geom_point() +
+#     geom_hline(yintercept=1) +
+#     scale_color_viridis_c() +
+#     labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Youngest Parent Release Year', width = 1)) +
+#     theme(text = element_text(color = 'black', size = 14),
+#           axis.text = element_text(color = 'black', size = rel(1)),
+#           axis.line = element_line(color = 'black', size = 1),
+#           panel.background = element_blank(),
+#           panel.border = element_blank(),
+#           panel.grid = element_blank(),
+#           plot.background = element_blank(),
+#           legend.position = 'right',
+#           legend.background = element_rect(color = 'black'))
+# 
+#   meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(.data[[traitMu]], .data[[traitB]], color = meanParentAge)) +
+#     geom_point() +
+#     geom_hline(yintercept=1) +
+#     scale_color_viridis_c() +
+#     labs(x = meanLabel, y = str_wrap(plasticityLabel, width = 20), color = str_wrap('Mean Parent Release Year', width = 1)) +
+#     theme(text = element_text(color = 'black', size = 14),
+#           axis.text = element_text(color = 'black', size = rel(1)),
+#           axis.line = element_line(color = 'black', size = 1),
+#           panel.background = element_blank(),
+#           panel.border = element_blank(),
+#           panel.grid = element_blank(),
+#           plot.background = element_blank(),
+#           legend.position = 'right',
+#           legend.background = element_rect(color = 'black'))
+# 
+#   print(oldestParentPlot)
+#   print(youngestParentPlot)
+#   print(meanParentPlot)
+# }
 # 
 # # Subset to the locations where we got a significant, classical N response on a population level and estimate plasticity --> does N plasticity correlate across location years?
 # nResponse <- filter(hybrids, str_detect(environment, '2023:Ames')|str_detect(environment, '2023:Crawfordsville')|location %in% c('North Platte2', 'Scottsbluff'))
@@ -857,10 +904,10 @@ for(var in vars)
 #     scale_color_viridis_c(direction = -1) +
 #     labs(x = meanLabel, y = plasticityLabel, color = str_wrap('Mean Parent Release Year', width = 1)) + 
 #     theme_minimal() +
-#     theme(axis.text.x = element_text(color = 'black', size = 11),
-#           axis.text.y = element_text(color = 'black', size = 11),
-#           legend.text = element_text(color = 'black', size = 11),
-#           text = element_text(color = 'black', size = 11),
+#     theme(axis.text.x = element_text(color = 'black', size = 9),
+#           axis.text.y = element_text(color = 'black', size = 9),
+#           legend.text = element_text(color = 'black', size = 9),
+#           text = element_text(color = 'black', size = 9),
 #           legend.position = 'none',
 #           panel.grid = element_blank())
 #   
@@ -870,8 +917,17 @@ for(var in vars)
 #   # ggsave(paste0('analysis/', yieldComponents[i], 'LinearPlasticityVsMean.png'), dpi = 1000)
 # }
 
+nResponseLocationYears <- c('2023 Crawfordsville', '2023 Ames', '2022 Scottsbluff', '2022 North Platte LI')
 # Subset to the locations where we got a significant, classical N response on a population level and estimate plasticity --> does N plasticity correlate across location years?
-nResponse <- filter(hybrids, str_detect(environment, '2023:Ames')|str_detect(environment, '2023:Crawfordsville')|location %in% c('North Platte2', 'Scottsbluff'))
+nResponse <- filter(hybrids, locationYear %in% nResponseLocationYears)
+
+nTreatmentsPerLocationYear <- nResponse %>%
+  group_by(locationYear, genotype) %>%
+  summarise(nitrogenTreatments = n_distinct(nitrogenTreatment, na.rm = TRUE)) %>%
+  filter(nitrogenTreatments < 3)
+singleNLevelHybrids <- unique(nTreatmentsPerLocationYear$genotype)
+
+nResponse <- filter(nResponse, !(genotype %in% singleNLevelHybrids))
 
 nResponse.pl <- getNitrogenPlasticityByLocationYear(nResponse, paste0(phenotypes[1], '.sp'), 'nitrogenTreatment', 'genotype')
 
@@ -887,7 +943,6 @@ for(i in 2:length(phenotypes))
 nResponse.pl <- nResponse.pl %>%
   rowwise() %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .))) %>% 
-  mutate(locationYear = case_when(locationYear=='2022:North Platte' ~ '2022:North Platte:4.3', .default = locationYear)) %>% 
   rowwise() %>%
   mutate(genotype = str_to_upper(genotype),
          earParent = str_split_i(genotype, ' X ', 1),
@@ -917,23 +972,21 @@ nPlasticityCorYield <- ggplot(corData, aes(locationYear1, locationYear2, fill = 
   geom_tile(color = 'white') +
   scale_fill_viridis_c(direction = -1) + 
   scale_x_discrete(breaks = unique(corData$locationYear1), 
-                   labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10), 
-                              str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 8))) +
+                   labels = label_wrap(10)) +
   scale_y_discrete(breaks = unique(corData$locationYear1), 
-                   labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10), 
-                              str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 10))) +
+                   labels = label_wrap(10)) +
   labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Yield (bushels/acre)') + 
   theme_minimal() +
-  theme(text = element_text(color = 'black', size = 11),
+  theme(text = element_text(color = 'black', size = 9),
         axis.text.x = element_text(color = 'black', size = rel(1), angle = 90),
         axis.text = element_text(color = 'black', size = rel(1), hjust = 1, margin = margin(0,0,0, 0)),
-        plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
         axis.line = element_blank(),
         panel.background = element_blank(),
         panel.border = element_blank(),
         panel.grid = element_blank(), 
         plot.background = element_blank(), 
-        legend.position = 'left',
+        legend.position = 'none',
         legend.background = element_blank())
 nPlasticityCorYield
 
@@ -959,7 +1012,7 @@ nPlasticityCorYield
 #                    labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
 #                               str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
 #   labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Kernel Row Number') + 
-#   theme(text = element_text(color = 'black', size = 11),
+#   theme(text = element_text(color = 'black', size = 9),
 #         axis.text.x = element_text(color = 'black', size = rel(1)),
 #         axis.text = element_text(color = 'black', size = rel(1)),
 #         axis.line = element_blank(),
@@ -989,13 +1042,11 @@ nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nP
   guides(fill = guide_colourbar(barwidth = 12,
                                 barheight = 1)) +
   scale_x_discrete(breaks = unique(corData$locationYear1), 
-                   labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
-                              str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
+                   labels = label_wrap(10)) +
   scale_y_discrete(breaks = unique(corData$locationYear1), 
-                   labels = c(str_wrap('2022 North Platte:4.3', 4), str_wrap('2022 Scottsbluff', 4), 
-                              str_wrap('2023 Ames', 4), str_wrap('2023 Crawfordsville', 4))) +
+                   labels = c(label_wrap(10))) +
   labs(x = '', y = '', fill = 'Nitrogen Plasticity Correlation', title = 'Hundred Kernel Mass (g)') + 
-  theme(text = element_text(color = 'black', size = 11),
+  theme(text = element_text(color = 'black', size = 9),
         axis.text.x = element_text(color = 'black', size = rel(1)),
         axis.text = element_text(color = 'black', size = rel(1)),
         axis.line = element_blank(),
@@ -1005,8 +1056,8 @@ nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nP
         plot.background = element_blank(), 
         legend.position = 'bottom',
         legend.background = element_blank(), 
-        legend.text = element_text(color = 'black', size = 11),
-        legend.title = element_text(color = 'black', size = 11, vjust = 0.85))
+        legend.text = element_text(color = 'black', size = 9),
+        legend.title = element_text(color = 'black', size = 9, vjust = 0.85))
 nPlasticityCorHKM
 
 nPlasticityCorLegend <- get_legend(nPlasticityCorHKM) 
@@ -1015,14 +1066,12 @@ nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nP
   geom_tile(color = 'white') +
   scale_fill_viridis_c(direction = -1) + 
   scale_x_discrete(breaks = unique(corData$locationYear1), 
-                   labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10), 
-                              str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 10))) +
+                   labels = label_wrap(10)) +
   scale_y_discrete(breaks = unique(corData$locationYear1), 
-                   labels = c(str_wrap('2022 North Platte:4.3', 10), str_wrap('2022 Scottsbluff', 10), 
-                              str_wrap('2023 Ames', 10), str_wrap('2023 Crawfordsville', 10))) +
+                   labels = label_wrap(10)) +
   labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Hundred Kernel Mass (g)') + 
   theme_minimal() +
-  theme(text = element_text(color = 'black', size = 11),
+  theme(text = element_text(color = 'black', size = 9),
         axis.text.x = element_text(color = 'black', size = rel(1), angle = 90),
         axis.text = element_text(color = 'black', size = rel(1), hjust = 1, margin = margin(0, 0, 0, 0)),
         axis.line = element_blank(),
@@ -1031,7 +1080,7 @@ nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nP
         panel.grid = element_blank(), 
         plot.background = element_blank(), 
         legend.position = 'none',
-        plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
         legend.background = element_blank())
 nPlasticityCorHKM
 
@@ -1062,90 +1111,95 @@ nPlasticityCorHKM
 #   }
 # }
 
-ames23NResponse.pl <- filter(nResponse.pl, locationYear=='2023:Ames')
-ames23YieldByNResponse <- lm(yieldPerAcre.sp.mu~ yieldPerAcre.sp.b + meanParentAge, data = ames23NResponse.pl)
-anova(ames23YieldByNResponse)
-summary(ames23YieldByNResponse)
-
-ames23HKMByNResponse <- lm(hundredKernelMass.sp.mu ~ hundredKernelMass.sp.b + meanParentAge, data = ames23NResponse.pl)
-anova(ames23HKMByNResponse)
-
-nPlasticityAmesYield <- ggplot(ames23NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
-  geom_point() +
-  geom_hline(yintercept = 1, color = 'black', linewidth = 1) +
-  scale_color_viridis(direction = -1) +
-  scale_y_continuous(limits = c(0, 1.5)) + 
-  guides(color = guide_colourbar(barwidth = 12,
-                         barheight = 1)) +
-  labs(x = 'Mean Yield (bushels/acre)', y = 'Nitrogen Plasticity', color = 'Mean Parent Age') +
-  theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        legend.text = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
-        legend.position = 'bottom',
-        legend.title = element_text(color = 'black', size = 11, vjust = 0.75),
-        panel.grid = element_blank())
- nPlasticityAmesYield
+ames23NResponse.pl <- filter(nResponse.pl, locationYear=='2023 Ames')
+# ames23YieldByNResponse <- lm(yieldPerAcre.sp.mu~ yieldPerAcre.sp.b + meanParentAge, data = ames23NResponse.pl)
+# anova(ames23YieldByNResponse)
+# summary(ames23YieldByNResponse)
+# 
+# ames23HKMByNResponse <- lm(hundredKernelMass.sp.mu ~ hundredKernelMass.sp.b + meanParentAge, data = ames23NResponse.pl)
+# anova(ames23HKMByNResponse)
+# 
+# nPlasticityAmesYield <- ggplot(ames23NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
+#   geom_point() +
+#   geom_hline(yintercept = 1, color = 'black', linewidth = 1) +
+#   scale_color_viridis(direction = -1) +
+#   scale_y_continuous(limits = c(0, 1.5)) + 
+#   guides(color = guide_colourbar(barwidth = 12,
+#                          barheight = 1)) +
+#   labs(x = 'Mean Yield (bushels/acre)', y = 'Nitrogen Plasticity', color = 'Mean Parent Age') +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         legend.text = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
+#         legend.position = 'bottom',
+#         legend.title = element_text(color = 'black', size = 9, vjust = 0.75),
+#         panel.grid = element_blank())
+#  nPlasticityAmesYield
+#  
+#  nPlasticityParentAgeLegend <- get_legend(nPlasticityAmesYield)
  
- nPlasticityParentAgeLegend <- get_legend(nPlasticityAmesYield)
- 
- nPlasticityAmesYield <- ggplot(ames23NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
-   geom_point() +
-   geom_hline(yintercept = 1, color = 'black') +
-   scale_color_viridis(direction = -1) +
-   scale_y_continuous(limits = c(0.5, 1.5)) + 
-   labs(x = 'Mean Yield (bushels/acre)', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
-   theme_minimal() +
-   theme(axis.text.x = element_text(color = 'black', size = 11),
-         axis.text.y = element_text(color = 'black', size = 11),
-         legend.text = element_text(color = 'black', size = 11),
-         text = element_text(color = 'black', size = 11),
-         legend.position = 'none',
-         panel.grid = element_blank())
- nPlasticityAmesYield
-
- # nPlasticitySBKRN <- ggplot(sb22NResponse.pl, aes(kernelRowNumber.sp.mu, kernelRowNumber.sp.b, color = meanParentAge)) +
+ # nPlasticityAmesYield <- ggplot(ames23NResponse.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
  #   geom_point() +
  #   geom_hline(yintercept = 1, color = 'black') +
  #   scale_color_viridis(direction = -1) +
- #   scale_y_continuous(limits = c(-2.5, 2.5)) + 
- #   labs(x = 'Mean Kernel Row Number', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
+ #   scale_y_continuous(limits = c(0.5, 1.5)) + 
+ #   labs(x = 'Mean Yield (bushels/acre)', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
  #   theme_minimal() +
- #   theme(axis.text.x = element_text(color = 'black', size = 11),
- #         axis.text.y = element_text(color = 'black', size = 11),
- #         legend.text = element_text(color = 'black', size = 11),
- #         text = element_text(color = 'black', size = 11),
+ #   theme(axis.text.x = element_text(color = 'black', size = 9),
+ #         axis.text.y = element_text(color = 'black', size = 9),
+ #         legend.text = element_text(color = 'black', size = 9),
+ #         text = element_text(color = 'black', size = 9),
  #         legend.position = 'none',
  #         panel.grid = element_blank())
- # nPlasticitySBKRN
-
- nPlasticityAmesHKM <- ggplot(ames23NResponse.pl, aes(hundredKernelMass.sp.mu, hundredKernelMass.sp.b, color = meanParentAge)) +
-   geom_point() +
-   geom_hline(yintercept = 1, color = 'black') +
-   scale_color_viridis(direction = -1) +
-   scale_y_continuous(limits = c(0.5, 1.5)) + 
-   labs(x = 'Mean Hundred Kernel Mass (g)', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
-   theme_minimal() +
-   theme(axis.text.x = element_text(color = 'black', size = 11),
-         axis.text.y = element_text(color = 'black', size = 11),
-         legend.text = element_text(color = 'black', size = 11),
-         text = element_text(color = 'black', size = 11),
-         legend.position = 'none',
-         panel.grid = element_blank())
- nPlasticityAmesHKM
+ # nPlasticityAmesYield
+ # 
+ # # nPlasticitySBKRN <- ggplot(sb22NResponse.pl, aes(kernelRowNumber.sp.mu, kernelRowNumber.sp.b, color = meanParentAge)) +
+ # #   geom_point() +
+ # #   geom_hline(yintercept = 1, color = 'black') +
+ # #   scale_color_viridis(direction = -1) +
+ # #   scale_y_continuous(limits = c(-2.5, 2.5)) + 
+ # #   labs(x = 'Mean Kernel Row Number', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
+ # #   theme_minimal() +
+ # #   theme(axis.text.x = element_text(color = 'black', size = 9),
+ # #         axis.text.y = element_text(color = 'black', size = 9),
+ # #         legend.text = element_text(color = 'black', size = 9),
+ # #         text = element_text(color = 'black', size = 9),
+ # #         legend.position = 'none',
+ # #         panel.grid = element_blank())
+ # # nPlasticitySBKRN
+ # 
+ # nPlasticityAmesHKM <- ggplot(ames23NResponse.pl, aes(hundredKernelMass.sp.mu, hundredKernelMass.sp.b, color = meanParentAge)) +
+ #   geom_point() +
+ #   geom_hline(yintercept = 1, color = 'black') +
+ #   scale_color_viridis(direction = -1) +
+ #   scale_y_continuous(limits = c(0.5, 1.5)) + 
+ #   labs(x = 'Mean Hundred Kernel Mass (g)', y = 'Nitrogen Plasticity', color = str_wrap('Mean Parent Age', 6)) +
+ #   theme_minimal() +
+ #   theme(axis.text.x = element_text(color = 'black', size = 9),
+ #         axis.text.y = element_text(color = 'black', size = 9),
+ #         legend.text = element_text(color = 'black', size = 9),
+ #         text = element_text(color = 'black', size = 9),
+ #         legend.position = 'none',
+ #         panel.grid = element_blank())
+ # nPlasticityAmesHKM
 
  # Which genotypes are 'most' and 'least' nitrogen stable across these envs for yield
 ames23Genotypes <- ames23NResponse.pl$genotype
-cf23NResponse.pl <- filter(nResponse.pl, locationYear=="2023:Crawfordsville")
+cf23NResponse.pl <- filter(nResponse.pl, locationYear=="2023 Crawfordsville")
 cf23Genotypes <- cf23NResponse.pl$genotype
 nResponse23Genotypes <- intersect(ames23Genotypes, cf23Genotypes)
-sb22NResponse.pl <- filter(nResponse.pl, locationYear=='2022:Scottsbluff')
+sb22NResponse.pl <- filter(nResponse.pl, locationYear=='2022 Scottsbluff')
 sb22Genotypes <- sb22NResponse.pl$genotype
-np22NResponse.pl <- filter(nResponse.pl, locationYear=='2022:North Platte:4.3')
+np22NResponse.pl <- filter(nResponse.pl, locationYear=='2022 North Platte LI')
 np22Genotypes <- np22NResponse.pl$genotype
 nResponse22Genotypes <- intersect(sb22Genotypes, np22Genotypes)
 nResponseGenotypes <- intersect(nResponse22Genotypes, nResponse23Genotypes)
+
+nResponsePopulation <- nResponse %>%
+  group_by(nitrogenTreatment, locationYear) %>%
+  summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  mutate(genotype = 'Population')
 
 nResponseGenotypeLevel <- nResponse.pl %>%
   filter(genotype %in% nResponseGenotypes) %>%
@@ -1153,105 +1207,133 @@ nResponseGenotypeLevel <- nResponse.pl %>%
    summarise(maxNPlasticityYield = max(yieldPerAcre.sp.b, na.rm = TRUE), 
              minNPlasticityYield = min(yieldPerAcre.sp.b, na.rm = TRUE), 
              meanNPlasticityYield = mean(yieldPerAcre.sp.b, na.rm = TRUE)) %>%
-   arrange(meanNPlasticityYield)
+   arrange(meanNPlasticityYield) 
  
 lowPlasticityGenotype <- nResponseGenotypeLevel$genotype[1] 
 avgPlasticityGenotype <- nResponseGenotypeLevel$genotype[round(length(nResponseGenotypeLevel$genotype)/2)]
 highPlasticityGenotype <- nResponseGenotypeLevel$genotype[length(nResponseGenotypeLevel$genotype)]
- 
-nPlasticityLAHAmes <- filter(hybrids, genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype) & str_detect(environment, '2023:Ames'))  %>%
-  group_by(genotype, environment, nitrogenTreatment) %>%
-  summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
-  mutate(nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
-                                       nitrogenTreatment=='Medium' ~ '150-175',
-                                       nitrogenTreatment=='High' ~ '225-250')) %>%
-  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250')),
-         genotype = factor(genotype, levels = c(highPlasticityGenotype, avgPlasticityGenotype, lowPlasticityGenotype)))
 
-nPlasticityLAHCF <- filter(hybrids, genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype) & str_detect(environment, '2023:Crawfordsville')) %>%
-  group_by(genotype, environment, nitrogenTreatment) %>%
-  summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
-  mutate(nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
-                                       nitrogenTreatment=='Medium' ~ '150-175',
-                                       nitrogenTreatment=='High' ~ '225-250')) %>%
-  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250')),
-         genotype = factor(genotype, levels = c(highPlasticityGenotype, avgPlasticityGenotype, lowPlasticityGenotype)))
+nResponseLAH <- hybrids %>%
+  filter(genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype)) %>%
+  filter(locationYear %in% nResponseLocationYears) %>%
+  group_by(genotype, locationYear, nitrogenTreatment) %>%
+  summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>% 
+  bind_rows(nResponsePopulation) %>%
+  mutate(genotype = factor(genotype, levels = c('Population', highPlasticityGenotype, avgPlasticityGenotype, lowPlasticityGenotype)))
 
-nPlasticityLAHNP2 <- filter(hybrids, genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype) & location=='North Platte2') %>%
-  group_by(genotype, environment, nitrogenTreatment) %>%
-  summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
-  mutate(nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
-                                       nitrogenTreatment=='Medium' ~ '150-175',
-                                       nitrogenTreatment=='High' ~ '225-250')) %>%
-  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250')),
-         genotype = factor(genotype, levels = c(highPlasticityGenotype, avgPlasticityGenotype, lowPlasticityGenotype)))
-
-nPlasticityLAHSB <- filter(hybrids, genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype) & location=='Scottsbluff') %>%
-  group_by(genotype, environment, nitrogenTreatment) %>%
-  summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
-  mutate(nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
-                                       nitrogenTreatment=='Medium' ~ '150-175',
-                                       nitrogenTreatment=='High' ~ '225-250')) %>%
-  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250')),
-         genotype = factor(genotype, levels = c(highPlasticityGenotype, avgPlasticityGenotype, lowPlasticityGenotype)))
-
-nPlasticityGenotypeLines <- ggplot() + 
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHNP2, linetype = 'solid') +
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHSB, linetype = 'dashed') +
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHAmes, linetype = 'dotted') +
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHCF, linetype = 'dotdash') +
-  scale_color_manual(values = viridis_pal()(4)[c(1, 3, 4)],
-                     label = label_wrap(20)) + 
-  labs(x = 'Nitrogen Fertilizer (lbs/acre)', y = 'Mean Yield (bushels/acre)', color = 'Genotype') + 
+nPlasticityGenotypeLines <- ggplot(nResponseLAH, aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype, linetype = genotype)) +
+  geom_line() +
+  facet_wrap(vars(locationYear), ncol = 2, nrow = 2) +
+  scale_color_manual(values = viridis_pal()(4)[c(2, 1, 3, 4)]) +
+  scale_linetype_manual(values = c('dashed', 'solid', 'solid', 'solid')) + 
+  labs(x = 'Nitrogen Treatment', y = 'Yield (bushels/acre)', color = NULL, linetype = NULL) +
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        legend.text = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
-        legend.position = 'right',
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        legend.text = element_text(color = 'black', size = 9),
+        strip.text = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'bottom',
         panel.grid = element_blank())
 nPlasticityGenotypeLines
 
-nPlasticityLinesGenotypeLegend <- get_legend(nPlasticityGenotypeLines)
 
-linetypes <- tibble(environment = c('2022 North Platte:4.3', '2022 Scottsbluff', '2023 Ames', '2023 Crawfordsville'), x = 1, y = 1)
-linetypePlot <- ggplot(linetypes, aes(x, y, linetype = environment)) +
-  geom_line() + 
-  scale_linetype_manual(values = c('solid', 'dashed', 'dotted', 'dotdash'),
-                        labels = label_wrap(20)) +
-  labs(linetype = 'Environment') +
-  theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        legend.text = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
-        legend.position = 'right',
-        panel.grid = element_blank())
-linetypePlot
+  
+  
 
-nPlasticityLinesLinetypeLegend <- get_legend(linetypePlot)
+# nPlasticityLAHAmes <- filter(hybrids, genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype) & str_detect(environment, '2023:Ames'))  %>%
+#   group_by(genotype, environment, nitrogenTreatment) %>%
+#   summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+#   mutate(nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
+#                                        nitrogenTreatment=='Medium' ~ '150-175',
+#                                        nitrogenTreatment=='High' ~ '225-250')) %>%
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250')),
+#          genotype = factor(genotype, levels = c(highPlasticityGenotype, avgPlasticityGenotype, lowPlasticityGenotype)))
+# 
+# nPlasticityLAHCF <- filter(hybrids, genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype) & str_detect(environment, '2023:Crawfordsville')) %>%
+#   group_by(genotype, environment, nitrogenTreatment) %>%
+#   summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+#   mutate(nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
+#                                        nitrogenTreatment=='Medium' ~ '150-175',
+#                                        nitrogenTreatment=='High' ~ '225-250')) %>%
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250')),
+#          genotype = factor(genotype, levels = c(highPlasticityGenotype, avgPlasticityGenotype, lowPlasticityGenotype)))
+# 
+# nPlasticityLAHNP2 <- filter(hybrids, genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype) & location=='North Platte2') %>%
+#   group_by(genotype, environment, nitrogenTreatment) %>%
+#   summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+#   mutate(nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
+#                                        nitrogenTreatment=='Medium' ~ '150-175',
+#                                        nitrogenTreatment=='High' ~ '225-250')) %>%
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250')),
+#          genotype = factor(genotype, levels = c(highPlasticityGenotype, avgPlasticityGenotype, lowPlasticityGenotype)))
+# 
+# nPlasticityLAHSB <- filter(hybrids, genotype %in% c(lowPlasticityGenotype, avgPlasticityGenotype, highPlasticityGenotype) & location=='Scottsbluff') %>%
+#   group_by(genotype, environment, nitrogenTreatment) %>%
+#   summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+#   mutate(nitrogenTreatment = case_when(nitrogenTreatment=='Low' ~ '75',
+#                                        nitrogenTreatment=='Medium' ~ '150-175',
+#                                        nitrogenTreatment=='High' ~ '225-250')) %>%
+#   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('75', '150-175', '225-250')),
+#          genotype = factor(genotype, levels = c(highPlasticityGenotype, avgPlasticityGenotype, lowPlasticityGenotype)))
 
-nPlasticityGenotypeLines <- ggplot() + 
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHNP2, linetype = 'solid') +
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHSB, linetype = 'dashed') +
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHAmes, linetype = 'dotted') +
-  geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHCF, linetype = 'dotdash') +
-  scale_color_manual(values = viridis_pal()(4)[c(1, 3, 4)]) + 
-  labs(x = 'Nitrogen Fertilizer (lbs/acre)', y = 'Mean Yield (bushels/acre)', color = 'Genotype') + 
-  theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        legend.text = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
-        legend.position = 'none',
-        panel.grid = element_blank())
-nPlasticityGenotypeLines
+# nPlasticityGenotypeLines <- ggplot() + 
+#   geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHNP2, linetype = 'solid') +
+#   geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHSB, linetype = 'dashed') +
+#   geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHAmes, linetype = 'dotted') +
+#   geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHCF, linetype = 'dotdash') +
+#   scale_color_manual(values = viridis_pal()(4)[c(1, 3, 4)],
+#                      label = label_wrap(20)) + 
+#   labs(x = 'Nitrogen Fertilizer (lbs/acre)', y = 'Mean Yield (bushels/acre)', color = 'Genotype') + 
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         legend.text = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
+#         legend.position = 'right',
+#         panel.grid = element_blank())
+# nPlasticityGenotypeLines
+# 
+# nPlasticityLinesGenotypeLegend <- get_legend(nPlasticityGenotypeLines)
+# 
+# linetypes <- tibble(environment = c('2022 North Platte:4.3', '2022 Scottsbluff', '2023 Ames', '2023 Crawfordsville'), x = 1, y = 1)
+# linetypePlot <- ggplot(linetypes, aes(x, y, linetype = environment)) +
+#   geom_line() + 
+#   scale_linetype_manual(values = c('solid', 'dashed', 'dotted', 'dotdash'),
+#                         labels = label_wrap(20)) +
+#   labs(linetype = 'Environment') +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         legend.text = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
+#         legend.position = 'right',
+#         panel.grid = element_blank())
+# linetypePlot
+# 
+# nPlasticityLinesLinetypeLegend <- get_legend(linetypePlot)
+# 
+# nPlasticityGenotypeLines <- ggplot() + 
+#   geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHNP2, linetype = 'solid') +
+#   geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHSB, linetype = 'dashed') +
+#   geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHAmes, linetype = 'dotted') +
+#   geom_line(aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype), data = nPlasticityLAHCF, linetype = 'dotdash') +
+#   scale_color_manual(values = viridis_pal()(4)[c(1, 3, 4)]) + 
+#   labs(x = 'Nitrogen Fertilizer (lbs/acre)', y = 'Mean Yield (bushels/acre)', color = 'Genotype') + 
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         legend.text = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
+#         legend.position = 'none',
+#         panel.grid = element_blank())
+# nPlasticityGenotypeLines
 
-nPlasticityGenotypeLinesLegends <- plot_grid(nPlasticityLinesGenotypeLegend, nPlasticityLinesLinetypeLegend, ncol = 1)
-nPlasticityGenotypeLinesLegends
-
-nPlasticityGenotypeLinesPlot <- plot_grid(nPlasticityGenotypeLines, nPlasticityGenotypeLinesLegends, ncol = 2, rel_widths = c(1, 0.4))
-nPlasticityGenotypeLinesPlot
+# nPlasticityGenotypeLinesLegends <- plot_grid(nPlasticityLinesGenotypeLegend, nPlasticityLinesLinetypeLegend, ncol = 1)
+# nPlasticityGenotypeLinesLegends
+# 
+# nPlasticityGenotypeLinesPlot <- plot_grid(nPlasticityGenotypeLines, nPlasticityGenotypeLinesLegends, ncol = 2, rel_widths = c(1, 0.4))
+# nPlasticityGenotypeLinesPlot
 # How well does N plasticity correlate between reps within a location
 nResponseBlock.pl <- getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(phenotypes[1], '.sp'), 'nitrogenTreatment', 'genotype')
 
@@ -1264,24 +1346,24 @@ for(i in 2:length(phenotypes))
                             keep = FALSE)
 }
 
-for(i in 6)
-{
-  traitNPlasticity <- paste0(yieldComponents[i], '.sp.b')
-  
-  dfWide <- nResponseBlock.pl %>%
-    pivot_wider(id_cols = c(genotype, locationYear), 
-                names_from = blockSet, 
-                values_from = all_of(traitNPlasticity), 
-                names_prefix = 'blockSet')
-  
-  nPlasticityBlockCorr <- ggplot(dfWide, aes(blockSet1, blockSet2)) + 
-    geom_point() + 
-    facet_wrap(vars(locationYear)) + 
-    labs(title = yieldComponents[i])
-  print(yieldComponents[i])
-  print(cor(dfWide$blockSet1, dfWide$blockSet2, use = 'complete.obs', method = 'spearman'))
-  print(nPlasticityBlockCorr)
-}
+# for(i in 6)
+# {
+#   traitNPlasticity <- paste0(yieldComponents[i], '.sp.b')
+#   
+#   dfWide <- nResponseBlock.pl %>%
+#     pivot_wider(id_cols = c(genotype, locationYear), 
+#                 names_from = blockSet, 
+#                 values_from = all_of(traitNPlasticity), 
+#                 names_prefix = 'blockSet')
+#   
+#   nPlasticityBlockCorr <- ggplot(dfWide, aes(blockSet1, blockSet2)) + 
+#     geom_point() + 
+#     facet_wrap(vars(locationYear)) + 
+#     labs(title = yieldComponents[i])
+#   print(yieldComponents[i])
+#   print(cor(dfWide$blockSet1, dfWide$blockSet2, use = 'complete.obs', method = 'spearman'))
+#   print(nPlasticityBlockCorr)
+# }
   
 
 
@@ -1351,13 +1433,16 @@ for(i in 6)
   cxHeatmap <- ggplot(cxData, aes(genotypeRank1, as.numeric(genotypeRank2), fill = factor(crossover))) + 
     geom_tile(color = 'white', alpha = 1) +
     scale_fill_manual(values = viridis_pal()(4)[1:2]) +
-    labs(x = 'Hybrid Rank X', 
-         y = 'Hybrid Rank Y', 
-         fill = str_wrap('Superior Hybrid in Best Environment', 1), 
+    scale_x_continuous(limits = c(0, 120)) +
+    scale_y_continuous(limits = c(0, 120)) +
+    guides(shape = guide_legend(override.aes = list(size = 0.5))) +
+    labs(x = 'Hybrid Rank', 
+         y = 'Hybrid Rank', 
+         fill = str_wrap('Superior Hybrid in Best Environment', 20), 
          title = yieldComponentsLabels[i]) + 
     theme_minimal() +
-    theme(text = element_text(color = 'black', size = 11),
-          title = element_text(color = 'black', size = 11),
+    theme(text = element_text(color = 'black', size = 9),
+          title = element_text(color = 'black', size = 9),
           axis.text.x = element_text(color = 'black', size = rel(1)),
           axis.text = element_text(color = 'black', size = rel(1)),
           axis.line = element_blank(),
@@ -1366,7 +1451,7 @@ for(i in 6)
           panel.grid = element_blank(), 
           plot.background = element_blank(), 
           plot.title = element_text(hjust = 0.5),
-          legend.position = 'right',
+          legend.position = 'bottom',
           legend.background = element_blank())
   
   print(cxHeatmap)
@@ -1409,8 +1494,79 @@ sigCrossovers <- read.csv('analysis/significantCrossovers.csv')
 
 heatmap <- plotInteractionImportanceGrid(trait = 'yieldPerAcre', 
                                          traitLabel = 'Yield (bushels/acre)', 
-                                         legendPosition = 'right')
+                                         legendPosition = 'bottom',
+                                         legendTextAngle = 90)
 heatmap
+
+sigCrossoversGenotypeLevel <- sigCrossovers %>%
+  group_by(genotype1) %>%
+  summarise(yieldTotalNormalizedScore = sum(yieldPerAcreScoreNormalized, na.rm = TRUE)) %>%
+  left_join(yieldBLUPS, join_by(genotype1==genotype), keep = FALSE, suffix = c('', '')) %>%
+  select(genotype1, yieldTotalNormalizedScore, rankOrder)
+
+freqCrossoverHybrids <- c('PHK76 X LH82', 'PHP02 X PHJ89', 'LH195 X PHM49', 'PHK56 X W606S', 'PHP02 X PHG47')
+
+freqCrossoverHybridData1LNK <- sigCrossovers %>%
+  filter((genotype1 %in% freqCrossoverHybrids)) %>%
+  select(genotype1, yieldPerAcreRank.E7.G1, yieldPerAcreRank.E8.G1, yieldPerAcreRank.E9.G1) %>%
+  rowwise() %>%
+  mutate(lnkRank = mean(c_across(c(yieldPerAcreRank.E7.G1, yieldPerAcreRank.E8.G1, yieldPerAcreRank.E9.G1)), na.rm = TRUE)) %>%
+  group_by(genotype1) %>%
+  summarise(lnkRank = mean(lnkRank, na.rm = TRUE))
+
+freqCrossoverHybridData2LNK <- sigCrossovers %>%
+  filter((genotype2 %in% freqCrossoverHybrids)) %>%
+  select(genotype2, yieldPerAcreRank.E7.G2, yieldPerAcreRank.E8.G2, yieldPerAcreRank.E9.G2) %>%
+  rowwise() %>%
+  mutate(lnkRank = mean(c_across(c(yieldPerAcreRank.E7.G2, yieldPerAcreRank.E8.G2, yieldPerAcreRank.E9.G2)), na.rm = TRUE)) %>%
+  group_by(genotype2) %>%
+  summarise(lnkRank = mean(lnkRank, na.rm = TRUE))
+
+freqCrossoverHybridData1 <- sigCrossovers %>%
+  filter((genotype1 %in% freqCrossoverHybrids)) %>%
+  select(c(genotype1, contains('yieldPerAcreRank'))) %>%
+  select(c(genotype1, contains('.G1'))) %>%
+  select(!c(yieldPerAcreRank.E7.G1, yieldPerAcreRank.E8.G1, yieldPerAcreRank.E9.G1)) %>%
+  rowwise() %>%
+  mutate(mean = mean(c_across(contains('yieldPerAcreRank')), na.rm = TRUE)) %>%
+  group_by(genotype1) %>%
+  summarise(mean = mean(mean, na.rm = TRUE)) %>%
+  full_join(freqCrossoverHybridData1LNK, join_by(genotype1))
+
+freqCrossoverHybridData2 <- sigCrossovers %>%
+  filter((genotype2 %in% freqCrossoverHybrids)) %>%
+  select(c(genotype2, contains('yieldPerAcreRank'))) %>%
+  select(c(genotype2, contains('.G2'))) %>%
+  select(!c(yieldPerAcreRank.E7.G2, yieldPerAcreRank.E8.G2, yieldPerAcreRank.E9.G2)) %>%
+  rowwise() %>%
+  mutate(mean = mean(c_across(contains('yieldPerAcreRank')), na.rm = TRUE)) %>%
+  group_by(genotype2) %>%
+  summarise(mean = mean(mean, na.rm = TRUE)) %>%
+  full_join(freqCrossoverHybridData2LNK, join_by(genotype2))
+
+top72Percent <- yieldBLUPS %>%
+  arrange(rankOrder)
+top72Percent <- top72Percent$genotype[33:117]
+
+freqCrossoverHybridDF <- sigCrossovers %>%
+  filter(((genotype1 %in% freqCrossoverHybrids) & (genotype2 %in% top72Percent))|
+           ((genotype1 %in% top72Percent)|(genotype2 %in% freqCrossoverHybrids))) %>%
+  select(!yieldPerAcreScoreNormalized) %>%
+  rowwise() %>%
+  mutate(across(contains('yieldPerAcreScore'), ~case_when(.>0~1))) %>%
+  mutate(nonZeroEnvPairs = sum(c_across(contains('yieldPerAcreScore')), na.rm = TRUE)) %>%
+  mutate(percentNonZeroEnvPairs = (nonZeroEnvPairs/(yieldPerAcreComparedEnvs*(yieldPerAcreComparedEnvs - 1)))*100,
+         freqCrossoverHybrid1 = case_when(genotype1 %in% freqCrossoverHybrids ~ genotype1, 
+                                          .default = genotype2),
+         freqCrossoverHybrid2 = case_when((genotype1 %in%freqCrossoverHybrids) & (genotype2 %in% freqCrossoverHybrids) ~ genotype2)) %>%
+  select(genotype1, genotype2, freqCrossoverHybrid1, freqCrossoverHybrid2, nonZeroEnvPairs, percentNonZeroEnvPairs) %>%
+  arrange(freqCrossoverHybrid1, freqCrossoverHybrid2, nonZeroEnvPairs)
+
+phk76lh82 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHK76 X LH82"|freqCrossoverHybrid2=="PHK76 X LH82")
+php02phj89 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHP02 X PHJ89"|freqCrossoverHybrid2=="PHP02 X PHJ89")
+lh195phm49 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="LH195 X PHM49"|freqCrossoverHybrid2=="LH195 X PHM49")
+phk56w606s <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHK56 X W606S"|freqCrossoverHybrid2=="PHK56 X W606S")
+php02phg47 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHK56 X W606S"|freqCrossoverHybrid2=="PHK56 X W606S")
 # ggsave('../interactionImportance.png', dpi = 1000)
 
 highPlasticityGenotype <- hybridsNOLNK22.pl %>%
@@ -1425,7 +1581,7 @@ lowPlasticityGenotype <- lowPlasticityGenotype$genotype[1]
 
 averagePlasticityGenotype <- hybridsNOLNK22.pl %>%
   arrange(yieldPerAcre.sp.b)
-averagePlasticityGenotype <- averagePlasticityGenotype$genotype[round(length(averagePlasticityGenotype$genotype)/2)]
+averagePlasticityGenotype <- averagePlasticityGenotype$genotype[ceiling(length(averagePlasticityGenotype$genotype)/2)]
 
 LAHPlasticities <- filter(hybridsNOLNK22.pl, genotype %in% c(lowPlasticityGenotype, averagePlasticityGenotype, highPlasticityGenotype)) %>% 
   select(genotype, yieldPerAcre.sp.b, yieldPerAcre.sp.FWW) %>%
@@ -1449,10 +1605,10 @@ FWConceptualPlot <- ggplot(LAHData, aes(envIndex, yieldPerAcre.sp, color = genot
   scale_color_manual(values = viridis_pal()(4)[c(1, 3, 4)]) + 
   labs(x = 'Mean Environment Yield (bushels/acre)', y = 'Yield (bushels/acre)', color = '') + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        legend.text = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        legend.text = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'right',
         legend.background = element_blank(),
         panel.grid = element_blank())
@@ -1467,10 +1623,10 @@ FWConceptualPlot <- ggplot(LAHData, aes(envIndex, yieldPerAcre.sp, color = genot
   scale_color_manual(values = viridis_pal()(4)[c(1, 3, 4)]) + 
   labs(x = 'Mean Environment Yield (bushels/acre)', y = 'Yield (bushels/acre)', color = '') + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        legend.text = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        legend.text = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank()) +
   inset_element(FWConceptualPlotLegend, left = 0.25, bottom = 0.6, right = 0.35, top = 1.05, on_top = FALSE)
@@ -1507,14 +1663,15 @@ mostPlastic10PercentPerformance <- ggplot(hybrids, aes(mostPlastic10Percent, yie
                     labels = c('Lower 90%', 'Upper 10%')) + 
   labs(x = '', y = 'Yield (bushels/acre)', fill = 'Plasticity Rank') +
   theme_minimal() + 
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11, hjust = 0.5),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        strip.text = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9, hjust = 0.5),
         panel.grid = element_blank(),
         legend.position = 'top')
 mostPlastic10PercentPerformance
-ggsave('../mostPlastic10PercentPerformance.svg', plot = mostPlastic10PercentPerformance, 
-       width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
+# ggsave('../mostPlastic10PercentPerformance.svg', plot = mostPlastic10PercentPerformance,
+#        width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
 
 
 # How does yield as % of env mean change with env mean for plastic vs less plastic genotypes?
@@ -1545,13 +1702,13 @@ percentMeanPlotExtremePlasticity <- percentMeanData %>%
   scale_y_continuous(breaks = c(50, 100, 150, 200),
                      labels = c('50%', '100%', '150%', '200%')) +
   labs(x = 'Environment Mean Yield (bushels/acre)', y = 'Hybrid Mean Yield As Percent of Environment Mean', 
-       color = 'Mean Parent Release Year', title = '10% Most & Least Plastic Hybrids') +
+       color = str_wrap('Mean Parent Release Year', 1), title = '10% Most & Least Plastic Hybrids') +
   theme_minimal() +  
-  theme(axis.text.x = element_text(color = 'black', size = 11, hjust = 0.5),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11, hjust = 0.5),
-        plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
-        # legend.text = element_text(color = 'black', size = 11, vjust = 0.5, angle = 90),legend.text = element_text(color = 'black', size = 11, vjust = 0.5, angle = 90),
+  theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        # legend.text = element_text(color = 'black', size = 9, vjust = 0.5, angle = 90),legend.text = element_text(color = 'black', size = 9, vjust = 0.5, angle = 90),
         # legend.position = 'bottom', 
         panel.grid = element_blank())
 percentMeanPlotExtremePlasticity
@@ -1562,18 +1719,18 @@ percentMeanPlotOverallPerformance <- percentMeanData %>%
   filter(best10PercentOverall|worst10PercentOverall) %>%
 ggplot(aes(envMean, hybridPercentEnvMean, group = genotype,
                             color = meanParentAge)) +
-  geom_smooth() + 
+  geom_smooth(method = 'lm') + 
   geom_point() + 
   scale_color_viridis(direction = -1) + 
   scale_y_continuous(breaks = c(50, 100, 150, 200), 
                      labels = c('50%', '100%', '150%', '200%')) +
   labs(x = 'Environment Mean Yield (bushels/acre)', y = 'Hybrid Mean Yield As Percent of Environment Mean', 
-       color = 'Mean Parent Release Year', title = '10% Highest & Lowest Overall Yielding Hybrids') +
+       color = str_wrap('Mean Parent Release Year', 1), title = '10% Highest & Lowest Overall Yielding Hybrids') +
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11, hjust = 0.5),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11, hjust = 0.5),
-        plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
+  theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
         panel.grid = element_blank())
 percentMeanPlotOverallPerformance
 
@@ -1587,7 +1744,8 @@ ggsave('../percentMeanPlots.png', plot = percentMeanPlots, width = 6.5, height =
 
 
 
-phenotypeLabelsGCAVP <- c('Plant Density', 'Test Weight', 'Harvest Moisture', 'Flag Leaf Height',
+phenotypeLabelsGCAVP <- c(#'Plant Density', 
+                        'Test Weight', 'Harvest Moisture', 'Flag Leaf Height',
                         'Ear Height', 'Yield', 'GDD To Anthesis*', 'GDD to Silk*', 
                         'Anthesis Silking Interval*', 'Kernel Row Number', 'Ear Width', 'Ear Length',
                         'Shelled Cob Width', 'Shelled Cob Mass', 'Kernel Mass Per Ear', 
@@ -1625,17 +1783,19 @@ gca_vp.plot <- ggplot(gca_vp, aes(label, pctVar, fill = grp)) +
   scale_fill_manual(values = viridis_pal()(4)[1:2]) +
   scale_y_continuous(breaks = c(0, 25, 50, 75, 100),
                      labels = c('0%', '25%', '50%', '75%', '100%')) +
-  labs(x = 'Phenotype', y = 'Linear Plasticity Variance', fill = '') +
+  guides(shape = guide_legend(override.aes = list(size = 0.5))) +
+  labs(x = NULL, y = 'Linear Plasticity Variance', fill = '') +
   theme_minimal() +
-  theme(axis.text.x = element_text(size = 11, color = 'black', angle = 90, margin = margin(0, 0, 0, 0), 
+  theme(axis.text.x = element_text(size = 9, color = 'black', angle = 90, margin = margin(0, 0, 0, 0), 
                                    vjust = 0.5, hjust = 1),
-        axis.text.y = element_text(size = 11, color = 'black', vjust = 0, hjust = 0),
-        legend.text = element_text(size = 11, color = 'black'),
-        text = element_text(size = 11, color = 'black'),
-        legend.position = 'right',
+        axis.text.y = element_text(size = 9, color = 'black', vjust = 0, hjust = 0),
+        legend.text = element_text(size = 9, color = 'black'),
+        text = element_text(size = 9, color = 'black'),
+        legend.position = 'bottom',
         line = element_line(color = 'black', linewidth = 1),
         panel.grid = element_blank())
 gca_vp.plot
+# ggsave('../gca_vp.png', width = 21.96, height = 11.5, units = 'in', dpi = 1000)
 
 
 
@@ -1679,9 +1839,9 @@ gca_vp.plot
 #   scale_fill_viridis(discrete = TRUE) +
 #   labs(x = 'Mean Feature Importance', y = '') +
 #   theme_minimal() + 
-#   theme(axis.text.x = element_text(color = 'black', size = 11),
-#         axis.text.y = element_text(color = 'black', size = 11),
-#         text = element_text(color = 'black', size = 11),
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
 #         panel.grid = element_blank(),
 #         legend.position = 'none')
 # featureImportance
@@ -1724,10 +1884,10 @@ gca_vp.plot
 #   scale_x_continuous(limits = c(0, 300)) +
 #   labs(x = 'Actual Yield (bushels/acre)', y = 'Predicted Yield (bushels/acre)', color = 'Method') + 
 #   theme_minimal() +
-#   theme(axis.text.x = element_text(color = 'black', size = 11),
-#         axis.text.y = element_text(color = 'black', size = 11),
-#         legend.text = element_text(color = 'black', size = 11),
-#         text = element_text(color = 'black', size = 11),
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         legend.text = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
 #         legend.position = 'top',
 #         panel.grid = element_blank())
 # yieldPredictionsPlot
@@ -1758,26 +1918,26 @@ rfFeaturesSummmary <- rfFeatures %>%
 rfFeatures <- rfFeatures %>%
   pivot_longer(everything(), names_to = 'phenotype', values_to = 'val') %>%
   rowwise() %>%
-  mutate(phenotypeLabel = case_when(phenotype=='plantDensity' ~ 'Plant Density (plants/acre)',
+  mutate(phenotypeLabel = case_when(phenotype=='plantDensity' ~ 'Plant Density',
                                     phenotype=='kernelRowNumber' ~ 'Kernel Row Number',
                                     phenotype=='kernelsPerRow' ~ 'Kernels Per Row*',
-                                    phenotype=='hundredKernelMass' ~ 'Hundred Kernel Mass (g)')) %>%
+                                    phenotype=='hundredKernelMass' ~ 'Hundred Kernel Mass')) %>%
   mutate(phenotypeLabel = factor(phenotypeLabel, 
-                                 levels = c('Kernel Row Number', 'Plant Density (plants/acre)', 'Kernels Per Row*', 'Hundred Kernel Mass (g)'), 
+                                 levels = c('Kernel Row Number', 'Plant Density', 'Kernels Per Row*', 'Hundred Kernel Mass'), 
                                  ordered = TRUE))
 
 featureImportance <- ggplot(rfFeatures, aes(val, phenotypeLabel)) +
   geom_boxplot(color = 'black', fill = nitrogenColors[3]) +
-  geom_text(aes(0.85, 'Hundred Kernel Mass (g)'), label = 'a', size = 3.88) +
-  geom_text(aes(0.85, 'Kernels Per Row*'), label = 'b', size = 3.88) +
-  geom_text(aes(0.85, 'Plant Density (plants/acre)'), label = 'c', size = 3.88) +
-  geom_text(aes(0.85, 'Kernel Row Number'), label = 'd', size = 3.88) +
+  # geom_text(aes(0.85, 'Hundred Kernel Mass (g)'), label = 'a', size = 3.88) +
+  # geom_text(aes(0.85, 'Kernels Per Row*'), label = 'b', size = 3.88) +
+  # geom_text(aes(0.85, 'Plant Density (plants/acre)'), label = 'c', size = 3.88) +
+  # geom_text(aes(0.85, 'Kernel Row Number'), label = 'd', size = 3.88) +
   scale_y_discrete(labels = str_wrap(levels(rfFeatures$phenotypeLabel), 9)) +
   labs(x = 'Feature Importance', y = '') +
   theme_minimal() + 
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         panel.grid = element_blank(),
         legend.position = 'none')
 featureImportance
@@ -1805,13 +1965,14 @@ summary(extensionRegressionModel)
 extensionR2 <- 0.4564
 
 yieldPredictionsSubsample <- yieldPredictions %>%
-  slice_sample(prop = 0.5) %>%
+  slice_sample(prop = 0.10) %>%
   pivot_longer(c(predictedYieldExtension, predictedYieldRF), 
                values_to = 'predictedYield', 
                names_to = 'method', 
                names_prefix = 'predictedYield') %>%
   rowwise() %>%
-  mutate(method = case_when(method=='RF' ~ 'Random Forest', .default = method))
+  mutate(method = case_when(method=='RF' ~ 'Random Forest',
+                            method=='Extension' ~ 'Expert'))
 
 yieldPredictionsPlot <- ggplot(yieldPredictionsSubsample, aes(yieldPerAcre, predictedYield, color = method)) + 
   geom_point() + 
@@ -1822,10 +1983,10 @@ yieldPredictionsPlot <- ggplot(yieldPredictionsSubsample, aes(yieldPerAcre, pred
   scale_x_continuous(limits = c(0, 300)) +
   labs(x = 'Actual Yield (bushels/acre)', y = 'Predicted Yield (bushels/acre)', color = 'Method') + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        legend.text = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        legend.text = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'top',
         panel.grid = element_blank())
 yieldPredictionsPlot
@@ -1834,14 +1995,14 @@ meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre
     geom_point() +
     geom_hline(yintercept=1) +
     scale_color_viridis_c(direction = -1) +
-    guides(color = guide_colourbar(barwidth = 6,
+    guides(color = guide_colourbar(barwidth = 8,
                                 barheight = 1)) +
-    labs(x = 'Hybrid Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = 'Mean Parent Release Year') + 
+    labs(x = 'Hybrid Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = str_wrap('Mean Parent Release Year', 12)) + 
     theme_minimal() +
-    theme(axis.text.x = element_text(color = 'black', size = 11),
-          axis.text.y = element_text(color = 'black', size = 11),
-          legend.text = element_text(color = 'black', size = 11, margin = margin(0, 0, 0, 0)),
-          text = element_text(color = 'black', size = 24),
+    theme(axis.text.x = element_text(color = 'black', size = 9),
+          axis.text.y = element_text(color = 'black', size = 9),
+          legend.text = element_text(color = 'black', size = 9, margin = margin(0, 0, 0, 0)),
+          text = element_text(color = 'black', size = 9),
           legend.position = 'top',
           panel.grid = element_blank())
 meanParentPlot
@@ -1853,29 +2014,37 @@ meanParentPlot
 #   scale_color_viridis_c(direction = -1) +
 #   labs(x = 'Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = str_wrap('Mean Parent Release Year', width = 1)) + 
 #   theme_minimal() +
-#   theme(axis.text.x = element_text(color = 'black', size = 11),
-#         axis.text.y = element_text(color = 'black', size = 11),
-#         legend.text = element_text(color = 'black', size = 11),
-#         text = element_text(color = 'black', size = 11),
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         legend.text = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
 #         legend.position = 'none',
 #         panel.grid = element_blank()) +
 #   inset_element(meanParentPlotLegend, left = 0.125, bottom = 0.43, right = 0.225, top = 1, on_top = TRUE)
 
 
-workflow <- rasterGrob(readPNG('../workflow.png'))
+# workflow <- rasterGrob(readPNG('../workflow.png'))
 
-fig1left <- plot_grid(workflow, vp.plot, ncol = 1, labels = c('B', 'C'), rel_heights = c(0.4, 0.6))
-fig1right <- plot_grid(yieldPredictionsPlot, featureImportance, ncol = 1, labels = c('D', 'E'))
-fig1bottom <- plot_grid(fig1left, fig1right, nrow = 1, rel_widths = c(0.6, 0.4))
-fig1 <- plot_grid(experimentalDesign, fig1bottom, ncol = 1, labels = c('A', '', ''), rel_heights = c(0.3, 0.7))
-fig1
+# fig1left <- plot_grid(workflow, vp.plot, ncol = 1, labels = c('B', 'C'), rel_heights = c(0.4, 0.6))
+# fig1right <- plot_grid(yieldPredictionsPlot, featureImportance, ncol = 1)
+# fig1bottom <- plot_grid(fig1left, fig1right, nrow = 1, rel_widths = c(0.6, 0.4))
+# fig1 <- plot_grid(experimentalDesign, fig1bottom, ncol = 1, labels = c('A', '', ''), rel_heights = c(0.3, 0.7))
+# fig1
+
+# fig1middle <- plot_grid(workflow, orderedBoxplots, nrow = 1, labels = c('B', 'C'), rel_widths = c(0.25, 0.75))
+fig1 <- plot_grid(experimentalDesign, orderedBoxplots, vp.plot, ncol = 1, labels = 'AUTO', rel_heights = c(0.29, 0.33, 0.37))
 ggsave('../fig1HighRes.svg', plot = fig1, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
-fig2left <- plot_grid(FWConceptualPlot, meanParentPlot, ncol = 1, labels = c('A', 'B'))
-fig2right <- plot_grid(cxHeatmap, heatmap, ncol = 1, labels = c('C', 'D'))
-fig2top <- plot_grid(fig2left, fig2right, nrow = 1, rel_widths = c(0.8, 1))
-fig2 <- plot_grid(fig2top, gca_vp.plot, nrow = 2, labels = c('', 'E'), rel_heights = c(0.575, 0.425))
-ggsave('../fig2HighRes.svg', plot = fig2, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+# fig2left <- plot_grid(FWConceptualPlot, meanParentPlot, ncol = 1, labels = c('A', 'B'))
+# fig2right <- plot_grid(cxHeatmap, heatmap, ncol = 1, labels = c('C', 'D'))
+# fig2top <- plot_grid(fig2left, fig2right, nrow = 1, rel_widths = c(0.8, 1))
+# fig2 <- plot_grid(fig2top, gca_vp.plot, nrow = 2, labels = c('', 'E'), rel_heights = c(0.575, 0.425))
+# ggsave('../fig2HighRes.svg', plot = fig2, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+
+fig2top <- plot_grid(FWConceptualPlot, meanParentPlot, nrow = 1, labels = 'AUTO')
+# fig2bottom <- plot_grid(cxHeatmap, heatmap, nrow = 1, labels = c('D', 'E'))
+fig2 <- plot_grid(fig2top, gca_vp.plot, nrow = 2, labels = c('', 'C'), rel_heights = c(0.425, 0.575))
+ggsave('../fig2HighRes.svg', plot = fig2, width = 6.5, height = 6.5, units = 'in', dpi = 1000, bg = 'white')
 
 # Variance partitioning for yield from yield components
 # vc_yield <- partitionVariance3(hybrids, 'yieldPerAcre.sp', 'Yield (bushels/acre)', '~ (1|plantDensity) + (1|kernelRowNumber) + (1|kernelsPerRow) + (1|hundredKernelMass)')
@@ -1883,13 +2052,13 @@ ggsave('../fig2HighRes.svg', plot = fig2, width = 6.5, height = 9, units = 'in',
 fig3top <- plot_grid(nPlasticityCorYield, nPlasticityCorHKM,labels = c('A', 'B'), 
                      nrow = 1, rel_widths = c(0.5, 0.5))
 fig3top <- plot_grid(fig3top, nPlasticityCorLegend, ncol = 1, rel_heights = c(1, 0.075))
-fig3middle <- plot_grid(nPlasticityAmesYield, nPlasticityAmesHKM, labels = c('C', 'D'), 
-                        nrow = 1, rel_widths = c(0.5, 0.5))
-fig3middle <- plot_grid(fig3middle, nPlasticityParentAgeLegend, ncol = 1, rel_heights = c(1, 0.15))
+# fig3middle <- plot_grid(nPlasticityAmesYield, nPlasticityAmesHKM, labels = c('C', 'D'), 
+#                         nrow = 1, rel_widths = c(0.5, 0.5))
+# fig3middle <- plot_grid(fig3middle, nPlasticityParentAgeLegend, ncol = 1, rel_heights = c(1, 0.15))
 
-fig3 <- plot_grid(fig3top, fig3middle, nPlasticityGenotypeLinesPlot, nrow = 3, labels = c('', '', 'E'), rel_heights = c(0.55, 0.45, 0.45))
+fig3 <- plot_grid(fig3top, nPlasticityGenotypeLines, nrow = 2, labels = c('', 'C'), rel_heights = c(0.55, 0.9))
 fig3
-ggsave('../fig3HighRes.svg', plot = fig3, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+ggsave('../fig3HighRes.png', plot = fig3, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 
 # # Test spFW
@@ -1924,13 +2093,13 @@ blockCorr <- ggplot(block.pl, aes(yieldPerAcre.sp.b.1, yieldPerAcre.sp.b.2)) +
   geom_point(color = viridis_pal()(4)[1]) +
   labs(x = 'Linear Plasticity - Block 1', y = 'Linear Plasticity - Block 2', title = paste0('Spearman Rank Correlation: ', round(blockRho, 4))) +
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        text = element_text(color = 'black', size = 9),
         panel.grid = element_blank())
 blockCorr
-ggsave('../figSBlockCorr.png', plot = blockCorr, width = 6.5, height = 6.5, units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../figSBlockCorr.png', plot = blockCorr, width = 6.5, height = 6.5, units = 'in', dpi = 1000, bg = 'white')
 
 nResponseBlockWide <- nResponseBlock.pl %>%
   pivot_wider(id_cols = c(genotype, locationYear), names_from = blockSet, values_from = yieldPerAcre.sp.b, names_prefix = 'b')
@@ -1943,14 +2112,14 @@ nResponseCorr <- ggplot(nResponseBlockWide, aes(b1, b2)) +
   scale_x_continuous(limits = c(-1.15, 1.75)) +
   scale_y_continuous(limits = c(-1.15, 1.75)) +
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        plot.title = element_text(color = 'black', size = 11, hjust = 0.5),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        text = element_text(color = 'black', size = 9),
         panel.grid = element_blank())
 nResponseCorr
 
-ggsave('../figSNResponseBlockCorr.png', plot = nResponseCorr, width = 6.5, height = 6.5, units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../figSNResponseBlockCorr.png', plot = nResponseCorr, width = 6.5, height = 6.5, units = 'in', dpi = 1000, bg = 'white')
 
 for(i in 1:length(phenotypes))
 {
@@ -1961,15 +2130,15 @@ meanParentPlotShelledCobWidth <- ggplot(hybridsNOLNK22.pl, aes(shelledCobWidth.s
   geom_point() +
   geom_hline(yintercept=1) +
   scale_color_viridis_c(direction = -1) +
-  guides(color = guide_colourbar(barwidth = 6,
-                                 barheight = 1)) +
+  # guides(color = guide_colourbar(barwidth = 6,
+  #                                barheight = 1)) +
   labs(x = 'Hybrid Mean Shelled Cob Width (cm)', y = 'Shelled Cob Width Linear Plasticity', color = 'Mean Parent Release Year') + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        legend.text = element_text(color = 'black', size = 11, margin = margin(0, 0, 0, 0)),
-        text = element_text(color = 'black', size = 11),
-        legend.position = 'top',
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        legend.text = element_text(color = 'black', size = 9, margin = margin(0, 0, 0, 0)),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'right',
         panel.grid = element_blank())
 meanParentPlotShelledCobWidth
 
@@ -1982,12 +2151,12 @@ meanParentPlotShelledCobWidth <- ggplot(hybridsNOLNK22.pl, aes(shelledCobWidth.s
   scale_color_viridis_c(direction = -1) +
   guides(color = guide_colourbar(barwidth = 6,
                                  barheight = 1)) +
-  labs(x = str_wrap('Hybrid Mean Shelled Cob Width (cm)', 19), y = str_wrap('Shelled Cob Width Linear Plasticity', 24), color = str_wrap('Mean Parent Release Year', 
+  labs(x = str_wrap('Hybrid Mean Shelled Cob Width (cm)', 19), y = str_wrap('Shelled Cob Width Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
                                                                                                              width = 15)) + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 meanParentPlotShelledCobWidth
@@ -1999,12 +2168,12 @@ meanParentPlotKRN <- ggplot(hybridsNOLNK22.pl, aes(kernelRowNumber.sp.mu, kernel
   scale_color_viridis_c(direction = -1) +
   guides(color = guide_colourbar(barwidth = 6,
                                  barheight = 1)) +
-  labs(x = str_wrap('Hybrid Mean Kernel Row Number', 19), y = str_wrap('Kernel Row Number Linear Plasticity', 24), color = str_wrap('Mean Parent Release Year', 
+  labs(x = str_wrap('Hybrid Mean Kernel Row Number', 19), y = str_wrap('Kernel Row Number Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
                                                                                                width = 15)) + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 meanParentPlotKRN
@@ -2016,12 +2185,12 @@ meanParentPlotEarLength <- ggplot(hybridsNOLNK22.pl, aes(earLength.sp.mu, earLen
   scale_color_viridis_c(direction = -1) +
   guides(color = guide_colourbar(barwidth = 6,
                                  barheight = 1)) +
-  labs(x = str_wrap('Hybrid Mean Ear Length (cm)', 19), y = str_wrap('Ear Length Linear Plasticity', 24), color = str_wrap('Mean Parent Release Year', 
+  labs(x = str_wrap('Hybrid Mean Ear Length (cm)', 19), y = str_wrap('Ear Length Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
                                                                                                         width = 15)) + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 meanParentPlotEarLength
@@ -2033,12 +2202,12 @@ meanParentPlotEarFillLength <- ggplot(hybridsNOLNK22.pl, aes(earFillLength.sp.mu
   scale_color_viridis_c(direction = -1) +
   guides(color = guide_colourbar(barwidth = 6,
                                  barheight = 1)) +
-  labs(x = str_wrap('Hybrid Mean Ear Fill Length* (cm)', 19), y = str_wrap('Ear Fill Length Linear Plasticity', 24), color = str_wrap('Mean Parent Release Year', 
+  labs(x = str_wrap('Hybrid Mean Ear Fill Length* (cm)', 19), y = str_wrap('Ear Fill Length Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
                                                                                                         width = 15)) + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 meanParentPlotEarFillLength
@@ -2050,12 +2219,12 @@ meanParentPlotKPR <- ggplot(hybridsNOLNK22.pl, aes(kernelsPerRow.sp.mu, kernelsP
   scale_color_viridis_c(direction = -1) +
   guides(color = guide_colourbar(barwidth = 6,
                                  barheight = 1)) +
-  labs(x = str_wrap('Hybrid Mean Kernels Per Row*', 19), y = str_wrap('Kernels Per Row Linear Plasticity', 24), color = str_wrap('Mean Parent Release Year', 
+  labs(x = str_wrap('Hybrid Mean Kernels Per Row*', 19), y = str_wrap('Kernels Per Row Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
                                                                                                         width = 15)) + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 meanParentPlotKPR
@@ -2067,12 +2236,12 @@ meanParentPlotKPE <- ggplot(hybridsNOLNK22.pl, aes(kernelsPerEar.sp.mu, kernelsP
   scale_color_viridis_c(direction = -1) +
   guides(color = guide_colourbar(barwidth = 6,
                                  barheight = 1)) +
-  labs(x = str_wrap('Hybrid Mean Kernels Per Ear', 19), y = str_wrap('Kernels Per Ear Linear Plasticity', 24), color = str_wrap('Mean Parent Release Year', 
+  labs(x = str_wrap('Hybrid Mean Kernels Per Ear', 19), y = str_wrap('Kernels Per Ear Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
                                                                                                         width = 15)) + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 meanParentPlotKPE
@@ -2084,12 +2253,12 @@ meanParentPlotEarWidth <- ggplot(hybridsNOLNK22.pl, aes(earWidth.sp.mu, earWidth
   scale_color_viridis_c(direction = -1) +
   guides(color = guide_colourbar(barwidth = 6,
                                  barheight = 1)) +
-  labs(x = str_wrap('Hybrid Mean Ear Width (cm)', 19), y = str_wrap('Ear Width Linear Plasticity', 24), color = str_wrap('Mean Parent Release Year', 
+  labs(x = str_wrap('Hybrid Mean Ear Width (cm)', 19), y = str_wrap('Ear Width Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
                                                                                                         width = 15)) + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 meanParentPlotEarWidth
@@ -2101,12 +2270,12 @@ meanParentPlotHKM <- ggplot(hybridsNOLNK22.pl, aes(hundredKernelMass.sp.mu, hund
   scale_color_viridis_c(direction = -1) +
   guides(color = guide_colourbar(barwidth = 6,
                                  barheight = 1)) +
-  labs(x = str_wrap('Hybrid Mean Hundred Kernel Mass (g)', 19), y = str_wrap('Hundred Kernel Mass Linear Plasticity', 24), color = str_wrap('Mean Parent Release Year', 
+  labs(x = str_wrap('Hybrid Mean Hundred Kernel Mass (g)', 19), y = str_wrap('Hundred Kernel Mass Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
                                                                                                         width = 15)) + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 meanParentPlotHKM
@@ -2118,24 +2287,181 @@ meanParentPlotKernelMass <- ggplot(hybridsNOLNK22.pl, aes(kernelMassPerEar.sp.mu
   scale_color_viridis_c(direction = -1) +
   guides(color = guide_colourbar(barwidth = 6,
                                  barheight = 1)) +
-  labs(x = str_wrap('Hybrid Mean Kernel Mass Per Ear (g)', 19), y = str_wrap('Kernel Mass Per Ear Linear Plasticity', 24), color = str_wrap('Mean Parent Release Year', 
+  labs(x = str_wrap('Hybrid Mean Kernel Mass Per Ear (g)', 19), y = str_wrap('Kernel Mass Per Ear Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
                                                                                                         width = 15)) + 
   theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 meanParentPlotKernelMass
 
-supplMeanParentPlots <- plot_grid(meanParentPlotShelledCobWidth, meanParentPlotKRN, meanParentPlotEarLength, 
-                                  meanParentPlotEarFillLength, meanParentPlotKPR, meanParentPlotKPE,
-                                  meanParentPlotEarWidth, meanParentPlotHKM, meanParentPlotKernelMass,
-                                  nrow = 3, ncol = 3, labels = 'AUTO')
-supplMeanParentPlots <- plot_grid(supplMeanParentPlots, meanParentPlotLegend, ncol = 1, rel_heights = c(1.5, 0.1))
-ggsave('../figSMeanParentPlots.svg', plot = supplMeanParentPlots, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+# meanParentPlotPlantDensity <- ggplot(hybridsNOLNK22.pl, aes(plantDensity.sp.mu/1000, plantDensity.sp.b, color = meanParentAge)) +
+#   geom_point() +
+#   geom_hline(yintercept=1) +
+#   scale_y_continuous(limits = c(0.6, 1.4)) +
+#   scale_color_viridis_c(direction = -1) +
+#   guides(color = guide_colourbar(barwidth = 6,
+#                                  barheight = 1)) +
+#   labs(x = str_wrap('Hybrid Mean Plant Density (1000 plants/acre)', 19), y = str_wrap('Plant Density Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
+#                                                                                                                                             width = 15)) + 
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
+#         legend.position = 'none',
+#         panel.grid = element_blank())
+
+meanParentPlotTestWt <- ggplot(hybridsNOLNK22.pl, aes(combineTestWeight.sp.mu, combineTestWeight.sp.b, color = meanParentAge)) +
+  geom_point() +
+  geom_hline(yintercept=1) +
+  scale_y_continuous(limits = c(0.6, 1.4)) +
+  scale_color_viridis_c(direction = -1) +
+  guides(color = guide_colourbar(barwidth = 6,
+                                 barheight = 1)) +
+  labs(x = str_wrap('Hybrid Mean Test Weight (lbs/bushel)', 19), y = str_wrap('Test Weight Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
+                                                                                                                                          width = 15)) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'none',
+        panel.grid = element_blank())
+
+meanParentPlotHarvestMoisture <- ggplot(hybridsNOLNK22.pl, aes(combineMoisture.sp.mu, combineMoisture.sp.b, color = meanParentAge)) +
+  geom_point() +
+  geom_hline(yintercept=1) +
+  scale_y_continuous(limits = c(0.6, 1.4)) +
+  scale_color_viridis_c(direction = -1) +
+  guides(color = guide_colourbar(barwidth = 6,
+                                 barheight = 1)) +
+  labs(x = str_wrap('Hybrid Mean Harvest Moisture (%)', 19), y = str_wrap('Harvest Moisture Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
+                                                                                                                                          width = 15)) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'none',
+        panel.grid = element_blank())
+
+meanParentPlotFlagLeafHeight <- ggplot(hybridsNOLNK22.pl, aes(flagLeafHeight.sp.mu, flagLeafHeight.sp.b, color = meanParentAge)) +
+  geom_point() +
+  geom_hline(yintercept=1) +
+  scale_y_continuous(limits = c(0.6, 1.4)) +
+  scale_color_viridis_c(direction = -1) +
+  guides(color = guide_colourbar(barwidth = 6,
+                                 barheight = 1)) +
+  labs(x = str_wrap('Hybrid Mean Flag Leaf Height (cm)', 19), y = str_wrap('Flag Leaf Height Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
+                                                                                                                                          width = 15)) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'none',
+        panel.grid = element_blank())
+
+meanParentPlotEarHeight <- ggplot(hybridsNOLNK22.pl, aes(earHeight.sp.mu, earHeight.sp.b, color = meanParentAge)) +
+  geom_point() +
+  geom_hline(yintercept=1) +
+  scale_y_continuous(limits = c(0.6, 1.4)) +
+  scale_color_viridis_c(direction = -1) +
+  guides(color = guide_colourbar(barwidth = 6,
+                                 barheight = 1)) +
+  labs(x = str_wrap('Hybrid Mean Ear Height (cm)', 19), y = str_wrap('Ear Height Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
+                                                                                                                                          width = 15)) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'none',
+        panel.grid = element_blank())
+
+meanParentPlotGDDToAnthesis <- ggplot(hybridsNOLNK22.pl, aes(GDDToAnthesis.sp.mu, GDDToAnthesis.sp.b, color = meanParentAge)) +
+  geom_point() +
+  geom_hline(yintercept=1) +
+  scale_y_continuous(limits = c(0.6, 1.4)) +
+  scale_color_viridis_c(direction = -1) +
+  guides(color = guide_colourbar(barwidth = 6,
+                                 barheight = 1)) +
+  labs(x = str_wrap('Hybrid Mean GDD to Anthesis', 19), y = str_wrap('GDD to Anthesis Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
+                                                                                                                                          width = 15)) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9, angle = 90),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'none',
+        panel.grid = element_blank())
+
+meanParentPlotGDDToSilk <- ggplot(hybridsNOLNK22.pl, aes(GDDToSilk.sp.mu, GDDToSilk.sp.b, color = meanParentAge)) +
+  geom_point() +
+  geom_hline(yintercept=1) +
+  scale_y_continuous(limits = c(0.6, 1.4)) +
+  scale_color_viridis_c(direction = -1) +
+  guides(color = guide_colourbar(barwidth = 6,
+                                 barheight = 1)) +
+  labs(x = str_wrap('Hybrid Mean GDD to Silk', 19), y = str_wrap('GDD to Silk Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
+                                                                                                                                          width = 15)) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9, angle = 90),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'none',
+        panel.grid = element_blank())
+
+meanParentPlotASI <- ggplot(hybridsNOLNK22.pl, aes(anthesisSilkingIntervalGDD.sp.mu, anthesisSilkingIntervalGDD.sp.b, color = meanParentAge)) +
+  geom_point() +
+  geom_hline(yintercept=1) +
+  scale_y_continuous(limits = c(0.6, 1.4)) +
+  scale_color_viridis_c(direction = -1) +
+  guides(color = guide_colourbar(barwidth = 6,
+                                 barheight = 1)) +
+  labs(x = str_wrap('Hybrid Mean Anthesis-Silking Interval (GDD)', 19), y = str_wrap('Anthesis-Silking Interval Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
+                                                                                                                                          width = 15)) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'none',
+        panel.grid = element_blank())
+
+meanParentPlotCobMass <- ggplot(hybridsNOLNK22.pl, aes(shelledCobMass.sp.mu, shelledCobMass.sp.b, color = meanParentAge)) +
+  geom_point() +
+  geom_hline(yintercept=1) +
+  scale_y_continuous(limits = c(0.6, 1.4)) +
+  scale_color_viridis_c(direction = -1) +
+  guides(color = guide_colourbar(barwidth = 6,
+                                 barheight = 1)) +
+  labs(x = str_wrap('Hybrid Mean Shelled Cob Mass (g)', 19), y = str_wrap('Shelled Cob Mass Linear Plasticity', 15), color = str_wrap('Mean Parent Release Year', 
+                                                                                                                                          width = 15)) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'none',
+        panel.grid = element_blank())
+
+supplMeanParentPlots <- plot_grid(meanParentPlotLegend, meanParentPlotEarHeight, meanParentPlotFlagLeafHeight, 
+                                  meanParentPlotGDDToAnthesis, 
+                                  meanParentPlotGDDToSilk, meanParentPlotASI, meanParentPlotTestWt,
+                                  meanParentPlotHarvestMoisture, meanParentPlotCobMass, meanParentPlotShelledCobWidth, 
+                                  meanParentPlotKRN, meanParentPlotEarLength, meanParentPlotEarFillLength, 
+                                  meanParentPlotKPR, meanParentPlotKPE, meanParentPlotEarWidth, 
+                                  meanParentPlotHKM, meanParentPlotKernelMass, 
+                                  nrow = 6, ncol = 3, labels = c('', 'A', 'B', 
+                                                                 'C', 'D', 'E', 
+                                                                 'F', 'G', 'H', 
+                                                                 'I', 'J', 'K', 
+                                                                 'L', 'M', 'N', 
+                                                                 'O', 'P', 'Q'))
+# supplMeanParentPlots <- plot_grid(supplMeanParentPlots, , ncol = 1, rel_heights = c(1.5, 0.1))
+# ggsave('../figSMeanParentPlots.svg', plot = supplMeanParentPlots, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 # Model relationships: are they significant?
+meanPerformanceByPlasticityOnlyYield <- lm(yieldPerAcre.sp.mu ~ yieldPerAcre.sp.b, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByPlasticityOnlyYield)
+summary(meanPerformanceByPlasticityOnlyYield)
+
 meanPerformanceByPlasticityYield <- lm(yieldPerAcre.sp.mu ~ yieldPerAcre.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityYield)
 summary(meanPerformanceByPlasticityYield)
@@ -2176,7 +2502,41 @@ meanPerformanceByPlasticityKernelMass <- lm(kernelMassPerEar.sp.mu ~ kernelMassP
 anova(meanPerformanceByPlasticityKernelMass)
 summary(meanPerformanceByPlasticityKernelMass)
 
+# meanPerformanceByPlasticityPlantDensity <- lm(plantDensity.sp.mu ~ plantDensity.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
+# anova(meanPerformanceByPlasticityPlantDensity)
+# summary(meanPerformanceByPlasticityPlantDensity)
 
+meanPerformanceByPlasticityTestWt <- lm(combineTestWeight.sp.mu ~ combineTestWeight.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByPlasticityTestWt)
+summary(meanPerformanceByPlasticityTestWt)
+
+meanPerformanceByPlasticityCombineMoisture <- lm(combineMoisture.sp.mu ~ combineMoisture.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByPlasticityCombineMoisture)
+summary(meanPerformanceByPlasticityCombineMoisture)
+
+meanPerformanceByPlasticityFlagLeafHeight <- lm(flagLeafHeight.sp.mu ~ flagLeafHeight.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByPlasticityFlagLeafHeight)
+summary(meanPerformanceByPlasticityFlagLeafHeight)
+
+meanPerformanceByPlasticityEarHeight <- lm(earHeight.sp.mu ~ earHeight.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByPlasticityEarHeight)
+summary(meanPerformanceByPlasticityEarHeight)
+
+meanPerformanceByPlasticityGDDToAnthesis <- lm(GDDToAnthesis.sp.mu ~ GDDToAnthesis.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByPlasticityGDDToAnthesis)
+summary(meanPerformanceByPlasticityGDDToAnthesis)
+
+meanPerformanceByPlasticityGDDToSilk <- lm(GDDToSilk.sp.mu ~ GDDToSilk.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByPlasticityGDDToSilk)
+summary(meanPerformanceByPlasticityGDDToSilk)
+
+meanPerformanceByPlasticityAnthesisSilkingIntervalGDD <- lm(anthesisSilkingIntervalGDD.sp.mu ~ anthesisSilkingIntervalGDD.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByPlasticityAnthesisSilkingIntervalGDD)
+summary(meanPerformanceByPlasticityAnthesisSilkingIntervalGDD)
+
+meanPerformanceByPlasticityCobMass  <- lm(shelledCobMass.sp.mu ~ shelledCobMass.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByPlasticityCobMass)
+summary(meanPerformanceByPlasticityCobMass)
 # How far apart in rank are the hybrids predicted to crossover by FW?
 FWRankChangeRankDistance <- cxData %>%
   filter(crossover=='Y') %>%
@@ -2184,14 +2544,33 @@ FWRankChangeRankDistance <- cxData %>%
   rowwise() %>%
   mutate(rankDistance = abs(genotypeRank1 - genotypeRank2))
 
+bestEnvYield <- filter(hybridsNOLNK22, environment=='2023:Ames:0:High') %>%
+  group_by(genotype) %>%
+  summarise(bestEnvMeanYield = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
+  full_join(sortedhybridsCommon, join_by(genotype), keep = FALSE, suffix = c('', '')) %>%
+  select(genotype, rankOrder, bestEnvMeanYield, yieldPerAcre.sp.FWB, yieldPerAcre.sp.mu)
+
+
+FWRankChangeRankDistance <- FWRankChangeRankDistance %>%
+  left_join(bestEnvYield, join_by(genotypeRank1==rankOrder), keep = FALSE, suffix = c('', '')) %>%
+  rename(genotype1BestEnvYieldReal = bestEnvMeanYield, 
+         genotype1FWB = yieldPerAcre.sp.FWB) %>%
+  left_join(bestEnvYield, join_by(genotypeRank2==rankOrder), keep = FALSE, suffix = c('.1', '.2')) %>%
+  rename(genotype2BestEnvYieldReal = bestEnvMeanYield,
+         genotype2FWB = yieldPerAcre.sp.FWB) %>%
+  rowwise() %>% 
+  mutate(yieldDiffBestEnvironmentReal = abs(genotype1BestEnvYieldReal - genotype2BestEnvYieldReal),
+         yieldDiffFWB = abs(genotype1FWB - genotype2FWB))
+
+
 FWRankChangeRankDistanceHist <- FWRankChangeRankDistance %>%
   ggplot(aes(rankDistance)) +
     geom_histogram(binwidth = 1, fill = viridis_pal()(4)[1]) +
     labs(x = 'Hybrid Rank Difference', y = 'Predicted Rank Order Changes') + 
     theme_minimal() +
-    theme(axis.text.x = element_text(color = 'black', size = 11),
-        axis.text.y = element_text(color = 'black', size = 11),
-        text = element_text(color = 'black', size = 11),
+    theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
         legend.position = 'none',
         panel.grid = element_blank())
 FWRankChangeRankDistanceHist
@@ -2207,92 +2586,112 @@ totalUniquePairs <- (numHybrids * (numHybrids - 1))/2
 percentRankChanges <- numRankChanges/totalUniquePairs
 percentRankChanges
 
-# Model relationships with N plasticity in  Ames 2023: are they significant?
-meanPerformanceByNPlasticityYield <- lm(yieldPerAcre.sp.mu ~ yieldPerAcre.sp.b + meanParentAge, data = ames23NResponse.pl)
-anova(meanPerformanceByNPlasticityYield)
+# # Model relationships with N plasticity in  Ames 2023: are they significant?
+# meanPerformanceByNPlasticityYield <- lm(yieldPerAcre.sp.mu ~ yieldPerAcre.sp.b + meanParentAge, data = ames23NResponse.pl)
+# anova(meanPerformanceByNPlasticityYield)
+# 
+# meanPerformanceByNPlasticityHKM <- lm(hundredKernelMass.sp.mu ~ hundredKernelMass.sp.b + meanParentAge, data = ames23NResponse.pl)
+# anova(meanPerformanceByNPlasticityHKM)
 
-meanPerformanceByNPlasticityHKM <- lm(hundredKernelMass.sp.mu ~ hundredKernelMass.sp.b + meanParentAge, data = ames23NResponse.pl)
-anova(meanPerformanceByNPlasticityHKM)
-
-# Look at distribution of residuals for yield prediction models
-yieldPredictions <- yieldPredictions %>%
-  rowwise() %>%
-  mutate(residualsRF = predictedYieldRF - yieldPerAcre,
-         residualsExtension = predictedYieldExtension - yieldPerAcre)
-
-extensionResidualsHistogram <- ggplot(yieldPredictions, aes(residualsExtension)) +
-  geom_histogram() +
-  labs(title = 'Extension Residuals')
-extensionResidualsHistogram
-
-rfResidualsHistogram <- ggplot(yieldPredictions, aes(residualsRF)) + 
-  geom_histogram() + 
-  labs(title = 'RF Residuals')
-rfResidualsHistogram
-
-# Are feature importances significantly different from each other?
-anova <- aov(val ~ phenotype, data = rfFeatures)
-tukey <- TukeyHSD(anova)
+# # Look at distribution of residuals for yield prediction models
+# yieldPredictions <- yieldPredictions %>%
+#   rowwise() %>%
+#   mutate(residualsRF = predictedYieldRF - yieldPerAcre,
+#          residualsExtension = predictedYieldExtension - yieldPerAcre)
+# 
+# extensionResidualsHistogram <- ggplot(yieldPredictions, aes(residualsExtension)) +
+#   geom_histogram() +
+#   labs(title = 'Extension Residuals')
+# extensionResidualsHistogram
+# 
+# rfResidualsHistogram <- ggplot(yieldPredictions, aes(residualsRF)) + 
+#   geom_histogram() + 
+#   labs(title = 'RF Residuals')
+# rfResidualsHistogram
+# 
+# # Are feature importances significantly different from each other?
+# anova <- aov(val ~ phenotype, data = rfFeatures)
+# tukey <- TukeyHSD(anova)
 
 # interaction importance supplemental figs
 interactionImportancePlantDensity <- plotInteractionImportanceGrid(trait = 'plantDensity', traitLabel = 'Plant Density', 
-                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
-interactionImportancePlantDensity
+                                                                      legendPosition = 'right', legendTextAngle = 0, xAxisLabelAngle = 90,
+                                                                      legendTitle = str_wrap('Normalized Interaction Importance Score', 20))
+interactionImportanceSLegend <- get_legend(interactionImportancePlantDensity)
+# interactionImportancePlantDensity <- plotInteractionImportanceGrid(trait = 'plantDensity', traitLabel = 'Plant Density', 
+#                                                                    legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+# interactionImportancePlantDensity
+
 interactionImportanceGDDToAnthesis <- plotInteractionImportanceGrid(trait = 'GDDToAnthesis', traitLabel = 'GDD to Anthesis*', 
-                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                      legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceGDDToAnthesis
 interactionImportanceGDDToSilk <- plotInteractionImportanceGrid(trait = 'GDDToSilk', traitLabel = 'GDD to Silk*', 
-                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                      legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceGDDToSilk
 interactionImportanceAnthesiSilkingIntervalGDD <- plotInteractionImportanceGrid(trait = 'anthesisSilkingIntervalGDD', traitLabel = ' Anthesis Silking Interval*', 
-                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                      legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceAnthesiSilkingIntervalGDD
 interactionImportanceShelledCobWidth <- plotInteractionImportanceGrid(trait = 'shelledCobWidth', traitLabel = 'Shelled Cob Width', 
-                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                      legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceShelledCobWidth
 interactionImportanceKRN <- plotInteractionImportanceGrid(trait = 'kernelRowNumber', traitLabel = 'Kernel Row Number', 
-                                                          legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                          legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceKRN
 interactionImportanceEarLength <- plotInteractionImportanceGrid(trait = 'earLength', traitLabel = 'Ear Length', 
-                                                                legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceEarLength
 interactionImportanceEarFillLength <- plotInteractionImportanceGrid(trait = 'earFillLength', traitLabel = 'Ear Fill Length*', 
-                                                                    legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                    legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceEarFillLength
 interactionImportanceKPR <- plotInteractionImportanceGrid(trait = 'kernelsPerRow', traitLabel = 'Kernels Per Row*', 
-                                                          legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                          legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceKPR
 interactionImportanceKPE <- plotInteractionImportanceGrid(trait = 'kernelsPerEar', traitLabel = 'Kernels Per Ear', 
-                                                          legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                          legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceKPE
 interactionImportanceEarWidth <- plotInteractionImportanceGrid(trait = 'earWidth', traitLabel = 'Ear Width', 
-                                                               legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                               legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceEarWidth
 interactionImportanceHKM <- plotInteractionImportanceGrid(trait = 'hundredKernelMass', traitLabel = 'Hundred Kernel Mass', 
-                                                          legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                          legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceHKM
 interactionImportanceKernelMass <- plotInteractionImportanceGrid(trait = 'kernelMassPerEar', traitLabel = 'Kernel Mass Per Ear', 
-                                                                 legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                 legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceKernelMass
 interactionImportanceCombineTestWeight <- plotInteractionImportanceGrid(trait = 'combineTestWeight', traitLabel = 'Test Weight',
-                                                                        legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                        legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceCombineTestWeight
 interactionImportanceCombineMoisture <- plotInteractionImportanceGrid(trait = 'combineMoisture', traitLabel = 'Harvest Moisture',
-                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                      legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceCombineMoisture
 interactionImportanceFlagLeafHeight <- plotInteractionImportanceGrid(trait = 'flagLeafHeight', traitLabel = 'Flag Leaf Height',
-                                                                      legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                      legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceFlagLeafHeight
 interactionImportanceEarHeight <- plotInteractionImportanceGrid(trait = 'earHeight', traitLabel = 'Ear Height',
-                                                                     legendPosition = 'bottom', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                     legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceEarHeight
 
-supplInteractionImportancePlots <- plot_grid(interactionImportanceFlagLeafHeight, interactionImportanceAnthesiSilkingIntervalGDD, interactionImportanceCombineMoisture,
-                                             interactionImportanceCombineTestWeight, interactionImportanceKRN, interactionImportanceKPR, 
-                                             interactionImportanceEarWidth, interactionImportanceHKM, interactionImportanceKernelMass,
-                                             nrow = 3, ncol = 3, labels = 'AUTO')
+interactionImportanceShelledCobMass <- plotInteractionImportanceGrid(trait = 'shelledCobMass', traitLabel = 'Shelled Cob Mass', 
+                                                                      legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+interactionImportanceShelledCobMass
+
+
+supplInteractionImportancePlots <- plot_grid(interactionImportanceSLegend, interactionImportanceEarHeight, interactionImportanceFlagLeafHeight, interactionImportanceGDDToAnthesis, 
+                                             interactionImportanceGDDToSilk, interactionImportanceAnthesiSilkingIntervalGDD, interactionImportanceCombineTestWeight, 
+                                             interactionImportanceCombineMoisture, interactionImportanceShelledCobMass, interactionImportanceShelledCobWidth, 
+                                             interactionImportanceKRN, interactionImportanceEarLength, interactionImportanceEarFillLength, 
+                                             interactionImportanceKPR, interactionImportanceKPE, interactionImportanceEarWidth, 
+                                             interactionImportanceHKM, interactionImportanceKernelMass,
+                                             nrow = 6, ncol = 3, labels = c('', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'))
 supplInteractionImportancePlots
-ggsave('../figSInteractionImportancePlots.png', plot = supplInteractionImportancePlots, width = 8.125, height = 11.25, units = 'in', dpi = 1000, bg = 'white')
+
+# supplInteractionImportancePlots <- plot_grid(supplInteractionImportancePlots, ncol = 1, rel_heights = c(1.8, 0.15))
+# ggsave('../figSInteractionImportancePlots.svg', plot = supplInteractionImportancePlots, width = 5.5, height = 11, 
+       # units = 'in', dpi = 1000, bg = 'white')
+
+interactionImportanceDFWidespread <- sigCrossovers %>%
+  filter(combineTestWeightScoreNormalized >= 0.10 | combineMoistureScoreNormalized >= 0.10) %>%
+  select(genotype1, genotype2, combineTestWeightScoreNormalized, combineMoistureScoreNormalized)
 
 for(i in 1:length(phenotypes))
 {
@@ -2302,29 +2701,74 @@ for(i in 1:length(phenotypes))
 
 # N plasticity cor suppl figs
 nPlasticityCorShelledCobWidth <- plotNPlasticityCor(trait = 'shelledCobWidth', traitLabel = 'Shelled Cob Width',
-                                                    legendPosition = 'bottom')
+                                                    legendPosition = 'right')
 supplNPlasticityCorLegend <- get_legend(nPlasticityCorShelledCobWidth)
 nPlasticityCorShelledCobWidth <- plotNPlasticityCor(trait = 'shelledCobWidth', traitLabel = 'Shelled Cob Width',
                                                     legendPosition = 'none')
+nPlasticityCorShelledCobWidth
 nPlasticityCorKRN <- plotNPlasticityCor(trait = 'kernelRowNumber', traitLabel = 'Kernel Row Number',
                                         legendPosition = 'none')
+nPlasticityCorKRN
 nPlasticityCorEarLength <- plotNPlasticityCor(trait = 'earLength', traitLabel = 'Ear Length',
                                               legendPosition = 'none')
-# nPlasticityCorEarFillLength <- plotNPlasticityCor(trait = 'earFillLength', traitLabel = 'Ear Fill Length')
-# nPlasticityCorKPR <- plotNPlasticityCor(trait = 'kernelsPerRow', traitLabel = 'Kernels Per Row')
+nPlasticityCorEarLength
+# nPlasticityCorEarFillLength <- plotNPlasticityCor(trait = 'earFillLength', traitLabel = 'Ear Fill Length*', 
+#                                                   legendPosition = 'none')
+# nPlasticityCorEarFillLength
+# nPlasticityCorKPR <- plotNPlasticityCor(trait = 'kernelsPerRow', traitLabel = 'Kernels Per Row*',
+#                                         legendPosition = 'none')
+# nPlasticityCorKPR
 nPlasticityCorKPE <- plotNPlasticityCor(trait = 'kernelsPerEar', traitLabel = 'Kernels Per Ear',
                                         legendPosition = 'none')
+nPlasticityCorKPE
 nPlasticityCorEarWidth <- plotNPlasticityCor(trait = 'earWidth', traitLabel = 'Ear Width',
                                              legendPosition = 'none')
+nPlasticityCorEarWidth
 nPlasticityCorKernelMass <- plotNPlasticityCor(trait = 'kernelMassPerEar', traitLabel = 'Kernel Mass Per Ear',
                                                legendPosition = 'none')
+nPlasticityCorKernelMass
+# nPlasticityCorPlantDensity <- plotNPlasticityCor(trait = 'plantDensity', traitLabel = 'Plant Density',
+#                                                legendPosition = 'none')
+# nPlasticityCorPlantDensity
+nPlasticityCorTestWt <- plotNPlasticityCor(trait = 'combineTestWeight', traitLabel = 'Test Weight',
+                                               legendPosition = 'none')
+nPlasticityCorTestWt
 
-supplNPlasticityCorPlots <- plot_grid(nPlasticityCorShelledCobWidth, nPlasticityCorKRN, 
-                                      nPlasticityCorEarLength, nPlasticityCorKPE,
-                                      nPlasticityCorEarWidth, nPlasticityCorKernelMass,
-                                      nrow = 3, ncol = 2, labels = 'AUTO')
-supplNPlasticityCorPlots <- plot_grid(supplNPlasticityCorPlots, supplNPlasticityCorLegend, ncol = 1, rel_heights = c(1.2, 0.05))
-ggsave('../figSNPlasticityCorPlots.png', plot = supplNPlasticityCorPlots, width = 5.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+nPlasticityCorHarvestMoisture <- plotNPlasticityCor(trait = 'combineMoisture', traitLabel = 'Harvest Moisture',
+                                           legendPosition = 'none')
+nPlasticityCorHarvestMoisture
+
+nPlasticityCorFlagLeafHeight <- plotNPlasticityCor(trait = 'flagLeafHeight', traitLabel = 'Flag Leaf Height',
+                                           legendPosition = 'none')
+nPlasticityCorFlagLeafHeight
+
+nPlasticityCorEarHeight <- plotNPlasticityCor(trait = 'earHeight', traitLabel = 'Ear Height',
+                                           legendPosition = 'none')
+nPlasticityCorEarHeight
+
+# nPlasticityCorGDDToAnthesis <- plotNPlasticityCor(trait = 'GDDToAnthesis', traitLabel = 'GDD to Anthesis',
+#                                            legendPosition = 'none')
+# nPlasticityCorGDDToAnthesis
+# 
+# nPlasticityCorGDDToSilk <- plotNPlasticityCor(trait = 'GDDToSilk', traitLabel = 'GDD to Silk',
+#                                            legendPosition = 'none')
+# nPlasticityCorGDDToSilk
+# 
+# nPlasticityCorASI <- plotNPlasticityCor(trait = 'anthesisSilkingIntervalGDD', traitLabel = 'Anthesis-Silking Interval',
+#                                            legendPosition = 'none')
+# nPlasticityCorASI
+
+nPlasticityCorCobMass <- plotNPlasticityCor(trait = 'shelledCobMass', traitLabel = 'Shelled Cob Mass',
+                                           legendPosition = 'none')
+nPlasticityCorCobMass
+
+
+supplNPlasticityCorPlots <- plot_grid(supplNPlasticityCorLegend, nPlasticityCorEarHeight, nPlasticityCorFlagLeafHeight, 
+                                      nPlasticityCorTestWt, nPlasticityCorHarvestMoisture, nPlasticityCorCobMass, 
+                                      nPlasticityCorShelledCobWidth, nPlasticityCorKRN, nPlasticityCorEarLength, 
+                                      nPlasticityCorKPE, nPlasticityCorEarWidth, nPlasticityCorKernelMass, 
+                                      nrow = 4, ncol = 3, labels = c('', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'))
+ggsave('../figSNPlasticityCorPlots.png', plot = supplNPlasticityCorPlots, width = 8.25, height = 11, units = 'in', dpi = 1000, bg = 'white')
 
 nassYield <- read.csv('../NASSCornYield_2022_2023_IA_NE.csv') %>%
   rename(yield = Value,
@@ -2445,9 +2889,9 @@ plotPhenotypeNitrogenResponseViolins <- function(data = nResponseViolinData, phe
       facet_wrap(vars(locationYear)) + 
       labs(x = 'Nitrogen Level', y = phenotypeLabel, fill = '') + 
       theme_minimal() +
-      theme(axis.text.x = element_text(color = 'black', size = 11),
-            axis.text.y = element_text(color = 'black', size = 11),
-            text = element_text(color = 'black', size = 11),
+      theme(axis.text.x = element_text(color = 'black', size = 9),
+            axis.text.y = element_text(color = 'black', size = 9),
+            text = element_text(color = 'black', size = 9),
             legend.position = 'none',
             panel.grid = element_blank())
     print(p)
@@ -2460,3 +2904,224 @@ for(i in 1:length(phenotypes))
   plotPhenotypeNitrogenResponseViolins(phenotype = trait, phenotypeLabel = phenotypeLabels[i])
 }
 
+hybridsExtremeValues <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3_noExtremeValueRemoval.csv') %>% 
+  filter(!str_detect(qrCode, 'Block ID:')) %>%
+  filter(!str_detect(qrCode, 'AKW'))
+hybrids122 <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') %>%
+    filter(location!='') %>%
+    mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
+    rowwise() %>%
+    # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment,
+    # let's have an option to keep 2022 NP as one location
+    mutate(semanticLocation = case_when(location %in% c('North Platte1', 'North Platte2', 'North Platte3') ~ 'North Platte', .default = location),
+           environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'))
+
+nonMissingVals122 <- 0
+totalPlots122 <- length(hybrids122$qrCode)
+# vars <- c('anthesisDate', 'silkDate', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'GDDToAnthesis', 'GDDToSilk',
+#           'anthesisSilkingIntervalSilkingGDD', 'earHeight', 'flagLeafHeight', 'plantDensity', 'combineYield', 'yieldPerAcre',
+#           'combineMoisture', 'combineTestWeight', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 'kernelsPerRow',
+#           'kernelRowNumber', 'kernelsPerEar', 'shelledCobMass', 'percentMoisture', 'percentStarch', 'percentProtein', 'percentOil',
+#           'percentFiber', 'percentAsh', 'kernelColor', 'percentLodging', 'totalStandCount')
+vars <- phenotypes
+hybrids122 <- hybrids122 %>%
+  mutate(across(is.character, ~case_when(.=='' ~ NA, .default = .)))
+print('dataset')
+for(var in vars)
+{
+  numMissingVals <- as.numeric(sum(is.na(hybrids122[[var]])))
+  numNotMissing <- totalPlots122 - numMissingVals
+  nonMissingVals122 <- nonMissingVals122 + numNotMissing
+  print(var)
+  print(numNotMissing)
+}
+
+nonMissingValsExtreme <- 0
+totalPlotsExtreme <- length(hybridsExtremeValues$qrCode)
+# vars <- c('anthesisDate', 'silkDate', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'GDDToAnthesis', 'GDDToSilk',
+#           'anthesisSilkingIntervalSilkingGDD', 'earHeight', 'flagLeafHeight', 'plantDensity', 'combineYield', 'yieldPerAcre',
+#           'combineMoisture', 'combineTestWeight', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 'kernelsPerRow',
+#           'kernelRowNumber', 'kernelsPerEar', 'shelledCobMass', 'percentMoisture', 'percentStarch', 'percentProtein', 'percentOil',
+#           'percentFiber', 'percentAsh', 'kernelColor', 'percentLodging', 'totalStandCount')
+vars <- phenotypes
+hybridsExtremeValues <- hybridsExtremeValues %>%
+  mutate(across(is.character, ~case_when(.=='' ~ NA, .default = .)))
+print('with extreme values')
+for(var in vars)
+{
+  numMissingVals <- as.numeric(sum(is.na(hybridsExtremeValues[[var]])))
+  numNotMissing <- totalPlotsExtreme - numMissingVals
+  nonMissingValsExtreme <- nonMissingValsExtreme + numNotMissing
+  print(var)
+  print(numNotMissing)
+}
+
+interactionImportanceConceptualScores <- sigCrossovers %>%
+  filter(if_any(contains('yieldPerAcreScore.'), ~ .x == 2)) %>%
+  # select(c(genotype1, genotype2, contains('yieldPerAcreScore'))) %>%
+  filter(genotype1=='LH195 X PHZ51' & genotype2=='PHP02 X PHJ89') %>%
+  # select(contains('yieldPerAcreScore.E11'))
+  select(yieldPerAcreSigDiff.E11, yieldPerAcreSigDiff.E26, yieldPerAcreSigDiff.E27, yieldPerAcreSigDiff.E28)
+View(interactionImportanceConceptualScores)
+
+scoreZeroData <- filter(hybrids, (genotype %in% c('PHP02 X PHJ89', 'LH195 X PHZ51')) & 
+                      (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:High'))) %>%
+  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:High')))
+scoreZeroEnvs <- filter(hybrids, (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:High'))) %>%
+  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:High')))
+
+scoreZeroPlot <- ggplot(scoreZeroData, aes(environment, yieldPerAcre.sp, 
+                                           color = genotype, 
+                                           group = genotype)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) +
+  geom_violin(aes(environment, yieldPerAcre.sp, group = environment), 
+              data = scoreZeroEnvs, 
+              color = 'black', fill = NA) + 
+  annotate('text', x = '2022:North Platte:0:High', y = 190, label = '*', size = 9, color = 'black') +
+  scale_color_manual(values = viridis_pal()(4)[1:2]) +
+  scale_x_discrete(breaks = c('2022:North Platte:0:High', '2023:Crawfordsville:0:High'),
+                   labels = c(str_wrap('2022 North Platte NI High', 16), str_wrap('2023 Crawfordsville High', 16))) +
+  scale_y_continuous(limits = c(50, 200)) +
+  labs(x = 'Environment', y = 'Yield (bushels/acre)', color = 'Genotype', 
+       title = 'Interaction Importance Score = 0') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        legend.position = 'none',
+        panel.grid = element_blank())
+scoreZeroPlot
+
+scoreOneData <- filter(hybrids, (genotype %in% c('PHP02 X PHJ89', 'LH195 X PHZ51')) & 
+                          (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium'))) %>%
+  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium')))
+scoreOneEnvs <- filter(hybrids, (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium'))) %>%
+  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium')))
+
+scoreOnePlot <- ggplot(scoreOneData, aes(environment, yieldPerAcre.sp, color = genotype, group = genotype)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) +
+  geom_violin(aes(environment, yieldPerAcre.sp, group = environment), 
+              data = scoreOneEnvs, 
+              color = 'black', fill = NA) + 
+  annotate('text', x = '2022:North Platte:0:High', y = 190, label = '*', size = 9, color = 'black') +
+  scale_color_manual(values = viridis_pal()(4)[1:2]) +
+  scale_x_discrete(breaks = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium'),
+                   labels = c(str_wrap('2022 North Platte NI High', 16), str_wrap('2023 Crawfordsville Medium', 16))) +
+  scale_y_continuous(limits = c(50, 200)) +
+  labs(x = 'Environment', y = 'Yield (bushels/acre)', color = 'Genotype', 
+       title = 'Interaction Importance Score = 1') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        legend.position = 'none',
+        panel.grid = element_blank())
+scoreOnePlot
+
+scoreTwoData <- filter(hybrids, (genotype %in% c('PHP02 X PHJ89', 'LH195 X PHZ51')) & 
+                         (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low'))) %>%
+  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low')))
+scoreTwoEnvs <- filter(hybrids, (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low'))) %>%
+  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low')))
+
+scoreTwoPlot <- ggplot(scoreTwoData, aes(environment, yieldPerAcre.sp, color = genotype, group = genotype)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) +
+  geom_violin(aes(environment, yieldPerAcre.sp, group = environment), 
+              data = scoreTwoEnvs, 
+              color = 'black', fill = NA) + 
+  annotate('text', x = '2022:North Platte:0:High', y = 190, label = '*', size = 9, color = 'black') +
+  annotate('text', x = '2023:Crawfordsville:0:Low', y = 190, label = '*', size = 9, color = 'black') +
+  scale_color_manual(values = viridis_pal()(4)[1:2]) +
+  scale_x_discrete(breaks = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low'),
+                   labels = c(str_wrap('2022 North Platte NI High', 16), str_wrap('2023 Crawfordsville Low', 16))) +
+  scale_y_continuous(limits = c(50, 200)) +
+  labs(x = 'Environment', y = 'Yield (bushels/acre)', color = 'Genotype', 
+       title = 'Interaction Importance Score = 2') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        legend.position = 'bottom',
+        panel.grid = element_blank())
+scoreTwoPlot
+
+interactionImportanceConceptualFigure <- plot_grid(scoreZeroPlot, scoreOnePlot, scoreTwoPlot, ncol = 1)
+ggsave('../interactionImportanceConceptual.png', width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+
+fig4left <- plot_grid(cxHeatmap, heatmap, ncol = 1, labels = c('A', 'C'))
+fig4 <- plot_grid(fig4left, interactionImportanceConceptualFigure, nrow = 1, labels = c('', 'B'))
+fig4
+ggsave('../fig4HighRes.png', width = 6.5, height = 8, units = 'in', dpi = 1000, bg = 'white')
+
+maxInteractionImportanceScore <- sigCrossovers %>%
+  filter(genotype1=='LH185 X W606S' & genotype2=='L 289 X OS426') %>%
+  select(c(genotype1, genotype2, contains('yieldPerAcreRC')))
+
+noImportantInteractions <- sigCrossovers %>%
+  filter(!if_any(contains('yieldPerAcreScore.'), ~ .x > 0))
+
+lowInteractionImportanceScores <- sigCrossovers %>%
+  filter(yieldPerAcreScoreNormalized <= 0.05)
+
+mlcasbottom <- plot_grid(meanParentPlot, featureImportance, 
+                         yieldPredictionsPlot, percentMeanPlotExtremePlasticity, 
+                         nrow = 2, labels = c('B', 'C', 'D', 'E'), rel_heights = c(0.4, 0.6))
+mlcas <- plot_grid(experimentalDesign, mlcasbottom, nrow = 2, labels = c('A', ''), rel_heights = c(0.4, 0.6))
+mlcas
+ggsave('../mlcas.svg', width = 6.5, height = 7.25, units = 'in', dpi = 1000, bg = 'white')
+
+amesNResponseLAH <- hybrids %>%
+  filter(genotype %in% c('LH195 X LH185', 'PHB47 X PHJ89', 'F42 X MO17')) %>%
+  filter(locationYear == '2023 Ames') %>%
+  group_by(genotype, locationYear, nitrogenTreatment) %>%
+  summarise(yieldPerAcreMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>% 
+  bind_rows(nResponsePopulation) %>%
+  filter(locationYear=='2023 Ames') %>%
+  mutate(genotype = factor(genotype, levels = c('Population', 'F42 X MO17', 'PHB47 X PHJ89', 'LH195 X LH185')))
+
+ames23 <- filter(hybrids, locationYear=='2023 Ames')
+
+amesNPlasticityGenotypeLines <- ggplot(amesNResponseLAH, aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype, linetype = genotype)) +
+  geom_line(size = 1.5) + 
+  geom_boxplot(aes(nitrogenTreatment, yieldPerAcre.sp), data = ames23,  color = 'black', fill = 'transparent', inherit.aes = FALSE) +
+  scale_color_manual(values = moma.colors('VanGogh', 4, direction = -1)[c(3, 1, 2, 4)]) +
+  scale_linetype_manual(values = c('dashed', 'solid', 'solid', 'solid')) + 
+  labs(x = 'Nitrogen Treatment', y = 'Yield (bushels/acre)', color = NULL, linetype = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        legend.text = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'top',
+        panel.grid = element_blank())
+amesNPlasticityGenotypeLines 
+
+proposalMPPData <- hybridsNOLNK22.pl %>%
+  arrange(yieldPerAcre.sp.b)
+proposalMPPData$relPlasticity <- c(rep('Less Responsive Hybrids', 29), rep('Other Hybrids', 59), 
+                                   rep('Most Responsive Hybrids', 29))
+proposalMPPData <- mutate(proposalMPPData, relPlasticity = factor(relPlasticity, levels = c('Most Responsive Hybrids', 'Other Hybrids', 'Less Responsive Hybrids')))
+
+proposalMPPlot <- ggplot(proposalMPPData, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = relPlasticity)) +
+  geom_point() +
+  geom_hline(yintercept=1) +
+  scale_color_manual(values = moma.colors('VanGogh', 3, direction = -1)) +
+  labs(x = 'Hybrid Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = NULL) + 
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9),
+        axis.text.y = element_text(color = 'black', size = 9),
+        legend.text = element_text(color = 'black', size = 9, margin = margin(0, 0, 0, 0)),
+        text = element_text(color = 'black', size = 9),
+        legend.position = 'top',
+        panel.grid = element_blank())
+proposalMPPlot
+
+
+proposal <- plot_grid(amesNPlasticityGenotypeLines, proposalMPPlot, ncol = 1, labels = 'AUTO')
+ggsave('../proposal.svg', width = 3.5, height = 7, units = 'in', dpi = 1000, bg = 'white')
