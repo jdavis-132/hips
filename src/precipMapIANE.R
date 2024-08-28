@@ -7,8 +7,8 @@ library(patchwork)
 # library(MoMAColors)
 library(viridis)
 library(scales)
-# library(grid)
-# library(gridExtra)
+library(grid)
+library(gridExtra)
 library(cowplot)
 
 aoi <- aoi_get(state = c('NE', 'IA'), county = 'all')
@@ -83,7 +83,7 @@ nitrogenLegend <- ggplot(nitrogenDF3, aes(col, fill = col)) +
         legend.text = element_text(size = 9, color = 'black'),
         text = element_text(color = 'black', size = 9))
 nitrogenLegend
-nitrogenLegend <- get_legend(nitrogenLegend)
+nitrogenLegend <- get_plot_component(nitrogenLegend, 'guide-box-bottom')
 
 irrigationLevels <- tibble(label = c('NI', 'LI', 'FI')) %>%
   mutate(label = factor(label, level = c('NI', 'LI', 'FI')))
@@ -96,7 +96,7 @@ irrigationLegend <- ggplot(irrigationLevels, aes(label, fill = label)) +
         legend.text = element_text(color = 'black', size = 9),
         text = element_text(color = 'black', size = 9))
 irrigationLegend
-irrigationLegend <- get_legend(irrigationLegend)
+irrigationLegend <- get_plot_component(irrigationLegend, 'guide-box-bottom')
 # nitrogenLegend <- grid.draw(nitrogenLegend)
 # subplotHeight = 0.1
 # subPlotWidth = 0.025
@@ -107,8 +107,8 @@ map <- ggplot(data = gridmetPrecip) +
   geom_sf_text(data = hipsLocations_sf, aes(label = location), position = position_nudge(x = 0.05, y = -0.15), 
                size = 3, color = 'white') +
   scale_fill_viridis_c(direction = -1) +
-  # guides(fill = guide_colourbar(barwidth = 1,
-  #                               barheight = 12)) +
+  # guides(fill = guide_colourbar(barwidth = 12,
+  #                               barheight = 1)) +
   labs(fill = str_wrap("Total Precipitation (mm), November 2021 - October 2023", 10)) +
   theme_void() +
   theme(legend.position = 'right',
@@ -128,4 +128,4 @@ legends <- plot_grid(nitrogenLegend, irrigationLegend, nrow = 1)
 experimentalDesign <- plot_grid(map, legends, ncol = 1, rel_heights = c(1, 0.2))
 experimentalDesign
 
-
+# ggsave('../experimentalDesignAIIRA.svg', width = 15.99, height = 6.4, units = 'in', dpi = 1000, bg = 'transparent')

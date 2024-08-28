@@ -17,7 +17,7 @@ library(png)
 library(spFW)
 source('src/Functions.R')
 
-# hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') %>%
+hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') #%>%
 #   filter(location!='') %>%
 #   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
 #   rowwise() %>%
@@ -789,11 +789,12 @@ hybridsNOLNK22.pl <- left_join(hybridsNOLNK22.pl, parentInfo, join_by(earParent=
 # How many plots and non-missing values do we have?
 nonMissingVals <- 0
 totalPlots <- length(hybrids$qrCode)
-# vars <- c('anthesisDate', 'silkDate', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 'GDDToAnthesis', 'GDDToSilk',
-#           'anthesisSilkingIntervalSilkingGDD', 'earHeight', 'flagLeafHeight', 'plantDensity', 'combineYield', 'yieldPerAcre',
-#           'combineMoisture', 'combineTestWeight', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 'kernelsPerRow',
-#           'kernelRowNumber', 'kernelsPerEar', 'shelledCobMass', 'percentMoisture', 'percentStarch', 'percentProtein', 'percentOil',
-#           'percentFiber', 'percentAsh', 'kernelColor', 'percentLodging', 'totalStandCount')
+vars <- c(#'anthesisDate', 'silkDate', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 
+          'GDDToAnthesis', 'GDDToSilk',
+          'anthesisSilkingIntervalSilkingGDD', 'earHeight', 'flagLeafHeight', 'plantDensity', 'combineYield', 'yieldPerAcre',
+          'combineMoisture', 'combineTestWeight', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 'kernelsPerRow',
+          'kernelRowNumber', 'kernelsPerEar', 'shelledCobMass', 'percentMoisture', 'percentStarch', 'percentProtein', 'percentOil',
+          'percentFiber', 'percentAsh', 'kernelColor', 'percentLodging', 'totalStandCount')
 vars <- phenotypes
 hybrids <- hybrids %>%
   mutate(across(is.character, ~case_when(.=='' ~ NA, .default = .)))
@@ -978,15 +979,15 @@ nPlasticityCorYield <- ggplot(corData, aes(locationYear1, locationYear2, fill = 
   labs(x = '', y = '', fill = str_wrap('Nitrogen Plasticity Correlation', 1), title = 'Yield (bushels/acre)') + 
   theme_minimal() +
   theme(text = element_text(color = 'black', size = 9),
-        axis.text.x = element_text(color = 'black', size = rel(1), angle = 90),
-        axis.text = element_text(color = 'black', size = rel(1), hjust = 1, margin = margin(0,0,0, 0)),
+        axis.text.x = element_text(color = 'black', size = 9, angle = 90),
+        axis.text = element_text(color = 'black', size = 9, hjust = 1, margin = margin(0,0,0, 0)),
         plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
         axis.line = element_blank(),
         panel.background = element_blank(),
         panel.border = element_blank(),
         panel.grid = element_blank(), 
         plot.background = element_blank(), 
-        legend.position = 'none',
+        legend.position = 'left',
         legend.background = element_blank())
 nPlasticityCorYield
 
@@ -1346,6 +1347,11 @@ for(i in 2:length(phenotypes))
                             keep = FALSE)
 }
 
+nResponseBlockCorrByLocYear <- nResponseBlock.pl %>%
+  pivot_wider(id_cols = c(genotype, locationYear), names_from = blockSet, names_prefix = 'b', 
+              values_from = yieldPerAcre.sp.b)%>%
+  group_by(locationYear) %>%
+  summarise(nResponseCorr = cor(b1, b2, use = 'complete.obs', method = 'spearman'))
 # for(i in 6)
 # {
 #   traitNPlasticity <- paste0(yieldComponents[i], '.sp.b')
@@ -1632,7 +1638,7 @@ FWConceptualPlot <- ggplot(LAHData, aes(envIndex, yieldPerAcre.sp, color = genot
   inset_element(FWConceptualPlotLegend, left = 0.25, bottom = 0.6, right = 0.35, top = 1.05, on_top = FALSE)
 FWConceptualPlot
 
-# ggsave('../FWConceptualPlot.png', dpi = 1000)
+# ggsave('../FWConceptualPlot.png', dpi = 1000, width = 3*3.92, height = 3*3.52, units = 'in', bg = 'white')
 
 hybrids <- hybrids %>%
   rowwise() %>%
@@ -1701,7 +1707,7 @@ percentMeanPlotExtremePlasticity <- percentMeanData %>%
                                 barheight = 1)) +
   scale_y_continuous(breaks = c(50, 100, 150, 200),
                      labels = c('50%', '100%', '150%', '200%')) +
-  labs(x = 'Environment Mean Yield (bushels/acre)', y = 'Hybrid Mean Yield As Percent of Environment Mean', 
+  labs(x = 'Environment Mean Yield (bushels/acre)', y = str_wrap('Hybrid Mean Yield As Percent of Environment Mean', 28), 
        color = str_wrap('Mean Parent Release Year', 1), title = '10% Most & Least Plastic Hybrids') +
   theme_minimal() +  
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
@@ -1713,7 +1719,7 @@ percentMeanPlotExtremePlasticity <- percentMeanData %>%
         panel.grid = element_blank())
 percentMeanPlotExtremePlasticity
 
-# ggsave('../percentMeanExtremePlasticity.png', dpi = 1000)
+ggsave('../percentMeanExtremePlasticity.png', dpi = 1000)
 
 percentMeanPlotOverallPerformance <- percentMeanData %>%
   filter(best10PercentOverall|worst10PercentOverall) %>%
@@ -1736,8 +1742,8 @@ percentMeanPlotOverallPerformance
 
 percentMeanPlots <- plot_grid(percentMeanPlotExtremePlasticity, percentMeanPlotOverallPerformance, 
                               ncol = 1, labels = 'AUTO')
-ggsave('../percentMeanPlots.png', plot = percentMeanPlots, width = 6.5, height = 9, units = 'in',
-       dpi = 1000, bg = 'white')
+# ggsave('../percentMeanPlots.png', plot = percentMeanPlots, width = 6.5, height = 9, units = 'in',
+#        dpi = 1000, bg = 'white')
 
 
 
@@ -1795,7 +1801,7 @@ gca_vp.plot <- ggplot(gca_vp, aes(label, pctVar, fill = grp)) +
         line = element_line(color = 'black', linewidth = 1),
         panel.grid = element_blank())
 gca_vp.plot
-# ggsave('../gca_vp.png', width = 21.96, height = 11.5, units = 'in', dpi = 1000)
+ggsave('../gca_vp.png', width = 3*6.22, height = 3*3, units = 'in', dpi = 1000)
 
 
 
@@ -1944,6 +1950,13 @@ featureImportance
 # Extension: https://crops.extension.iastate.edu/blog/meaghan-anderson/making-yield-estimates-corn-2022-edition
 yieldPredictions <- read.csv('analysis/RFpredictions5CV.csv') %>%
   select(environment, plotNumber, predictedYield) %>%
+  rowwise() %>%
+  mutate(environment = str_replace(environment, ':0:', ' NI ') %>%
+           str_replace('8.6', 'FI') %>%
+           str_replace('4.3', 'LI') %>%
+           str_replace('4.5', 'LI') %>% 
+           str_replace_all(':', ' ')) %>%
+  mutate(environment = case_when(str_detect(environment, 'Lincoln')|str_detect(environment, 'Missouri Valley') ~ str_replace(environment, ' NI ', ' '), .default = environment)) %>%
   rename(predictedYieldRF = predictedYield) %>%
   full_join(hybrids, join_by(environment, plotNumber), keep = FALSE, suffix = c('', '')) %>%
   filter(!is.na(predictedYieldRF)) %>%
@@ -1965,7 +1978,11 @@ summary(extensionRegressionModel)
 extensionR2 <- 0.4564
 
 yieldPredictionsSubsample <- yieldPredictions %>%
-  slice_sample(prop = 0.10) %>%
+  filter(!is.na(yieldPerAcre)) %>%
+  filter(!is.na(predictedYieldExtension)) %>%
+  filter(!is.na(predictedYieldRF)) %>%
+  ungroup() %>%
+  dplyr::slice_sample(prop = 0.10) %>%
   pivot_longer(c(predictedYieldExtension, predictedYieldRF), 
                values_to = 'predictedYield', 
                names_to = 'method', 
@@ -1991,11 +2008,14 @@ yieldPredictionsPlot <- ggplot(yieldPredictionsSubsample, aes(yieldPerAcre, pred
         panel.grid = element_blank())
 yieldPredictionsPlot
 
+# rf <- plot_grid(featureImportance, yieldPredictionsPlot, nrow = 1)
+# ggsave('../rf.png', dpi = 1000, units = 'in')
+
 meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
     geom_point() +
     geom_hline(yintercept=1) +
     scale_color_viridis_c(direction = -1) +
-    guides(color = guide_colourbar(barwidth = 8,
+    guides(color = guide_colourbar(barwidth = 15,
                                 barheight = 1)) +
     labs(x = 'Hybrid Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = str_wrap('Mean Parent Release Year', 12)) + 
     theme_minimal() +
@@ -2006,7 +2026,7 @@ meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre
           legend.position = 'top',
           panel.grid = element_blank())
 meanParentPlot
-# ggsave('../meanParentPlot.png', dpi = 1000)
+ggsave('../meanParentPlot.png', dpi = 1000, units = 'in')
 # meanParentPlotLegend <- get_legend(meanParentPlot)
 # meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
 #   geom_point() +
@@ -2033,7 +2053,7 @@ meanParentPlot
 
 # fig1middle <- plot_grid(workflow, orderedBoxplots, nrow = 1, labels = c('B', 'C'), rel_widths = c(0.25, 0.75))
 fig1 <- plot_grid(experimentalDesign, orderedBoxplots, vp.plot, ncol = 1, labels = 'AUTO', rel_heights = c(0.29, 0.33, 0.37))
-ggsave('../fig1HighRes.svg', plot = fig1, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../fig1HighRes.svg', plot = fig1, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 # fig2left <- plot_grid(FWConceptualPlot, meanParentPlot, ncol = 1, labels = c('A', 'B'))
 # fig2right <- plot_grid(cxHeatmap, heatmap, ncol = 1, labels = c('C', 'D'))
@@ -2044,7 +2064,7 @@ ggsave('../fig1HighRes.svg', plot = fig1, width = 6.5, height = 9, units = 'in',
 fig2top <- plot_grid(FWConceptualPlot, meanParentPlot, nrow = 1, labels = 'AUTO')
 # fig2bottom <- plot_grid(cxHeatmap, heatmap, nrow = 1, labels = c('D', 'E'))
 fig2 <- plot_grid(fig2top, gca_vp.plot, nrow = 2, labels = c('', 'C'), rel_heights = c(0.425, 0.575))
-ggsave('../fig2HighRes.svg', plot = fig2, width = 6.5, height = 6.5, units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../fig2HighRes.svg', plot = fig2, width = 6.5, height = 6.5, units = 'in', dpi = 1000, bg = 'white')
 
 # Variance partitioning for yield from yield components
 # vc_yield <- partitionVariance3(hybrids, 'yieldPerAcre.sp', 'Yield (bushels/acre)', '~ (1|plantDensity) + (1|kernelRowNumber) + (1|kernelsPerRow) + (1|hundredKernelMass)')
@@ -2058,7 +2078,7 @@ fig3top <- plot_grid(fig3top, nPlasticityCorLegend, ncol = 1, rel_heights = c(1,
 
 fig3 <- plot_grid(fig3top, nPlasticityGenotypeLines, nrow = 2, labels = c('', 'C'), rel_heights = c(0.55, 0.9))
 fig3
-ggsave('../fig3HighRes.png', plot = fig3, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../fig3HighRes.png', plot = fig3, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 
 # # Test spFW
