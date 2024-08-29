@@ -969,6 +969,9 @@ corData <- cor(nResponse.plWide[, 2:5], use = 'complete.obs', method = 'spearman
   as.data.frame()
 names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
 
+corDataYield <- corData %>% 
+  filter(nPlasticityCor < 1)
+
 nPlasticityCorYield <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
   geom_tile(color = 'white') +
   scale_fill_viridis_c(direction = -1) + 
@@ -1351,7 +1354,24 @@ nResponseBlockCorrByLocYear <- nResponseBlock.pl %>%
   pivot_wider(id_cols = c(genotype, locationYear), names_from = blockSet, names_prefix = 'b', 
               values_from = yieldPerAcre.sp.b)%>%
   group_by(locationYear) %>%
-  summarise(nResponseCorr = cor(b1, b2, use = 'complete.obs', method = 'spearman'))
+  summarise(nPlasticityCor = cor(b1, b2, use = 'complete.obs', method = 'spearman')) %>%
+  rowwise() %>%
+  mutate(locationYear = str_replace(locationYear, ':', ' ')) %>%
+  mutate(locationYear = case_when(str_detect(locationYear, 'North Platte') ~ str_c(locationYear, ' LI'), 
+                                  .default = locationYear))
+
+nResponseCorSummary <- corDataYield %>%
+  left_join(nResponseBlockCorrByLocYear, join_by(locationYear1==locationYear), keep = FALSE, 
+            suffix = c('', '.1'), relationship = 'many-to-one') %>%
+  left_join(nResponseBlockCorrByLocYear, join_by(locationYear2==locationYear), keep = FALSE,
+            suffix = c('.a', '.2'), relationship = 'many-to-one') %>%
+  rowwise() %>%
+  mutate(a1 = nPlasticityCor.a - nPlasticityCor.1,
+         a2 = nPlasticityCor.a - nPlasticityCor.2) %>%
+  arrange(nPlasticityCor.a)
+nResponseCorSummary <- nResponseCorSummary[c(1, 3, 5, 7, 9, 11), ]
+
+
 # for(i in 6)
 # {
 #   traitNPlasticity <- paste0(yieldComponents[i], '.sp.b')
@@ -1370,8 +1390,6 @@ nResponseBlockCorrByLocYear <- nResponseBlock.pl %>%
 #   print(cor(dfWide$blockSet1, dfWide$blockSet2, use = 'complete.obs', method = 'spearman'))
 #   print(nPlasticityBlockCorr)
 # }
-  
-
 
 for(i in 6)
 {
