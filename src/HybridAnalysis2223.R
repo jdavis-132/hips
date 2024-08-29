@@ -154,7 +154,75 @@ for(i in 1:length(phenotypes))
   vc_all <- bind_rows(vc_all, partitionVariance3(hybrids, var, phenotypeLabelsVP[i], '~ (1|environment) + (1|genotype) + (1|genotype:environment)'))
 }
 
-
+# Compare broad-sense heritabilities with across/within env, locationYear spearman rhos
+rhoVsH2 <- tibble(trait = phenotypes, H2 = NULL, minAcrossEnvRho = NULL, maxAcrossEnvRho = NULL, 
+                  minAcrossLocationYearRho = NULL, maxAcrossLocationYearRho = NULL, minEnvRho = NULL, maxEnvRho = NULL, 
+                  minLocationYearRho = NULL, maxLocationYearRho = NULL)
+getCorrelations <- function(pheno) {
+# for(pheno in phenotypes)
+# {
+  trait <- paste0(pheno, '.sp')
+  trait1 <- paste0(trait, '.1')
+  trait2 <- paste0(trait, '.2')
+  
+  envLevelPerformance <- hybrids %>%
+    group_by(genotype, environment) %>%
+    summarise('{trait}' := mean(.data[[trait]], na.rm = TRUE))
+  
+  locationYearLevelPerformance <- hybrids %>%
+    group_by(genotype, locationYear) %>%
+    summarise('{trait}' := mean(.data[[trait]], na.rm = TRUE))
+  
+  acrossEnvRhoData <- envLevelPerformance %>%
+    pivot_wider(id_cols = genotype, names_from = environment, values_from = .data[[trait]]) %>%
+    ungroup() %>%
+    select(!genotype) %>%
+    cor(use = 'na.or.complete', method = 'spearman') %>%
+    as_tibble(rownames = 'environment1') %>%
+    mutate(across(where(is.numeric), ~case_when(.==1 ~ NA, .default = .))) %>%
+    pivot_longer(where(is.numeric), names_to = 'environment2', values_to = 'cor')
+  
+  acrossLocationYearRhoData <- locationYearLevelPerformance %>%
+    pivot_wider(id_cols = genotype, names_from = locationYear, values_from = .data[[trait]]) %>%
+    ungroup() %>%
+    select(!genotype) %>%
+    cor(use = 'na.or.complete', method = 'spearman') %>%
+    as_tibble(rownames = 'locationYear1') %>%
+    mutate(across(where(is.numeric), ~case_when(.==1 ~ NA, .default = .))) %>%
+    pivot_longer(where(is.numeric), names_to = 'locationYear2', values_to = 'cor')
+  
+  envRhoData1 <- hybrids %>%
+    filter(block %% 2 != 0) %>% 
+    select(genotype, environment, all_of(trait))
+  envRhoData2 <- hybrids %>%
+    filter(block %% 2 == 0) %>% 
+    select(genotype, environment, all_of(trait))
+  envRhoData <- full_join(envRhoData1, envRhoData2, join_by(genotype, environment), suffix = c('.1', '.2'), keep = FALSE, relationship = 'many-to-many') %>%
+    group_by(environment) %>%
+    summarise(cor = cor(.data[[trait1]], .data[[trait2]], use = 'na.or.complete', method = 'spearman'))
+  
+  locationYearRhoData1 <- hybrids %>%
+    filter(block %% 2 != 0) %>%
+    select(genotype, locationYear, all_of(trait))
+  locationYearRhoData2 <- hybrids %>%
+    filter(block %% 2 == 0) %>%
+    select(genotype, locationYear, all_of(trait))
+  locationYearRhoData <- full_join(locationYearRhoData1, locationYearRhoData2, join_by(genotype, locationYear), suffix = c('.1', '.2'), keep = FALSE, 
+                                   relationship = 'many-to-many')  %>%
+    group_by(locationYear) %>%
+    summarise(cor = cor(.data[[trait1]], .data[[trait2]], use = 'na.or.complete', method = 'spearman'))
+  
+  rhoVsH2$H2[rhoVsH2$trait==pheno] <- vc_all$pctVar[vc_all$responseVar==trait]/100
+  rhoVsH2$minAcrossEnvRho[rhoVsH2$trait==pheno] <- min(acrossEnvRhoData$cor, na.rm = TRUE)
+  rhoVsH2$maxAcrossEnvRho[rhoVsH2$trait==pheno] <- max(acrossEnvRhoData$cor, na.rm = TRUE)
+  rhoVsH2$minAcrossLocationYearRho[rhoVsH2$trait==pheno] <- min(acrossLocationYearRhoData$cor, na.rm = TRUE)
+  rhoVsH2$maxcrossLocationYearRho[rhoVsH2$trait==pheno] <- max(acrossLocationYearRhoData$cor, na.rm = TRUE)
+  rhoVsH2$minEnvRho[rhoVsH2$trait==pheno] <- min(envRhoData$cor, na.rm = TRUE)
+  rhoVsH2$maxEnvRho[rhoVsH2$trait==pheno] <- max(envRhoData$cor, na.rm = TRUE)
+  rhoVsH2$minLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRhoData$cor, na.rm = TRUE)
+  rhoVsH2$maxLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRhoData$cor, na.rm = TRUE)
+# }
+}
 # vc_all <- vc_all %>%
 #   rowwise() %>%
 #   mutate(grp = case_when(grp=='genotype' ~ 'Genotype',
