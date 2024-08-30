@@ -196,12 +196,14 @@ for(pheno in phenotypes){
   
   envRhoData1 <- hybrids %>%
     filter(block %% 2 != 0) %>% 
-    select(genotype, environment, all_of(trait))
+    select(genotype, environment, all_of(trait), nitrogenTreatment)
   envRhoData2 <- hybrids %>%
     filter(block %% 2 == 0) %>% 
-    select(genotype, environment, all_of(trait))
-  envRhoData <- full_join(envRhoData1, envRhoData2, join_by(genotype, environment), suffix = c('.1', '.2'), keep = FALSE, relationship = 'many-to-many')
+    select(genotype, environment, all_of(trait), nitrogenTreatment)
+  envRhoData <- full_join(envRhoData1, envRhoData2, join_by(genotype, environment, nitrogenTreatment), suffix = c('.1', '.2'), keep = FALSE,
+                          relationship = 'many-to-many')
   envRho <- envRhoData %>%  
+    filter(nitrogenTreatment %in% c('High')) %>%
     group_by(environment) %>%
     summarise(cor = cor(.data[[trait1]], .data[[trait2]], use = 'na.or.complete', method = 'spearman'))
   
