@@ -17,7 +17,7 @@ library(png)
 library(spFW)
 source('src/Functions.R')
 
-hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') #%>%
+# hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') #%>%
 #   filter(location!='') %>%
 #   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
 #   rowwise() %>%
@@ -157,10 +157,9 @@ for(i in 1:length(phenotypes))
 # Compare broad-sense heritabilities with across/within env, locationYear spearman rhos
 rhoVsH2 <- tibble(trait = phenotypes, H2 = NULL, minAcrossEnvRho = NULL, maxAcrossEnvRho = NULL, 
                   minAcrossLocationYearRho = NULL, maxAcrossLocationYearRho = NULL, minEnvRho = NULL, maxEnvRho = NULL, 
-                  minLocationYearRho = NULL, maxLocationYearRho = NULL)
-getCorrelations <- function(pheno) {
-# for(pheno in phenotypes)
-# {
+                  minLocationYearRho = NULL, maxLocationYearRho = NULL, envRhoAgg = NULL, locationYearRhoAgg = NULL)
+# getCorrelations <- function(pheno) {
+for(pheno in phenotypes){
   trait <- paste0(pheno, '.sp')
   trait1 <- paste0(trait, '.1')
   trait2 <- paste0(trait, '.2')
@@ -174,22 +173,26 @@ getCorrelations <- function(pheno) {
     summarise('{trait}' := mean(.data[[trait]], na.rm = TRUE))
   
   acrossEnvRhoData <- envLevelPerformance %>%
+    filter(!is.na(.data[[trait]])) %>%
     pivot_wider(id_cols = genotype, names_from = environment, values_from = .data[[trait]]) %>%
     ungroup() %>%
     select(!genotype) %>%
     cor(use = 'na.or.complete', method = 'spearman') %>%
     as_tibble(rownames = 'environment1') %>%
     mutate(across(where(is.numeric), ~case_when(.==1 ~ NA, .default = .))) %>%
-    pivot_longer(where(is.numeric), names_to = 'environment2', values_to = 'cor')
+    pivot_longer(where(is.numeric), names_to = 'environment2', values_to = 'cor')%>%
+    mutate(across(where(is.numeric), ~case_when(.==-Inf | .==Inf ~ NA, .default = .)))
   
   acrossLocationYearRhoData <- locationYearLevelPerformance %>%
+    filter(!is.na(.data[[trait]])) %>%
     pivot_wider(id_cols = genotype, names_from = locationYear, values_from = .data[[trait]]) %>%
     ungroup() %>%
     select(!genotype) %>%
     cor(use = 'na.or.complete', method = 'spearman') %>%
     as_tibble(rownames = 'locationYear1') %>%
     mutate(across(where(is.numeric), ~case_when(.==1 ~ NA, .default = .))) %>%
-    pivot_longer(where(is.numeric), names_to = 'locationYear2', values_to = 'cor')
+    pivot_longer(where(is.numeric), names_to = 'locationYear2', values_to = 'cor') %>%
+    mutate(across(where(is.numeric), ~case_when(.==-Inf | .==Inf ~ NA, .default = .)))
   
   envRhoData1 <- hybrids %>%
     filter(block %% 2 != 0) %>% 
@@ -197,7 +200,8 @@ getCorrelations <- function(pheno) {
   envRhoData2 <- hybrids %>%
     filter(block %% 2 == 0) %>% 
     select(genotype, environment, all_of(trait))
-  envRhoData <- full_join(envRhoData1, envRhoData2, join_by(genotype, environment), suffix = c('.1', '.2'), keep = FALSE, relationship = 'many-to-many') %>%
+  envRhoData <- full_join(envRhoData1, envRhoData2, join_by(genotype, environment), suffix = c('.1', '.2'), keep = FALSE, relationship = 'many-to-many')
+  envRho <- envRhoData %>%  
     group_by(environment) %>%
     summarise(cor = cor(.data[[trait1]], .data[[trait2]], use = 'na.or.complete', method = 'spearman'))
   
@@ -208,7 +212,8 @@ getCorrelations <- function(pheno) {
     filter(block %% 2 == 0) %>%
     select(genotype, locationYear, all_of(trait))
   locationYearRhoData <- full_join(locationYearRhoData1, locationYearRhoData2, join_by(genotype, locationYear), suffix = c('.1', '.2'), keep = FALSE, 
-                                   relationship = 'many-to-many')  %>%
+                                   relationship = 'many-to-many')
+  locationYearRho <- locationYearRhoData %>%
     group_by(locationYear) %>%
     summarise(cor = cor(.data[[trait1]], .data[[trait2]], use = 'na.or.complete', method = 'spearman'))
   
@@ -217,12 +222,19 @@ getCorrelations <- function(pheno) {
   rhoVsH2$maxAcrossEnvRho[rhoVsH2$trait==pheno] <- max(acrossEnvRhoData$cor, na.rm = TRUE)
   rhoVsH2$minAcrossLocationYearRho[rhoVsH2$trait==pheno] <- min(acrossLocationYearRhoData$cor, na.rm = TRUE)
   rhoVsH2$maxcrossLocationYearRho[rhoVsH2$trait==pheno] <- max(acrossLocationYearRhoData$cor, na.rm = TRUE)
-  rhoVsH2$minEnvRho[rhoVsH2$trait==pheno] <- min(envRhoData$cor, na.rm = TRUE)
-  rhoVsH2$maxEnvRho[rhoVsH2$trait==pheno] <- max(envRhoData$cor, na.rm = TRUE)
-  rhoVsH2$minLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRhoData$cor, na.rm = TRUE)
-  rhoVsH2$maxLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRhoData$cor, na.rm = TRUE)
+  rhoVsH2$minEnvRho[rhoVsH2$trait==pheno] <- min(envRho$cor, na.rm = TRUE)
+  rhoVsH2$maxEnvRho[rhoVsH2$trait==pheno] <- max(envRho$cor, na.rm = TRUE)
+  rhoVsH2$minLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRho$cor, na.rm = TRUE)
+  rhoVsH2$maxLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRho$cor, na.rm = TRUE)
+  rhoVsH2$envRhoAgg[rhoVsH2$trait==pheno] <- cor(envRhoData[[trait1]], envRhoData[[trait2]], use = 'na.or.complete', method = 'spearman')
+  rhoVsH2$locationYearRhoAgg[rhoVsH2$trait==pheno] <- cor(locationYearRhoData[[trait1]], locationYearRhoData[[trait2]], use = 'na.or.complete', method = 'spearman')
 # }
 }
+
+# for(i in phenotypes)
+# {
+#   getCorrelations(i)
+# }
 # vc_all <- vc_all %>%
 #   rowwise() %>%
 #   mutate(grp = case_when(grp=='genotype' ~ 'Genotype',
