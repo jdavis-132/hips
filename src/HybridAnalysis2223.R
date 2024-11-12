@@ -15,17 +15,26 @@ library(scales)
 library(grid)
 library(png)
 library(viridis)
-library(spFW)
 source('src/Functions.R')
+library(spFW)
 
-# hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') #%>%
+
+# hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') %>%
 #   filter(location!='') %>%
 #   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'High', 'Medium'))) %>%
 #   rowwise() %>%
 #   # Since we are making an environment variable based on year, location, irrigationProvided, and nitrogenTreatment,
 #   # let's have an option to keep 2022 NP as one location
 #   mutate(semanticLocation = case_when(location %in% c('North Platte1', 'North Platte2', 'North Platte3') ~ 'North Platte', .default = location),
-#          environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'))
+#          environment = str_c(year, semanticLocation, irrigationProvided, nitrogenTreatment, sep = ':'),
+#          genotype = case_when(genotype=="HOEGEMEYER 7089 AMXT" ~ 'COMMERCIAL HYBRID 1',
+#                               genotype=="HOEGEMEYER 8065RR" ~ 'COMMERCIAL HYBRID 2', 
+#                               genotype=="PIONEER 1311 AMXT" ~ 'COMMERCIAL HYBRID 3',
+#                               genotype=="PIONEER P0589 AMXT" ~ 'COMMERCIAL HYBRID 4',
+#                               genotype=="SYNGENTA NK0659-3120-EZ1" ~ 'COMMERCIAL HYBRID 5', 
+#                               genotype=="SYNGENTA NK0760-3111" ~ 'COMMERCIAL HYBRID 6',
+#                               genotype=="WYFFELS W1782" ~ 'COMMERCIAL HYBRID 7', 
+#                               .default = genotype))
 nitrogenColors <- pal_brewer('seq', palette = 'YlOrRd')(3)
 # show_col(nitrogenColors)
 irrigationColors <- pal_brewer('seq', palette = 'Greys')(3)
@@ -71,7 +80,7 @@ yieldComponentsLabels <- c('Ear Fill Length* (cm)', 'Ear Width (cm)', 'Shelled C
 # hybrids <- hybrids %>%
 #   rowwise() %>%
 #   mutate(across(everything(), ~case_when(is.null(.) ~ NA, .default = .)))
-# 
+# # 
 # # # Is there shrinkage toward the mean of a treatment ?
 # for(i in 1:length(phenotypes))
 # {
@@ -97,15 +106,9 @@ yieldComponentsLabels <- c('Ear Fill Length* (cm)', 'Ear Width (cm)', 'Shelled C
 #   print(shrinkBoxes)
 # }
 # 
-# # Don't use spatially corrected values if there is shrinkage towards the mean of a treatment
-# hybrids <- hybrids %>%
-#   rowwise() %>%
-#   mutate(anthesisSilkingIntervalGDD.sp = case_when(location %in% c('North Platte1', 'North Platte2') & year=='2022' ~ anthesisSilkingInterval,
-#                                                 .default = anthesisSilkingIntervalGDD.sp),
-#          combineMoisture.sp = case_when(location=='Ames' & year=='2022' ~ combineMoisture, .default = combineMoisture.sp))
-# 
 # # Export spatial corrections so we don't have to run it again
 # write.csv(hybrids, 'analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv', row.names = FALSE, quote = FALSE)
+
 hybrids <- read.csv('analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
   filter(location!='') %>% 
   mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>%
@@ -155,84 +158,84 @@ for(i in 1:length(phenotypes))
   vc_all <- bind_rows(vc_all, partitionVariance3(hybrids, var, phenotypeLabelsVP[i], '~ (1|environment) + (1|genotype) + (1|genotype:environment)'))
 }
 
-# Compare broad-sense heritabilities with across/within env, locationYear spearman rhos
-rhoVsH2 <- tibble(trait = phenotypes, H2 = NULL, minAcrossEnvRho = NULL, maxAcrossEnvRho = NULL, 
-                  minAcrossLocationYearRho = NULL, maxAcrossLocationYearRho = NULL, minEnvRho = NULL, maxEnvRho = NULL, 
-                  minLocationYearRho = NULL, maxLocationYearRho = NULL, envRhoAgg = NULL, locationYearRhoAgg = NULL)
-# getCorrelations <- function(pheno) {
-for(pheno in phenotypes){
-  trait <- paste0(pheno, '.sp')
-  trait1 <- paste0(trait, '.1')
-  trait2 <- paste0(trait, '.2')
-  
-  envLevelPerformance <- hybrids %>%
-    group_by(genotype, environment) %>%
-    summarise('{trait}' := mean(.data[[trait]], na.rm = TRUE))
-  
-  locationYearLevelPerformance <- hybrids %>%
-    group_by(genotype, locationYear) %>%
-    summarise('{trait}' := mean(.data[[trait]], na.rm = TRUE))
-  
-  acrossEnvRhoData <- envLevelPerformance %>%
-    filter(!is.na(.data[[trait]])) %>%
-    pivot_wider(id_cols = genotype, names_from = environment, values_from = .data[[trait]]) %>%
-    ungroup() %>%
-    select(!genotype) %>%
-    cor(use = 'na.or.complete', method = 'spearman') %>%
-    as_tibble(rownames = 'environment1') %>%
-    mutate(across(where(is.numeric), ~case_when(.==1 ~ NA, .default = .))) %>%
-    pivot_longer(where(is.numeric), names_to = 'environment2', values_to = 'cor')%>%
-    mutate(across(where(is.numeric), ~case_when(.==-Inf | .==Inf ~ NA, .default = .)))
-  
-  acrossLocationYearRhoData <- locationYearLevelPerformance %>%
-    filter(!is.na(.data[[trait]])) %>%
-    pivot_wider(id_cols = genotype, names_from = locationYear, values_from = .data[[trait]]) %>%
-    ungroup() %>%
-    select(!genotype) %>%
-    cor(use = 'na.or.complete', method = 'spearman') %>%
-    as_tibble(rownames = 'locationYear1') %>%
-    mutate(across(where(is.numeric), ~case_when(.==1 ~ NA, .default = .))) %>%
-    pivot_longer(where(is.numeric), names_to = 'locationYear2', values_to = 'cor') %>%
-    mutate(across(where(is.numeric), ~case_when(.==-Inf | .==Inf ~ NA, .default = .)))
-  
-  envRhoData1 <- hybrids %>%
-    filter(block %% 2 != 0) %>% 
-    select(genotype, environment, all_of(trait), nitrogenTreatment)
-  envRhoData2 <- hybrids %>%
-    filter(block %% 2 == 0) %>% 
-    select(genotype, environment, all_of(trait), nitrogenTreatment)
-  envRhoData <- full_join(envRhoData1, envRhoData2, join_by(genotype, environment, nitrogenTreatment), suffix = c('.1', '.2'), keep = FALSE,
-                          relationship = 'many-to-many')
-  envRho <- envRhoData %>%  
-    filter(nitrogenTreatment %in% c('High')) %>%
-    group_by(environment) %>%
-    summarise(cor = cor(.data[[trait1]], .data[[trait2]], use = 'na.or.complete', method = 'spearman'))
-  
-  locationYearRhoData1 <- hybrids %>%
-    filter(block %% 2 != 0) %>%
-    select(genotype, locationYear, all_of(trait))
-  locationYearRhoData2 <- hybrids %>%
-    filter(block %% 2 == 0) %>%
-    select(genotype, locationYear, all_of(trait))
-  locationYearRhoData <- full_join(locationYearRhoData1, locationYearRhoData2, join_by(genotype, locationYear), suffix = c('.1', '.2'), keep = FALSE, 
-                                   relationship = 'many-to-many')
-  locationYearRho <- locationYearRhoData %>%
-    group_by(locationYear) %>%
-    summarise(cor = cor(.data[[trait1]], .data[[trait2]], use = 'na.or.complete', method = 'spearman'))
-  
-  rhoVsH2$H2[rhoVsH2$trait==pheno] <- vc_all$pctVar[vc_all$responseVar==trait]/100
-  rhoVsH2$minAcrossEnvRho[rhoVsH2$trait==pheno] <- min(acrossEnvRhoData$cor, na.rm = TRUE)
-  rhoVsH2$maxAcrossEnvRho[rhoVsH2$trait==pheno] <- max(acrossEnvRhoData$cor, na.rm = TRUE)
-  rhoVsH2$minAcrossLocationYearRho[rhoVsH2$trait==pheno] <- min(acrossLocationYearRhoData$cor, na.rm = TRUE)
-  rhoVsH2$maxcrossLocationYearRho[rhoVsH2$trait==pheno] <- max(acrossLocationYearRhoData$cor, na.rm = TRUE)
-  rhoVsH2$minEnvRho[rhoVsH2$trait==pheno] <- min(envRho$cor, na.rm = TRUE)
-  rhoVsH2$maxEnvRho[rhoVsH2$trait==pheno] <- max(envRho$cor, na.rm = TRUE)
-  rhoVsH2$minLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRho$cor, na.rm = TRUE)
-  rhoVsH2$maxLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRho$cor, na.rm = TRUE)
-  rhoVsH2$envRhoAgg[rhoVsH2$trait==pheno] <- cor(envRhoData[[trait1]], envRhoData[[trait2]], use = 'na.or.complete', method = 'spearman')
-  rhoVsH2$locationYearRhoAgg[rhoVsH2$trait==pheno] <- cor(locationYearRhoData[[trait1]], locationYearRhoData[[trait2]], use = 'na.or.complete', method = 'spearman')
+# # Compare broad-sense heritabilities with across/within env, locationYear spearman rhos
+# rhoVsH2 <- tibble(trait = phenotypes, H2 = NULL, minAcrossEnvRho = NULL, maxAcrossEnvRho = NULL, 
+#                   minAcrossLocationYearRho = NULL, maxAcrossLocationYearRho = NULL, minEnvRho = NULL, maxEnvRho = NULL, 
+#                   minLocationYearRho = NULL, maxLocationYearRho = NULL, envRhoAgg = NULL, locationYearRhoAgg = NULL)
+# # getCorrelations <- function(pheno) {
+# for(pheno in phenotypes){
+#   trait <- paste0(pheno, '.sp')
+#   trait1 <- paste0(trait, '.1')
+#   trait2 <- paste0(trait, '.2')
+#   
+#   envLevelPerformance <- hybrids %>%
+#     group_by(genotype, environment) %>%
+#     summarise('{trait}' := mean(.data[[trait]], na.rm = TRUE))
+#   
+#   locationYearLevelPerformance <- hybrids %>%
+#     group_by(genotype, locationYear) %>%
+#     summarise('{trait}' := mean(.data[[trait]], na.rm = TRUE))
+#   
+#   acrossEnvRhoData <- envLevelPerformance %>%
+#     filter(!is.na(.data[[trait]])) %>%
+#     pivot_wider(id_cols = genotype, names_from = environment, values_from = .data[[trait]]) %>%
+#     ungroup() %>%
+#     select(!genotype) %>%
+#     cor(use = 'na.or.complete', method = 'spearman') %>%
+#     as_tibble(rownames = 'environment1') %>%
+#     mutate(across(where(is.numeric), ~case_when(.==1 ~ NA, .default = .))) %>%
+#     pivot_longer(where(is.numeric), names_to = 'environment2', values_to = 'cor')%>%
+#     mutate(across(where(is.numeric), ~case_when(.==-Inf | .==Inf ~ NA, .default = .)))
+#   
+#   acrossLocationYearRhoData <- locationYearLevelPerformance %>%
+#     filter(!is.na(.data[[trait]])) %>%
+#     pivot_wider(id_cols = genotype, names_from = locationYear, values_from = .data[[trait]]) %>%
+#     ungroup() %>%
+#     select(!genotype) %>%
+#     cor(use = 'na.or.complete', method = 'spearman') %>%
+#     as_tibble(rownames = 'locationYear1') %>%
+#     mutate(across(where(is.numeric), ~case_when(.==1 ~ NA, .default = .))) %>%
+#     pivot_longer(where(is.numeric), names_to = 'locationYear2', values_to = 'cor') %>%
+#     mutate(across(where(is.numeric), ~case_when(.==-Inf | .==Inf ~ NA, .default = .)))
+#   
+#   envRhoData1 <- hybrids %>%
+#     filter(block %% 2 != 0) %>% 
+#     select(genotype, environment, all_of(trait), nitrogenTreatment)
+#   envRhoData2 <- hybrids %>%
+#     filter(block %% 2 == 0) %>% 
+#     select(genotype, environment, all_of(trait), nitrogenTreatment)
+#   envRhoData <- full_join(envRhoData1, envRhoData2, join_by(genotype, environment, nitrogenTreatment), suffix = c('.1', '.2'), keep = FALSE,
+#                           relationship = 'many-to-many')
+#   envRho <- envRhoData %>%  
+#     filter(nitrogenTreatment %in% c('High')) %>%
+#     group_by(environment) %>%
+#     summarise(cor = cor(.data[[trait1]], .data[[trait2]], use = 'na.or.complete', method = 'spearman'))
+#   
+#   locationYearRhoData1 <- hybrids %>%
+#     filter(block %% 2 != 0) %>%
+#     select(genotype, locationYear, all_of(trait))
+#   locationYearRhoData2 <- hybrids %>%
+#     filter(block %% 2 == 0) %>%
+#     select(genotype, locationYear, all_of(trait))
+#   locationYearRhoData <- full_join(locationYearRhoData1, locationYearRhoData2, join_by(genotype, locationYear), suffix = c('.1', '.2'), keep = FALSE, 
+#                                    relationship = 'many-to-many')
+#   locationYearRho <- locationYearRhoData %>%
+#     group_by(locationYear) %>%
+#     summarise(cor = cor(.data[[trait1]], .data[[trait2]], use = 'na.or.complete', method = 'spearman'))
+#   
+#   rhoVsH2$H2[rhoVsH2$trait==pheno] <- vc_all$pctVar[vc_all$responseVar==trait]/100
+#   rhoVsH2$minAcrossEnvRho[rhoVsH2$trait==pheno] <- min(acrossEnvRhoData$cor, na.rm = TRUE)
+#   rhoVsH2$maxAcrossEnvRho[rhoVsH2$trait==pheno] <- max(acrossEnvRhoData$cor, na.rm = TRUE)
+#   rhoVsH2$minAcrossLocationYearRho[rhoVsH2$trait==pheno] <- min(acrossLocationYearRhoData$cor, na.rm = TRUE)
+#   rhoVsH2$maxcrossLocationYearRho[rhoVsH2$trait==pheno] <- max(acrossLocationYearRhoData$cor, na.rm = TRUE)
+#   rhoVsH2$minEnvRho[rhoVsH2$trait==pheno] <- min(envRho$cor, na.rm = TRUE)
+#   rhoVsH2$maxEnvRho[rhoVsH2$trait==pheno] <- max(envRho$cor, na.rm = TRUE)
+#   rhoVsH2$minLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRho$cor, na.rm = TRUE)
+#   rhoVsH2$maxLocationYearRho[rhoVsH2$trait==pheno] <- min(locationYearRho$cor, na.rm = TRUE)
+#   rhoVsH2$envRhoAgg[rhoVsH2$trait==pheno] <- cor(envRhoData[[trait1]], envRhoData[[trait2]], use = 'na.or.complete', method = 'spearman')
+#   rhoVsH2$locationYearRhoAgg[rhoVsH2$trait==pheno] <- cor(locationYearRhoData[[trait1]], locationYearRhoData[[trait2]], use = 'na.or.complete', method = 'spearman')
+# # }
 # }
-}
 
 # for(i in phenotypes)
 # {
@@ -877,22 +880,22 @@ for(i in 1:length(phenotypes))
 # 
 # How many plots and non-missing values do we have?
 nonMissingVals <- 0
-totalPlots <- length(hybrids$qrCode)
-vars <- c(#'anthesisDate', 'silkDate', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 
-          'GDDToAnthesis', 'GDDToSilk',
-          'anthesisSilkingIntervalSilkingGDD', 'earHeight', 'flagLeafHeight', 'plantDensity', 'combineYield', 'yieldPerAcre',
-          'combineMoisture', 'combineTestWeight', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 'kernelsPerRow',
-          'kernelRowNumber', 'kernelsPerEar', 'shelledCobMass', 'percentMoisture', 'percentStarch', 'percentProtein', 'percentOil',
-          'percentFiber', 'percentAsh', 'kernelColor', 'percentLodging', 'totalStandCount')
-vars <- phenotypes
-hybrids <- hybrids %>%
-  mutate(across(is.character, ~case_when(.=='' ~ NA, .default = .)))
-for(var in vars)
-{
-  numMissingVals <- as.numeric(sum(is.na(hybrids[[var]])))
-  numNotMissing <- totalPlots - numMissingVals
-  nonMissingVals <- nonMissingVals + numNotMissing
-}
+# totalPlots <- length(hybrids$qrCode)
+# vars <- c(#'anthesisDate', 'silkDate', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 
+#           'GDDToAnthesis', 'GDDToSilk',
+#           'anthesisSilkingIntervalSilkingGDD', 'earHeight', 'flagLeafHeight', 'plantDensity', 'combineYield', 'yieldPerAcre',
+#           'combineMoisture', 'combineTestWeight', 'earLength', 'earFillLength', 'earWidth', 'shelledCobWidth', 'kernelsPerRow',
+#           'kernelRowNumber', 'kernelsPerEar', 'shelledCobMass', 'percentMoisture', 'percentStarch', 'percentProtein', 'percentOil',
+#           'percentFiber', 'percentAsh', 'kernelColor', 'percentLodging', 'totalStandCount')
+# vars <- phenotypes
+# hybrids <- hybrids %>%
+#   mutate(across(is.character, ~case_when(.=='' ~ NA, .default = .)))
+# for(var in vars)
+# {
+#   numMissingVals <- as.numeric(sum(is.na(hybrids[[var]])))
+#   numNotMissing <- totalPlots - numMissingVals
+#   nonMissingVals <- nonMissingVals + numNotMissing
+# }
 # 
 # # Are some of the patterns I'm seeing only due to the addition of hybrids in 2023? Let's subset to hybrids present in both years
 # hybrids2022 <- filter(hybrids, year=='2022')
@@ -2236,7 +2239,7 @@ ggsave('../meanParentPlot.png', dpi = 1000, units = 'in')
 
 # fig1middle <- plot_grid(workflow, orderedBoxplots, nrow = 1, labels = c('B', 'C'), rel_widths = c(0.25, 0.75))
 fig1 <- plot_grid(experimentalDesign, orderedBoxplots, vp.plot, ncol = 1, labels = 'AUTO', rel_heights = c(0.29, 0.33, 0.37))
-# ggsave('../fig1HighRes.svg', plot = fig1, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+ggsave('../fig1HighRes.svg', plot = fig1, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 # fig2left <- plot_grid(FWConceptualPlot, meanParentPlot, ncol = 1, labels = c('A', 'B'))
 # fig2right <- plot_grid(cxHeatmap, heatmap, ncol = 1, labels = c('C', 'D'))

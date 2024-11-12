@@ -1,6 +1,6 @@
 library(tidyverse)
 library(SpATS)
-library(spFW)
+# library(spFW)
 library(viridis)
 SEED <- 101762103
 # Returns a data frame filtered to rows of data that have values for trait 
@@ -177,8 +177,7 @@ getSpatialCorrectionsEnvironment <- function(data, response, environment)
     # Extract BLUPS
     intercept <- model$coeff['Intercept']
     sp <- as_tibble(model$coeff, rownames = 'plotNumber') %>%
-      mutate(location = currlocation,
-             nitrogenTreatment = currTrt, 
+      mutate(environment = currEnvironment, 
              plotNumber = as.numeric(plotNumber)) %>%
       filter(!is.na(plotNumber)) %>%
       rowwise() %>%
