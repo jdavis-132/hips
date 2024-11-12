@@ -140,6 +140,7 @@ getSpatialCorrections <- function(data, response)
   print(length(df.sp$plotNumber))
   # Return df
   return(df.sp)
+  }
 }
 
 # ***Specific to HIPS data** Modify as needed. 
