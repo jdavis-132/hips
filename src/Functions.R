@@ -124,23 +124,18 @@ getSpatialCorrections <- function(data, response)
       # Plot model
       plot.SpATS(model, main = paste0(response, ':', currlocation, ':', currTrt))
       # Extract BLUPS
-      summary <- summary(model)
-      if(cor(location.n.df[[response]], summary$fitted + summary$residuals) > 0.99)
-      {
-        sp <- tibble(location = currlocation,
-                     nitrogenTreatment = currTrt, 
-                     plotNumber = location.n.df$plotNumber,
-                     '{response}':=summary$fitted)
-      }
-      else
-      {
-        print(paste0('Fitted values misordered. r =', cor(location.n.df[[response]], summary$fitted + summary$residuals), '; ', currlocation, '; ', currTrt))
-        next
-      }
+      intercept <- model$coeff['Intercept']
+      sp <- as_tibble(model$coeff, rownames = 'plotNumber') %>%
+        mutate(location = currlocation,
+               nitrogenTreatment = currTrt, 
+               plotNumber = as.numeric(plotNumber)) %>%
+        filter(!is.na(plotNumber)) %>%
+        rowwise() %>%
+        mutate(value = value + intercept) %>%
+        rename('{response}':= value)
       # Bind to df
       df.sp <- bind_rows(df.sp, sp) %>%
         mutate(plotNumber = as.numeric(plotNumber))
-    }
   }
   print(length(df.sp$plotNumber))
   # Return df
@@ -179,19 +174,15 @@ getSpatialCorrectionsEnvironment <- function(data, response, environment)
     # Plot model
     plot.SpATS(model, main = paste0(response, ':', currEnvironment))
     # Extract BLUPS
-    summary <- summary(model)
-    sp <- tibble(environment = NULL, plotNumber = NULL, '{response}':=NULL)
-    if(cor(environment.df[[response]], summary$fitted + summary$residuals) > 0.99)
-    {
-      sp <- tibble(environment = currEnvironment,
-                   plotNumber = environment.df$plotNumber,
-                   '{response}':=summary$fitted)
-    }
-    else
-    {
-      print(paste0('Fitted values misordered. r =', cor(environment.df[[response]], summary$fitted + summary$residuals), '; ', currEnvironment))
-      next
-    }
+    intercept <- model$coeff['Intercept']
+    sp <- as_tibble(model$coeff, rownames = 'plotNumber') %>%
+      mutate(location = currlocation,
+             nitrogenTreatment = currTrt, 
+             plotNumber = as.numeric(plotNumber)) %>%
+      filter(!is.na(plotNumber)) %>%
+      rowwise() %>%
+      mutate(value = value + intercept) %>%
+      rename('{response}':= value)
     # Bind to df
     df.sp <- bind_rows(df.sp, sp) %>%
       mutate(plotNumber = as.numeric(plotNumber))

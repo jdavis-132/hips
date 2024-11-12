@@ -14,6 +14,7 @@ library(lme4)
 library(scales)
 library(grid)
 library(png)
+library(viridis)
 library(spFW)
 source('src/Functions.R')
 
@@ -1859,10 +1860,14 @@ percentEnvMeanDataPlotLevel <- hybridsNOLNK22 %>%
   mutate(percentEnvironmentYield = (yieldPerAcre.sp/environmentMean)*100)
 # Not really what we want - uses mean(percentEnvironmentMean) which is always 100 as x-axis in the regression
 # percentEnvMean.pl <- estimatePlasticity3(percentEnvMeanDataPlotLevel, 'percentEnvironmentYield', 'environment', 'genotype')
-
+hybridSummary <- hybridsNOLNK22 %>% 
+  group_by(genotype) %>% 
+  summarise(meanYield = mean(yieldPerAcre.sp, na.rm = TRUE))
 # what if we try lm 
 percentEnvMeanModel <- lm(percentEnvironmentYield ~ genotype + genotype*environmentMean, 
                           data = percentEnvMeanDataPlotLevel)
+percentEnvMu <- percentEnvMeanModel$coefficients['(Intercept)']
+environmentMeanEffect <- percentEnvMeanModel$coefficients['environmentMean']
 percentEnvMean.pl <- percentEnvMeanModel$coefficients %>%
   as_tibble(rownames = 'genotype') %>%
   rowwise() %>%
@@ -1871,9 +1876,10 @@ percentEnvMean.pl <- percentEnvMeanModel$coefficients %>%
            str_remove(':environmentMean')) %>%
   pivot_wider(id_cols = genotype, 
               names_from = valueID, 
-              values_from = value)
-
-percentEnvMean.pl <- percentEnvMean.pl %>%
+              values_from = value) %>%
+  filter(!(genotype %in% c('(Intercept)', 'environmentMean'))) %>%
+  mutate(expectedValue = intercept + percentEnvMu, 
+         b = slope + environmentMeanEffect + 1) %>%
   rowwise() %>%
   mutate(genotype = str_to_upper(genotype),
          earParent = str_split_i(genotype, ' X ', 1),
@@ -1887,16 +1893,19 @@ percentEnvMean.pl <- percentEnvMean.pl %>%
          youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
          meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
   ungroup() %>%
-  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .))) %>%
+  left_join(hybridSummary)
 
-percentEnvMeanPlot <- ggplot(percentEnvMean.pl, aes(percentEnvironmentYield.mu, percentEnvironmentYield.b, color = meanParentAge)) + 
+
+
+percentEnvMeanPlotPlasticityVersusRelativePerformance <- ggplot(percentEnvMean.pl, aes(expectedValue, b, color = meanParentAge)) + 
   geom_point() + 
   scale_color_viridis(direction = -1) + 
-  scale_x_continuous(breaks = c(50, 100, 150, 200), 
+  scale_x_continuous(breaks = c(50, 100, 150, 200),
                      labels = c('50%', '100%', '150%', '200%')) +
-  scale_y_continuous(breaks = c(50, 100, 150, 200), 
-                     labels = c('50%', '100%', '150%', '200%')) +
-  labs(x = 'Hybrid Mean Yield as Percent of Environment Mean', y = 'Linear Plasticity', 
+  # scale_y_continuous(breaks = c(50, 100, 150, 200), 
+  #                    labels = c('50%', '100%', '150%', '200%')) +
+  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity', 
        color = str_wrap('Mean Parent Release Year', 1), title = NULL) +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
@@ -1904,20 +1913,25 @@ percentEnvMeanPlot <- ggplot(percentEnvMean.pl, aes(percentEnvironmentYield.mu, 
         text = element_text(color = 'black', size = 9, hjust = 0.5),
         plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
         panel.grid = element_blank())
-percentEnvMeanPlot
+percentEnvMeanPlotPlasticityVersusRelativePerformance
 
-# what if we try lm 
-percentEnvMeanModel <- lm(percentEnvironmentYield ~ genotype + genotype*environmentMean, 
-                          data = percentEnvMeanDataPlotLevel)
-percentEnvMean.pl <- percentEnvMeanModel$coefficients %>%
-  as_tibble(rownames = 'genotype') %>%
-  rowwise() %>%
-  mutate(valueID = case_when(str_detect(genotype, ':environmentMean') ~ 'slope', .default = 'intercept'), 
-         genotype = str_remove(genotype, 'genotype') %>%
-           str_remove(':environmentMean')) %>%
-  pivot_wider(id_cols = genotype, 
-              names_from = valueID, 
-              values_from = value)
+percentEnvMeanPlotPlasticityVersusMeanYield <- ggplot(percentEnvMean.pl, aes(meanYield, b, color = meanParentAge)) + 
+  geom_point() + 
+  scale_color_viridis(direction = -1) + 
+  # scale_x_continuous(breaks = c(50, 100, 150, 200),
+  #                    labels = c('50%', '100%', '150%', '200%')) +
+  # scale_y_continuous(breaks = c(50, 100, 150, 200), 
+  #                    labels = c('50%', '100%', '150%', '200%')) +
+  labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity', 
+       color = str_wrap('Mean Parent Release Year', 1), title = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        panel.grid = element_blank())
+percentEnvMeanPlotPlasticityVersusMeanYield
+
 
 phenotypeLabelsGCAVP <- c(#'Plant Density', 
                         'Test Weight', 'Harvest Moisture', 'Flag Leaf Height',
@@ -1941,7 +1955,7 @@ gca_vp <- gca_vp %>%
   rowwise() %>%
   mutate(grp = case_when(grp=='earParent' ~ 'Parent GCA',
                          grp=='pollenParent' ~ 'Parent GCA',
-                         .default = grp) %>%
+                         .default = grp) %>%http://127.0.0.1:36485/graphics/fdae8b21-5a44-49e1-960a-ee7c2ef2664f.png
            factor(levels = c('Parent GCA', 'Residual'))) %>%
   group_by(grp, responseVar, label) %>%
   summarise(pctVar = sum(pctVar, na.rm = TRUE))
