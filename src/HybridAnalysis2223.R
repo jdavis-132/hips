@@ -1438,17 +1438,17 @@ nPlasticityGenotypeLines
 # nPlasticityGenotypeLinesPlot <- plot_grid(nPlasticityGenotypeLines, nPlasticityGenotypeLinesLegends, ncol = 2, rel_widths = c(1, 0.4))
 # nPlasticityGenotypeLinesPlot
 # How well does N plasticity correlate between reps within a location
-nResponseBlock.pl <- getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(phenotypes[1], '.sp'), 'nitrogenTreatment', 'genotype')
-
-for(i in 2:length(phenotypes))
-{
-  nResponseBlock.pl <- full_join(nResponseBlock.pl, 
-                            getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(phenotypes[i], '.sp'), 'nitrogenTreatment', 'genotype'),
-                            join_by(genotype, locationYear, blockSet),
-                            suffix = c('', ''),
-                            keep = FALSE)
-}
-write.csv(nResponseBlock.pl, 'analysis/nitrogenResponseBlockPlasticity.csv', quote = FALSE, row.names = FALSE)
+# nResponseBlock.pl <- getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(phenotypes[1], '.sp'), 'nitrogenTreatment', 'genotype')
+# 
+# for(i in 2:length(phenotypes))
+# {
+#   nResponseBlock.pl <- full_join(nResponseBlock.pl, 
+#                             getNitrogenPlasticityByLocationYearBlock(nResponse, paste0(phenotypes[i], '.sp'), 'nitrogenTreatment', 'genotype'),
+#                             join_by(genotype, locationYear, blockSet),
+#                             suffix = c('', ''),
+#                             keep = FALSE)
+# }
+# write.csv(nResponseBlock.pl, 'analysis/nitrogenResponseBlockPlasticity.csv', quote = FALSE, row.names = FALSE)
 nResponseBlock.pl <- read.csv('analysis/nitrogenResponseBlockPlasticity.csv')
 
 nResponseBlockCorrByLocYear <- nResponseBlock.pl %>%
@@ -2293,15 +2293,15 @@ fig3
 #                               env_info = FALSE)
 # 
 # # Testing nlsr
-# model <- nls(yieldPerAcre.sp ~ genotype + environment + genotype*environment, data = hybrids, na.action = na.omit, start = c(genotype=1, environment=1))
-block1 <- hybridsNOLNK22 %>% 
-  filter((block %% 2)==0)
-block1.pl <- estimatePlasticity3(block1, 'yieldPerAcre.sp', 'environment', 'genotype')
-block2 <- hybridsNOLNK22 %>% 
-  filter((block %% 2)!=0)
-block2.pl <- estimatePlasticity3(block2, 'yieldPerAcre.sp', 'environment', 'genotype')
-block.pl <- full_join(block1.pl, block2.pl, join_by(genotype), keep = FALSE, suffix = c('.1', '.2'))
-write.csv(block.pl, 'analysis/overallYieldBlockPlasticity.csv', quote = FALSE, row.names = FALSE)
+# # model <- nls(yieldPerAcre.sp ~ genotype + environment + genotype*environment, data = hybrids, na.action = na.omit, start = c(genotype=1, environment=1))
+# block1 <- hybridsNOLNK22 %>% 
+#   filter((block %% 2)==0)
+# block1.pl <- estimatePlasticity3(block1, 'yieldPerAcre.sp', 'environment', 'genotype')
+# block2 <- hybridsNOLNK22 %>% 
+#   filter((block %% 2)!=0)
+# block2.pl <- estimatePlasticity3(block2, 'yieldPerAcre.sp', 'environment', 'genotype')
+# block.pl <- full_join(block1.pl, block2.pl, join_by(genotype), keep = FALSE, suffix = c('.1', '.2'))
+# write.csv(block.pl, 'analysis/overallYieldBlockPlasticity.csv', quote = FALSE, row.names = FALSE)
 block.pl <- read.csv('analysis/overallYieldBlockPlasticity.csv')
 
 blockRho <- cor(block.pl$yieldPerAcre.sp.b.1, block.pl$yieldPerAcre.sp.b.2, use = 'complete.obs', method = 'spearman')
