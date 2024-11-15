@@ -144,8 +144,8 @@ getSpatialCorrections <- function(data, response)
 }
 
 # ***Specific to HIPS data** Modify as needed. 
-# Returns a dataframe with a column where the values are the fitted values after spatial correction using SpATS
-# Fits plot identifier as the genotype so we get values for every plot. 
+# Returns a dataframe with a column where the values are the plot-wise BLUPs after spatial correction using SpATS + model intercept
+# Fits plot identifier as the genotype so we get values for every plot. Assumes this is a column titled 'plotNumber'.
 # data is a dataframe
 # environment is the column identifying individual treatments as a string
 # response is a string name of the phenotype column to spatially adjust
