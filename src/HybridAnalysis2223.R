@@ -1,6 +1,3 @@
-# setwd('davisjensina@gmail.com - Google Drive/My Drive/Schnable-Lab/HIPS/hips') # For running on Mac
-# setwd('HIPS/hips') # For running on lab computer
-
 library(tidyverse)
 library(readxl)
 library(lubridate)
@@ -16,7 +13,7 @@ library(grid)
 library(png)
 library(viridis)
 source('src/Functions.R')
-library(spFW)
+# library(spFW)
 
 
 # hybrids <- read.csv('outData/HIPS_HYBRIDS_2022_AND_2023_V2.3.csv') %>%
@@ -1470,7 +1467,7 @@ nResponseCorSummary <- corDataYield %>%
   mutate(a1 = nPlasticityCor.a - nPlasticityCor.1,
          a2 = nPlasticityCor.a - nPlasticityCor.2) %>%
   arrange(nPlasticityCor.a)
-nResponseCorSummary <- nResponseCorSummary[c(1, 3, 5, 7, 9, 11), ]
+# nResponseCorSummary <- nResponseCorSummary[c(1, 3, 5, 7, 9, 11), ]
 
 
 # for(i in 6)
@@ -1861,8 +1858,8 @@ percentMeanPlotOverallPerformance
 
 percentMeanPlots <- plot_grid(percentMeanPlotExtremePlasticity, percentMeanPlotOverallPerformance, 
                               ncol = 1, labels = 'AUTO')
-# ggsave('../percentMeanPlots.png', plot = percentMeanPlots, width = 6.5, height = 9, units = 'in',
-#        dpi = 1000, bg = 'white')
+ggsave('../percentMeanPlots.png', plot = percentMeanPlots, width = 6.5, height = 9, units = 'in',
+       dpi = 1000, bg = 'white')
 
 # Estimate plasticity using percent mean data
 percentEnvMeanDataPlotLevel <- hybridsNOLNK22 %>%
@@ -2678,6 +2675,10 @@ supplMeanParentPlots <- plot_grid(supplMeanParentPlots, , ncol = 1, rel_heights 
 meanPerformanceByPlasticityOnlyYield <- lm(yieldPerAcre.sp.mu ~ yieldPerAcre.sp.b, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityOnlyYield)
 summary(meanPerformanceByPlasticityOnlyYield)
+
+meanPerformanceByMeanParentAgeOnlyYield <- lm(yieldPerAcre.sp.mu ~ meanParentAge, data = hybridsNOLNK22.pl)
+anova(meanPerformanceByMeanParentAgeOnlyYield)
+summary(meanPerformanceByMeanParentAgeOnlyYield)
 
 meanPerformanceByPlasticityYield <- lm(yieldPerAcre.sp.mu ~ yieldPerAcre.sp.b + meanParentAge, data = hybridsNOLNK22.pl)
 anova(meanPerformanceByPlasticityYield)
