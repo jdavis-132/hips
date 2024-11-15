@@ -1,6 +1,6 @@
 library(tidyverse)
 library(SpATS)
-# library(spFW)
+library(spFW)
 library(viridis)
 SEED <- 101762103
 # Returns a data frame filtered to rows of data that have values for trait 
@@ -777,6 +777,7 @@ plotNPlasticityCor <- function(nitrogenResponsePlasticityData = nResponse.pl, tr
     as.table() %>%
     as.data.frame()
   names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
+  print(min(corData$nPlasticityCor, na.rm = TRUE))
   print(paste0(trait, ':', min(corData$nPlasticityCor, na.rm = TRUE), '-', max(corData$nPlasticityCor[corData$nPlasticityCor!=1], na.rm = TRUE)))
   
   plot <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +

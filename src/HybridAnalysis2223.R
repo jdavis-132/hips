@@ -348,7 +348,8 @@ parentInfo <- read_excel('data/HIPS_Genotype_Information_2022_2023.xlsx') %>%
                          .default = age)) %>%
   mutate(age = as.numeric(age)) %>%
   mutate(age = case_when(is.na(age) & !is.na(`received/donation year`) ~ `received/donation year`, 
-                         .default = age))
+                         .default = age)) %>% 
+  select(genotype, age)
 
 # missingParents <- c('I159', '66', 'A344', 'B7', 'CI 3A', 'K201', 'KYS', 'C.I. 540', 'L 289', 'W606S', 'N209', 'A12', 'WF9')
 # missingParentages <- c(1998, 2002, 1996, 1968, 1945, 1963, 1963, 1948, 1934, 1963, 1997,  1965, 1943)
@@ -619,52 +620,55 @@ hybrids <- hybrids %>%
 # Okay, let's run the plasticity without LNK 2022
 # Estimate FW plasticity across all environments where phenotype was observed
 hybridsNOLNK22 <- filter(hybrids, !(location=='Lincoln' & year=='2022'))
-hybridsNOLNK22.pl <- estimatePlasticity3(hybridsNOLNK22, trait = paste0(phenotypes[1], '.sp'), environment = 'environment', genotype = 'genotype')
-
-for(i in 2:length(phenotypes))
-{
-  hybridsNOLNK22.pl <- full_join(hybridsNOLNK22.pl, 
-                          estimatePlasticity3(hybridsNOLNK22, trait = paste0(phenotypes[i], '.sp'), environment = 'environment', genotype = 'genotype'),
-                          join_by(genotype),
-                          suffix = c('', ''), 
-                          keep = FALSE)
-  # Print mean of the b column so we know we are getting reasonable values
-  print(mean(hybridsNOLNK22.pl[[paste0(phenotypes[i], '.sp.b')]], na.rm = TRUE))
-}
-
-hybridsNOLNK22.pl <- hybridsNOLNK22.pl %>%
-  rowwise() %>%
-  mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .)))
-
-hybridsNOLNK22.pl <- hybridsNOLNK22.pl %>%
-  rowwise() %>%
-  mutate(genotype = str_to_upper(genotype),
-         earParent = str_split_i(genotype, ' X ', 1),
-         pollenParent = str_split_i(genotype, ' X ', 2))
-
-# parentInfo <- read_excel('data/HIPS_Genotype_Information_2022 - HIPS_Genotype_Information_2022_2023.xlsx',
-#                          range = 'A2:D357', 
-#                          col_names = c('genotype', 'accession', 'additionalAccessionNames', 'age'),
-#                          col_types = rep('text', 4)) %>%
-#   filter(genotype!='NA') %>%
-#   mutate(age = case_when(age=='NEAR 1946' ~ 1946,
-#                                  age=='PRE 1956' ~ 1956,
-#                                  age=='PRE 1976' ~ 1976,
-#                                  age=='PRE 1941' ~ 1941,
-#                                  age=='PRE 1964' ~ 1964, 
-#                                  .default = as.numeric(age))) %>%
-#   select(genotype, age)
-
-hybridsNOLNK22.pl <- left_join(hybridsNOLNK22.pl, parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
-  rename(earParentAge = age) %>%
-  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
-  rename(pollenParentAge = age) %>%
-  rowwise() %>%
-  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
-         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
-         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
-  ungroup() %>%
-  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+# hybridsNOLNK22.pl <- estimatePlasticity3(hybridsNOLNK22, trait = paste0(phenotypes[1], '.sp'), environment = 'environment', genotype = 'genotype')
+# 
+# for(i in 2:length(phenotypes))
+# {
+#   hybridsNOLNK22.pl <- full_join(hybridsNOLNK22.pl, 
+#                           estimatePlasticity3(hybridsNOLNK22, trait = paste0(phenotypes[i], '.sp'), environment = 'environment', genotype = 'genotype'),
+#                           join_by(genotype),
+#                           suffix = c('', ''), 
+#                           keep = FALSE)
+#   # Print mean of the b column so we know we are getting reasonable values
+#   print(mean(hybridsNOLNK22.pl[[paste0(phenotypes[i], '.sp.b')]], na.rm = TRUE))
+# }
+# 
+# hybridsNOLNK22.pl <- hybridsNOLNK22.pl %>%
+#   rowwise() %>%
+#   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .)))
+# 
+# hybridsNOLNK22.pl <- hybridsNOLNK22.pl %>%
+#   rowwise() %>%
+#   mutate(genotype = str_to_upper(genotype),
+#          earParent = str_split_i(genotype, ' X ', 1),
+#          pollenParent = str_split_i(genotype, ' X ', 2))
+# 
+# # parentInfo <- read_excel('data/HIPS_Genotype_Information_2022 - HIPS_Genotype_Information_2022_2023.xlsx',
+# #                          range = 'A2:D357', 
+# #                          col_names = c('genotype', 'accession', 'additionalAccessionNames', 'age'),
+# #                          col_types = rep('text', 4)) %>%
+# #   filter(genotype!='NA') %>%
+# #   mutate(age = case_when(age=='NEAR 1946' ~ 1946,
+# #                                  age=='PRE 1956' ~ 1956,
+# #                                  age=='PRE 1976' ~ 1976,
+# #                                  age=='PRE 1941' ~ 1941,
+# #                                  age=='PRE 1964' ~ 1964, 
+# #                                  .default = as.numeric(age))) %>%
+# #   select(genotype, age)
+# 
+# hybridsNOLNK22.pl <- left_join(hybridsNOLNK22.pl, parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+#   rename(earParentAge = age) %>%
+#   left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+#   rename(pollenParentAge = age) %>%
+#   rowwise() %>%
+#   mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
+#          youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
+#          meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
+#   ungroup() %>%
+#   mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+# 
+# write.csv(hybridsNOLNK22.pl, 'analysis/hybridsNOLNK22Plasticity.csv', row.names = FALSE, quote = FALSE)
+hybridsNOLNK22.pl <- read_csv('analysis/hybridsNOLNK22Plasticity.csv')
 
 for(i in 1:length(phenotypes))
 {
@@ -879,7 +883,7 @@ for(i in 1:length(phenotypes))
 # yieldViolins
 # 
 # How many plots and non-missing values do we have?
-nonMissingVals <- 0
+# nonMissingVals <- 0
 # totalPlots <- length(hybrids$qrCode)
 # vars <- c(#'anthesisDate', 'silkDate', 'daysToAnthesis', 'daysToSilk', 'anthesisSilkingInterval', 
 #           'GDDToAnthesis', 'GDDToSilk',
@@ -1010,53 +1014,56 @@ nonMissingVals <- 0
 #   # ggsave(paste0('analysis/', yieldComponents[i], 'LinearPlasticityVsMean.png'), dpi = 1000)
 # }
 
-nResponseLocationYears <- c('2023 Crawfordsville', '2023 Ames', '2022 Scottsbluff', '2022 North Platte LI')
+nResponseLocationYears <- c('2023 Ames', '2022 Scottsbluff', '2022 North Platte LI')
 # Subset to the locations where we got a significant, classical N response on a population level and estimate plasticity --> does N plasticity correlate across location years?
 nResponse <- filter(hybrids, locationYear %in% nResponseLocationYears)
 
-nTreatmentsPerLocationYear <- nResponse %>%
-  group_by(locationYear, genotype) %>%
-  summarise(nitrogenTreatments = n_distinct(nitrogenTreatment, na.rm = TRUE)) %>%
-  filter(nitrogenTreatments < 3)
-singleNLevelHybrids <- unique(nTreatmentsPerLocationYear$genotype)
-
-nResponse <- filter(nResponse, !(genotype %in% singleNLevelHybrids))
-
-nResponse.pl <- getNitrogenPlasticityByLocationYear(nResponse, paste0(phenotypes[1], '.sp'), 'nitrogenTreatment', 'genotype')
-
-for(i in 2:length(phenotypes))
-{
-  nResponse.pl <- full_join(nResponse.pl, 
-                            getNitrogenPlasticityByLocationYear(nResponse, paste0(phenotypes[i], '.sp'), 'nitrogenTreatment', 'genotype'),
-                            join_by(genotype, locationYear),
-                            suffix = c('', ''),
-                            keep = FALSE)
-}
-
-nResponse.pl <- nResponse.pl %>%
-  rowwise() %>%
-  mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .))) %>% 
-  rowwise() %>%
-  mutate(genotype = str_to_upper(genotype),
-         earParent = str_split_i(genotype, ' X ', 1),
-         pollenParent = str_split_i(genotype, ' X ', 2)) %>%
-  left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
-  rename(earParentAge = age) %>%
-  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
-  rename(pollenParentAge = age) %>%
-  rowwise() %>%
-  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
-         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
-         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
-  ungroup() %>%
-  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+# nTreatmentsPerLocationYear <- nResponse %>%
+#   group_by(locationYear, genotype) %>%
+#   summarise(nitrogenTreatments = n_distinct(nitrogenTreatment, na.rm = TRUE)) %>%
+#   filter(nitrogenTreatments < 3)
+# singleNLevelHybrids <- unique(nTreatmentsPerLocationYear$genotype)
+# 
+# nResponse <- filter(nResponse, !(genotype %in% singleNLevelHybrids))
+# 
+# nResponse.pl <- getNitrogenPlasticityByLocationYear(nResponse, paste0(phenotypes[1], '.sp'), 'nitrogenTreatment', 'genotype')
+# 
+# for(i in 2:length(phenotypes))
+# {
+#   nResponse.pl <- full_join(nResponse.pl, 
+#                             getNitrogenPlasticityByLocationYear(nResponse, paste0(phenotypes[i], '.sp'), 'nitrogenTreatment', 'genotype'),
+#                             join_by(genotype, locationYear),
+#                             suffix = c('', ''),
+#                             keep = FALSE)
+# }
+# 
+# nResponse.pl <- nResponse.pl %>%
+#   rowwise() %>%
+#   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .))) %>% 
+#   rowwise() %>%
+#   mutate(genotype = str_to_upper(genotype),
+#          earParent = str_split_i(genotype, ' X ', 1),
+#          pollenParent = str_split_i(genotype, ' X ', 2)) %>%
+#   left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+#   rename(earParentAge = age) %>%
+#   left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+#   rename(pollenParentAge = age) %>%
+#   rowwise() %>%
+#   mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
+#          youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
+#          meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
+#   ungroup() %>%
+#   mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+# 
+# write.csv(nResponse.pl, 'analysis/NitrogenResponsePlasticity.csv', quote = FALSE, row.names = FALSE)
+nResponse.pl <- read_csv('analysis/NitrogenResponsePlasticity.csv')
  # Yield
 nResponse.plWide <- nResponse.pl %>%
   pivot_wider(id_cols = genotype, 
               names_from = locationYear,
               values_from = yieldPerAcre.sp.b)
 
-corData <- cor(nResponse.plWide[, 2:5], use = 'complete.obs', method = 'spearman') %>%
+corData <- cor(nResponse.plWide[, 2:4], use = 'complete.obs', method = 'spearman') %>%
   as.table() %>%
   as.data.frame()
 names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
@@ -1066,7 +1073,7 @@ corDataYield <- corData %>%
 
 nPlasticityCorYield <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
   geom_tile(color = 'white') +
-  scale_fill_viridis_c(direction = -1) + 
+  scale_fill_viridis_c(direction = -1, limits = c(-0.1, 1)) + 
   scale_x_discrete(breaks = unique(corData$locationYear1), 
                    labels = label_wrap(10)) +
   scale_y_discrete(breaks = unique(corData$locationYear1), 
@@ -1082,7 +1089,7 @@ nPlasticityCorYield <- ggplot(corData, aes(locationYear1, locationYear2, fill = 
         panel.border = element_blank(),
         panel.grid = element_blank(), 
         plot.background = element_blank(), 
-        legend.position = 'left',
+        legend.position = 'none',
         legend.background = element_blank())
 nPlasticityCorYield
 
@@ -1126,7 +1133,7 @@ nResponse.plWideHKM <- nResponse.pl %>%
               names_from = locationYear,
               values_from = hundredKernelMass.sp.b)
 
-corData <- cor(nResponse.plWideHKM[, 2:5], use = 'complete.obs', method = 'spearman') %>%
+corData <- cor(nResponse.plWideHKM[, 2:4], use = 'complete.obs', method = 'spearman') %>%
   as.table() %>%
   as.data.frame()
 names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
@@ -1134,7 +1141,7 @@ names(corData) <- c('locationYear1', 'locationYear2', 'nPlasticityCor')
 nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
   geom_tile(color = 'white') +
   scale_fill_viridis_c(direction = -1,
-                       limits = c( -0.2, 1)) + 
+                       limits = c( -0.1, 1)) + 
   guides(fill = guide_colourbar(barwidth = 12,
                                 barheight = 1)) +
   scale_x_discrete(breaks = unique(corData$locationYear1), 
@@ -1156,7 +1163,7 @@ nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nP
         legend.title = element_text(color = 'black', size = 9, vjust = 0.85))
 nPlasticityCorHKM
 
-nPlasticityCorLegend <- get_legend(nPlasticityCorHKM) 
+nPlasticityCorLegend <- get_plot_component(nPlasticityCorHKM, 'guide-box-bottom') 
 
 nPlasticityCorHKM <- ggplot(corData, aes(locationYear1, locationYear2, fill = nPlasticityCor)) +
   geom_tile(color = 'white') +
@@ -1282,15 +1289,15 @@ ames23NResponse.pl <- filter(nResponse.pl, locationYear=='2023 Ames')
 
  # Which genotypes are 'most' and 'least' nitrogen stable across these envs for yield
 ames23Genotypes <- ames23NResponse.pl$genotype
-cf23NResponse.pl <- filter(nResponse.pl, locationYear=="2023 Crawfordsville")
-cf23Genotypes <- cf23NResponse.pl$genotype
-nResponse23Genotypes <- intersect(ames23Genotypes, cf23Genotypes)
+# cf23NResponse.pl <- filter(nResponse.pl, locationYear=="2023 Crawfordsville")
+# cf23Genotypes <- cf23NResponse.pl$genotype
+# nResponse23Genotypes <- intersect(ames23Genotypes, cf23Genotypes)
 sb22NResponse.pl <- filter(nResponse.pl, locationYear=='2022 Scottsbluff')
 sb22Genotypes <- sb22NResponse.pl$genotype
 np22NResponse.pl <- filter(nResponse.pl, locationYear=='2022 North Platte LI')
 np22Genotypes <- np22NResponse.pl$genotype
 nResponse22Genotypes <- intersect(sb22Genotypes, np22Genotypes)
-nResponseGenotypes <- intersect(nResponse22Genotypes, nResponse23Genotypes)
+nResponseGenotypes <- intersect(nResponse22Genotypes, ames23Genotypes)
 
 nResponsePopulation <- nResponse %>%
   group_by(nitrogenTreatment, locationYear) %>%
@@ -1319,7 +1326,7 @@ nResponseLAH <- hybrids %>%
 
 nPlasticityGenotypeLines <- ggplot(nResponseLAH, aes(nitrogenTreatment, yieldPerAcreMean, color = genotype, group = genotype, linetype = genotype)) +
   geom_line() +
-  facet_wrap(vars(locationYear), ncol = 2, nrow = 2) +
+  facet_wrap(vars(locationYear), nrow = 1) +
   scale_color_manual(values = viridis_pal()(4)[c(2, 1, 3, 4)]) +
   scale_linetype_manual(values = c('dashed', 'solid', 'solid', 'solid')) + 
   labs(x = 'Nitrogen Treatment', y = 'Yield (bushels/acre)', color = NULL, linetype = NULL) +
@@ -1958,7 +1965,7 @@ gca_vp <- gca_vp %>%
   rowwise() %>%
   mutate(grp = case_when(grp=='earParent' ~ 'Parent GCA',
                          grp=='pollenParent' ~ 'Parent GCA',
-                         .default = grp) %>%http://127.0.0.1:36485/graphics/fdae8b21-5a44-49e1-960a-ee7c2ef2664f.png
+                         .default = grp) %>%
            factor(levels = c('Parent GCA', 'Residual'))) %>%
   group_by(grp, responseVar, label) %>%
   summarise(pctVar = sum(pctVar, na.rm = TRUE))
@@ -1987,7 +1994,7 @@ gca_vp.plot <- ggplot(gca_vp, aes(label, pctVar, fill = grp)) +
         line = element_line(color = 'black', linewidth = 1),
         panel.grid = element_blank())
 gca_vp.plot
-ggsave('../gca_vp.png', width = 3*6.22, height = 3*3, units = 'in', dpi = 1000)
+# ggsave('../gca_vp.png', width = 3*6.22, height = 3*3, units = 'in', dpi = 1000)
 
 
 
@@ -2084,115 +2091,115 @@ ggsave('../gca_vp.png', width = 3*6.22, height = 3*3, units = 'in', dpi = 1000)
 #         panel.grid = element_blank())
 # yieldPredictionsPlot
 # Single model 
-rfFeatures <- read.csv('analysis/featureImportances5CV.csv')[2:5]
-colnames(rfFeatures) <- c('plantDensity', 'kernelRowNumber', 'kernelsPerRow', 'hundredKernelMass')
-
-rfFeaturesSummmary <- rfFeatures %>%
-  summarise(plantDensity.mean = mean(plantDensity, na.rm = TRUE),
-            plantDensity.sd = sd(plantDensity, na.rm = TRUE),
-            kernelRowNumber.mean = mean(kernelRowNumber, na.rm = TRUE),
-            kernelRowNumber.sd = sd(kernelRowNumber, na.rm = TRUE),
-            kernelsPerRow.mean = mean(kernelsPerRow, na.rm = TRUE),
-            kernelsPerRow.sd = sd(kernelsPerRow, na.rm = TRUE),
-            hundredKernelMass.mean = mean(hundredKernelMass, na.rm = TRUE),
-            hundredKernelMass.sd = sd(hundredKernelMass, na.rm = TRUE)) %>%
-  pivot_longer(everything(), names_to = 'type', values_to = 'val') %>%
-  rowwise() %>%
-  mutate(phenotype = str_split_i(type, fixed('.'), 1),
-         statistic = str_split_i(type, fixed('.'), 2)) %>%
-  select(phenotype, statistic, val) %>%
-  pivot_wider(id_cols = phenotype, names_from = statistic, values_from = val) %>%
-  mutate(phenotypeLabel = c('Plant Density (plants/acre)', 'Kernel Row Number', 'Kernels Per Row', 'Hundred Kernel Mass (g)')) %>%
-  mutate(phenotypeLabel = factor(phenotypeLabel,
-                                 levels = c('Kernel Row Number', 'Plant Density (plants/acre)', 'Hundred Kernel Mass (g)', 
-                                            'Kernels Per Row'), ordered = TRUE))
-
-rfFeatures <- rfFeatures %>%
-  pivot_longer(everything(), names_to = 'phenotype', values_to = 'val') %>%
-  rowwise() %>%
-  mutate(phenotypeLabel = case_when(phenotype=='plantDensity' ~ 'Plant Density',
-                                    phenotype=='kernelRowNumber' ~ 'Kernel Row Number',
-                                    phenotype=='kernelsPerRow' ~ 'Kernels Per Row*',
-                                    phenotype=='hundredKernelMass' ~ 'Hundred Kernel Mass')) %>%
-  mutate(phenotypeLabel = factor(phenotypeLabel, 
-                                 levels = c('Kernel Row Number', 'Plant Density', 'Kernels Per Row*', 'Hundred Kernel Mass'), 
-                                 ordered = TRUE))
-
-featureImportance <- ggplot(rfFeatures, aes(val, phenotypeLabel)) +
-  geom_boxplot(color = 'black', fill = nitrogenColors[3]) +
-  # geom_text(aes(0.85, 'Hundred Kernel Mass (g)'), label = 'a', size = 3.88) +
-  # geom_text(aes(0.85, 'Kernels Per Row*'), label = 'b', size = 3.88) +
-  # geom_text(aes(0.85, 'Plant Density (plants/acre)'), label = 'c', size = 3.88) +
-  # geom_text(aes(0.85, 'Kernel Row Number'), label = 'd', size = 3.88) +
-  scale_y_discrete(labels = str_wrap(levels(rfFeatures$phenotypeLabel), 9)) +
-  labs(x = 'Feature Importance', y = '') +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(color = 'black', size = 9),
-        axis.text.y = element_text(color = 'black', size = 9),
-        text = element_text(color = 'black', size = 9),
-        panel.grid = element_blank(),
-        legend.position = 'none')
-featureImportance
-# Extension: https://crops.extension.iastate.edu/blog/meaghan-anderson/making-yield-estimates-corn-2022-edition
-yieldPredictions <- read.csv('analysis/RFpredictions5CV.csv') %>%
-  select(environment, plotNumber, predictedYield) %>%
-  rowwise() %>%
-  mutate(environment = str_replace(environment, ':0:', ' NI ') %>%
-           str_replace('8.6', 'FI') %>%
-           str_replace('4.3', 'LI') %>%
-           str_replace('4.5', 'LI') %>% 
-           str_replace_all(':', ' ')) %>%
-  mutate(environment = case_when(str_detect(environment, 'Lincoln')|str_detect(environment, 'Missouri Valley') ~ str_replace(environment, ' NI ', ' '), .default = environment)) %>%
-  rename(predictedYieldRF = predictedYield) %>%
-  full_join(hybrids, join_by(environment, plotNumber), keep = FALSE, suffix = c('', '')) %>%
-  filter(!is.na(predictedYieldRF)) %>%
-  select(environment, plotNumber, yieldPerAcre, predictedYieldRF, plantDensity, kernelRowNumber, kernelsPerRow, hundredKernelMass) %>%
-  mutate(predictedYieldExtension = (plantDensity*kernelRowNumber*kernelsPerRow)/((56*453.592*100)/hundredKernelMass))
-
-rfRegressionModel <- lm(predictedYieldRF ~ yieldPerAcre, data = yieldPredictions)
-rfIntercept <- rfRegressionModel$coefficients[1]
-rfSlope <- rfRegressionModel$coefficients[2]
-summary(rfRegressionModel)
-# Adjusted R2 from summary(model)
-rfR2 <-  0.1111
-
-extensionRegressionModel <- lm(predictedYieldExtension ~ yieldPerAcre, data = yieldPredictions)
-extensionIntercept <- extensionRegressionModel$coefficients[1]
-extensionSlope <- extensionRegressionModel$coefficients[2]
-summary(extensionRegressionModel)
-# Adjusted R2 from summary(model)
-extensionR2 <- 0.4564
-
-yieldPredictionsSubsample <- yieldPredictions %>%
-  filter(!is.na(yieldPerAcre)) %>%
-  filter(!is.na(predictedYieldExtension)) %>%
-  filter(!is.na(predictedYieldRF)) %>%
-  ungroup() %>%
-  dplyr::slice_sample(prop = 0.10) %>%
-  pivot_longer(c(predictedYieldExtension, predictedYieldRF), 
-               values_to = 'predictedYield', 
-               names_to = 'method', 
-               names_prefix = 'predictedYield') %>%
-  rowwise() %>%
-  mutate(method = case_when(method=='RF' ~ 'Random Forest',
-                            method=='Extension' ~ 'Expert'))
-
-yieldPredictionsPlot <- ggplot(yieldPredictionsSubsample, aes(yieldPerAcre, predictedYield, color = method)) + 
-  geom_point() + 
-  geom_abline(slope = extensionSlope, intercept = extensionIntercept, color = viridis_pal()(4)[1], linewidth = 1) +
-  geom_abline(slope = rfSlope, intercept = rfIntercept, color = viridis_pal()(4)[2], linewidth = 1) +
-  scale_color_manual(values = viridis_pal()(4)[1:2],
-                     labels = label_wrap(1)) + 
-  scale_x_continuous(limits = c(0, 300)) +
-  labs(x = 'Actual Yield (bushels/acre)', y = 'Predicted Yield (bushels/acre)', color = 'Method') + 
-  theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 9),
-        axis.text.y = element_text(color = 'black', size = 9),
-        legend.text = element_text(color = 'black', size = 9),
-        text = element_text(color = 'black', size = 9),
-        legend.position = 'top',
-        panel.grid = element_blank())
-yieldPredictionsPlot
+# rfFeatures <- read.csv('analysis/featureImportances5CV.csv')[2:5]
+# colnames(rfFeatures) <- c('plantDensity', 'kernelRowNumber', 'kernelsPerRow', 'hundredKernelMass')
+# 
+# rfFeaturesSummmary <- rfFeatures %>%
+#   summarise(plantDensity.mean = mean(plantDensity, na.rm = TRUE),
+#             plantDensity.sd = sd(plantDensity, na.rm = TRUE),
+#             kernelRowNumber.mean = mean(kernelRowNumber, na.rm = TRUE),
+#             kernelRowNumber.sd = sd(kernelRowNumber, na.rm = TRUE),
+#             kernelsPerRow.mean = mean(kernelsPerRow, na.rm = TRUE),
+#             kernelsPerRow.sd = sd(kernelsPerRow, na.rm = TRUE),
+#             hundredKernelMass.mean = mean(hundredKernelMass, na.rm = TRUE),
+#             hundredKernelMass.sd = sd(hundredKernelMass, na.rm = TRUE)) %>%
+#   pivot_longer(everything(), names_to = 'type', values_to = 'val') %>%
+#   rowwise() %>%
+#   mutate(phenotype = str_split_i(type, fixed('.'), 1),
+#          statistic = str_split_i(type, fixed('.'), 2)) %>%
+#   select(phenotype, statistic, val) %>%
+#   pivot_wider(id_cols = phenotype, names_from = statistic, values_from = val) %>%
+#   mutate(phenotypeLabel = c('Plant Density (plants/acre)', 'Kernel Row Number', 'Kernels Per Row', 'Hundred Kernel Mass (g)')) %>%
+#   mutate(phenotypeLabel = factor(phenotypeLabel,
+#                                  levels = c('Kernel Row Number', 'Plant Density (plants/acre)', 'Hundred Kernel Mass (g)', 
+#                                             'Kernels Per Row'), ordered = TRUE))
+# 
+# rfFeatures <- rfFeatures %>%
+#   pivot_longer(everything(), names_to = 'phenotype', values_to = 'val') %>%
+#   rowwise() %>%
+#   mutate(phenotypeLabel = case_when(phenotype=='plantDensity' ~ 'Plant Density',
+#                                     phenotype=='kernelRowNumber' ~ 'Kernel Row Number',
+#                                     phenotype=='kernelsPerRow' ~ 'Kernels Per Row*',
+#                                     phenotype=='hundredKernelMass' ~ 'Hundred Kernel Mass')) %>%
+#   mutate(phenotypeLabel = factor(phenotypeLabel, 
+#                                  levels = c('Kernel Row Number', 'Plant Density', 'Kernels Per Row*', 'Hundred Kernel Mass'), 
+#                                  ordered = TRUE))
+# 
+# featureImportance <- ggplot(rfFeatures, aes(val, phenotypeLabel)) +
+#   geom_boxplot(color = 'black', fill = nitrogenColors[3]) +
+#   # geom_text(aes(0.85, 'Hundred Kernel Mass (g)'), label = 'a', size = 3.88) +
+#   # geom_text(aes(0.85, 'Kernels Per Row*'), label = 'b', size = 3.88) +
+#   # geom_text(aes(0.85, 'Plant Density (plants/acre)'), label = 'c', size = 3.88) +
+#   # geom_text(aes(0.85, 'Kernel Row Number'), label = 'd', size = 3.88) +
+#   scale_y_discrete(labels = str_wrap(levels(rfFeatures$phenotypeLabel), 9)) +
+#   labs(x = 'Feature Importance', y = '') +
+#   theme_minimal() + 
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
+#         panel.grid = element_blank(),
+#         legend.position = 'none')
+# featureImportance
+# # Extension: https://crops.extension.iastate.edu/blog/meaghan-anderson/making-yield-estimates-corn-2022-edition
+# yieldPredictions <- read.csv('analysis/RFpredictions5CV.csv') %>%
+#   select(environment, plotNumber, predictedYield) %>%
+#   rowwise() %>%
+#   mutate(environment = str_replace(environment, ':0:', ' NI ') %>%
+#            str_replace('8.6', 'FI') %>%
+#            str_replace('4.3', 'LI') %>%
+#            str_replace('4.5', 'LI') %>% 
+#            str_replace_all(':', ' ')) %>%
+#   mutate(environment = case_when(str_detect(environment, 'Lincoln')|str_detect(environment, 'Missouri Valley') ~ str_replace(environment, ' NI ', ' '), .default = environment)) %>%
+#   rename(predictedYieldRF = predictedYield) %>%
+#   full_join(hybrids, join_by(environment, plotNumber), keep = FALSE, suffix = c('', '')) %>%
+#   filter(!is.na(predictedYieldRF)) %>%
+#   select(environment, plotNumber, yieldPerAcre, predictedYieldRF, plantDensity, kernelRowNumber, kernelsPerRow, hundredKernelMass) %>%
+#   mutate(predictedYieldExtension = (plantDensity*kernelRowNumber*kernelsPerRow)/((56*453.592*100)/hundredKernelMass))
+# 
+# rfRegressionModel <- lm(predictedYieldRF ~ yieldPerAcre, data = yieldPredictions)
+# rfIntercept <- rfRegressionModel$coefficients[1]
+# rfSlope <- rfRegressionModel$coefficients[2]
+# summary(rfRegressionModel)
+# # Adjusted R2 from summary(model)
+# rfR2 <-  0.1111
+# 
+# extensionRegressionModel <- lm(predictedYieldExtension ~ yieldPerAcre, data = yieldPredictions)
+# extensionIntercept <- extensionRegressionModel$coefficients[1]
+# extensionSlope <- extensionRegressionModel$coefficients[2]
+# summary(extensionRegressionModel)
+# # Adjusted R2 from summary(model)
+# extensionR2 <- 0.4564
+# 
+# yieldPredictionsSubsample <- yieldPredictions %>%
+#   filter(!is.na(yieldPerAcre)) %>%
+#   filter(!is.na(predictedYieldExtension)) %>%
+#   filter(!is.na(predictedYieldRF)) %>%
+#   ungroup() %>%
+#   dplyr::slice_sample(prop = 0.10) %>%
+#   pivot_longer(c(predictedYieldExtension, predictedYieldRF), 
+#                values_to = 'predictedYield', 
+#                names_to = 'method', 
+#                names_prefix = 'predictedYield') %>%
+#   rowwise() %>%
+#   mutate(method = case_when(method=='RF' ~ 'Random Forest',
+#                             method=='Extension' ~ 'Expert'))
+# 
+# yieldPredictionsPlot <- ggplot(yieldPredictionsSubsample, aes(yieldPerAcre, predictedYield, color = method)) + 
+#   geom_point() + 
+#   geom_abline(slope = extensionSlope, intercept = extensionIntercept, color = viridis_pal()(4)[1], linewidth = 1) +
+#   geom_abline(slope = rfSlope, intercept = rfIntercept, color = viridis_pal()(4)[2], linewidth = 1) +
+#   scale_color_manual(values = viridis_pal()(4)[1:2],
+#                      labels = label_wrap(1)) + 
+#   scale_x_continuous(limits = c(0, 300)) +
+#   labs(x = 'Actual Yield (bushels/acre)', y = 'Predicted Yield (bushels/acre)', color = 'Method') + 
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         legend.text = element_text(color = 'black', size = 9),
+#         text = element_text(color = 'black', size = 9),
+#         legend.position = 'top',
+#         panel.grid = element_blank())
+# yieldPredictionsPlot
 
 # rf <- plot_grid(featureImportance, yieldPredictionsPlot, nrow = 1)
 # ggsave('../rf.png', dpi = 1000, units = 'in')
@@ -2201,7 +2208,7 @@ meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre
     geom_point() +
     geom_hline(yintercept=1) +
     scale_color_viridis_c(direction = -1) +
-    guides(color = guide_colourbar(barwidth = 15,
+    guides(color = guide_colourbar(barwidth = 8,
                                 barheight = 1)) +
     labs(x = 'Hybrid Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = str_wrap('Mean Parent Release Year', 12)) + 
     theme_minimal() +
@@ -2212,13 +2219,13 @@ meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre
           legend.position = 'top',
           panel.grid = element_blank())
 meanParentPlot
-ggsave('../meanParentPlot.png', dpi = 1000, units = 'in')
+# ggsave('../meanParentPlot.png', dpi = 1000, units = 'in')
 # meanParentPlotLegend <- get_legend(meanParentPlot)
 # meanParentPlot <- ggplot(hybridsNOLNK22.pl, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = meanParentAge)) +
 #   geom_point() +
 #   geom_hline(yintercept=1) +
 #   scale_color_viridis_c(direction = -1) +
-#   labs(x = 'Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = str_wrap('Mean Parent Release Year', width = 1)) + 
+#   labs(x = 'Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = str_wrap('Mean Parent Release Year', width = 1)) +
 #   theme_minimal() +
 #   theme(axis.text.x = element_text(color = 'black', size = 9),
 #         axis.text.y = element_text(color = 'black', size = 9),
@@ -2239,7 +2246,7 @@ ggsave('../meanParentPlot.png', dpi = 1000, units = 'in')
 
 # fig1middle <- plot_grid(workflow, orderedBoxplots, nrow = 1, labels = c('B', 'C'), rel_widths = c(0.25, 0.75))
 fig1 <- plot_grid(experimentalDesign, orderedBoxplots, vp.plot, ncol = 1, labels = 'AUTO', rel_heights = c(0.29, 0.33, 0.37))
-ggsave('../fig1HighRes.svg', plot = fig1, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../fig1HighRes.svg', plot = fig1, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 # fig2left <- plot_grid(FWConceptualPlot, meanParentPlot, ncol = 1, labels = c('A', 'B'))
 # fig2right <- plot_grid(cxHeatmap, heatmap, ncol = 1, labels = c('C', 'D'))
@@ -2255,16 +2262,16 @@ fig2 <- plot_grid(fig2top, gca_vp.plot, nrow = 2, labels = c('', 'C'), rel_heigh
 # Variance partitioning for yield from yield components
 # vc_yield <- partitionVariance3(hybrids, 'yieldPerAcre.sp', 'Yield (bushels/acre)', '~ (1|plantDensity) + (1|kernelRowNumber) + (1|kernelsPerRow) + (1|hundredKernelMass)')
 
-fig3top <- plot_grid(nPlasticityCorYield, nPlasticityCorHKM,labels = c('A', 'B'), 
+fig3top <- plot_grid(nPlasticityCorYield, nPlasticityCorHKM, labels = c('A', 'B'), 
                      nrow = 1, rel_widths = c(0.5, 0.5))
 fig3top <- plot_grid(fig3top, nPlasticityCorLegend, ncol = 1, rel_heights = c(1, 0.075))
 # fig3middle <- plot_grid(nPlasticityAmesYield, nPlasticityAmesHKM, labels = c('C', 'D'), 
 #                         nrow = 1, rel_widths = c(0.5, 0.5))
 # fig3middle <- plot_grid(fig3middle, nPlasticityParentAgeLegend, ncol = 1, rel_heights = c(1, 0.15))
 
-fig3 <- plot_grid(fig3top, nPlasticityGenotypeLines, nrow = 2, labels = c('', 'C'), rel_heights = c(0.55, 0.9))
+fig3 <- plot_grid(fig3top, nPlasticityGenotypeLines, nrow = 2, labels = c('', 'C'), rel_heights = c(0.5, 0.5))
 fig3
-# ggsave('../fig3HighRes.png', plot = fig3, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../fig3HighRes.png', plot = fig3, width = 6.5, height = 6.75, units = 'in', dpi = 1000, bg = 'white')
 
 
 # # Test spFW
@@ -2315,8 +2322,8 @@ nResponseBlockRho <- cor(nResponseBlockWide$b1, nResponseBlockWide$b2, use = 'co
 nResponseCorr <- ggplot(nResponseBlockWide, aes(b1, b2)) +
   geom_point(color = viridis_pal()(4)[1]) + 
   labs(x = 'Nitrogen Plasticity - Block 1', y = 'Nitrogen Plasticity - Block 2', title = paste0('Spearman Rank Correlation: ', round(nResponseBlockRho, 4))) + 
-  scale_x_continuous(limits = c(-1.15, 1.75)) +
-  scale_y_continuous(limits = c(-1.15, 1.75)) +
+  scale_x_continuous(limits = c(0.6, 1.4)) +
+  scale_y_continuous(limits = c(0.6, 1.4)) +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9),
         axis.text.y = element_text(color = 'black', size = 9),
@@ -2660,7 +2667,7 @@ supplMeanParentPlots <- plot_grid(meanParentPlotLegend, meanParentPlotEarHeight,
                                                                  'I', 'J', 'K', 
                                                                  'L', 'M', 'N', 
                                                                  'O', 'P', 'Q'))
-# supplMeanParentPlots <- plot_grid(supplMeanParentPlots, , ncol = 1, rel_heights = c(1.5, 0.1))
+supplMeanParentPlots <- plot_grid(supplMeanParentPlots, , ncol = 1, rel_heights = c(1.5, 0.1))
 # ggsave('../figSMeanParentPlots.svg', plot = supplMeanParentPlots, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 # Model relationships: are they significant?
@@ -2780,7 +2787,7 @@ FWRankChangeRankDistanceHist <- FWRankChangeRankDistance %>%
         legend.position = 'none',
         panel.grid = element_blank())
 FWRankChangeRankDistanceHist
-ggsave('../RankChangeDistanceHistogram.png', FWRankChangeRankDistanceHist, width = 6.5, height = 4, dpi = 1000, bg = 'white')
+# ggsave('../RankChangeDistanceHistogram.png', FWRankChangeRankDistanceHist, width = 6.5, height = 4, dpi = 1000, bg = 'white')
 
 # How often does FW predict crossovers?
 FWRRankChanges <- abs(cxMatrix) %>%
@@ -2820,16 +2827,22 @@ percentRankChanges
 # tukey <- TukeyHSD(anova)
 
 # interaction importance supplemental figs
-interactionImportancePlantDensity <- plotInteractionImportanceGrid(trait = 'plantDensity', traitLabel = 'Plant Density', 
-                                                                      legendPosition = 'right', legendTextAngle = 0, xAxisLabelAngle = 90,
-                                                                      legendTitle = str_wrap('Normalized Interaction Importance Score', 20))
-interactionImportanceSLegend <- get_legend(interactionImportancePlantDensity)
+# interactionImportancePlantDensity <- plotInteractionImportanceGrid(trait = 'plantDensity', traitLabel = 'Plant Density', 
+                                                                      # legendPosition = 'right', legendTextAngle = 0, xAxisLabelAngle = 90,
+                                                                      # legendTitle = str_wrap('Normalized Interaction Importance Score', 20))
+# interactionImportanceSLegend <- get_legend(interactionImportancePlantDensity)
 # interactionImportancePlantDensity <- plotInteractionImportanceGrid(trait = 'plantDensity', traitLabel = 'Plant Density', 
 #                                                                    legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 # interactionImportancePlantDensity
 
 interactionImportanceGDDToAnthesis <- plotInteractionImportanceGrid(trait = 'GDDToAnthesis', traitLabel = 'GDD to Anthesis*', 
-                                                                      legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
+                                                                      legendPosition = 'right', legendTextAngle = 0, 
+                                                                      legendTitle = str_wrap('Normalized Interaction Importance Score', 20), 
+                                                                      xAxisLabelAngle = 90)
+interactionImportanceGDDToAnthesis
+interactionImportanceSLegend <- get_plot_component(interactionImportanceGDDToAnthesis, 'guide-box-right')
+interactionImportanceGDDToAnthesis <- plotInteractionImportanceGrid(trait = 'GDDToAnthesis', traitLabel = 'GDD to Anthesis*', 
+                                                                    legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
 interactionImportanceGDDToAnthesis
 interactionImportanceGDDToSilk <- plotInteractionImportanceGrid(trait = 'GDDToSilk', traitLabel = 'GDD to Silk*', 
                                                                       legendPosition = 'none', legendTextAngle = 90, legendTitle = '', xAxisLabelAngle = 90)
@@ -2892,8 +2905,8 @@ supplInteractionImportancePlots <- plot_grid(interactionImportanceSLegend, inter
 supplInteractionImportancePlots
 
 # supplInteractionImportancePlots <- plot_grid(supplInteractionImportancePlots, ncol = 1, rel_heights = c(1.8, 0.15))
-# ggsave('../figSInteractionImportancePlots.svg', plot = supplInteractionImportancePlots, width = 5.5, height = 11, 
-       # units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../figSInteractionImportancePlots.svg', plot = supplInteractionImportancePlots, width = 5.5, height = 11,
+#        units = 'in', dpi = 1000, bg = 'white')
 
 interactionImportanceDFWidespread <- sigCrossovers %>%
   filter(combineTestWeightScoreNormalized >= 0.10 | combineMoistureScoreNormalized >= 0.10) %>%
@@ -2974,7 +2987,7 @@ supplNPlasticityCorPlots <- plot_grid(supplNPlasticityCorLegend, nPlasticityCorE
                                       nPlasticityCorShelledCobWidth, nPlasticityCorKRN, nPlasticityCorEarLength, 
                                       nPlasticityCorKPE, nPlasticityCorEarWidth, nPlasticityCorKernelMass, 
                                       nrow = 4, ncol = 3, labels = c('', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'))
-ggsave('../figSNPlasticityCorPlots.png', plot = supplNPlasticityCorPlots, width = 8.25, height = 11, units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../figSNPlasticityCorPlots.png', plot = supplNPlasticityCorPlots, width = 8.25, height = 11, units = 'in', dpi = 1000, bg = 'white')
 
 nassYield <- read.csv('../NASSCornYield_2022_2023_IA_NE.csv') %>%
   rename(yield = Value,
@@ -3165,30 +3178,34 @@ for(var in vars)
 interactionImportanceConceptualScores <- sigCrossovers %>%
   filter(if_any(contains('yieldPerAcreScore.'), ~ .x == 2)) %>%
   # select(c(genotype1, genotype2, contains('yieldPerAcreScore'))) %>%
-  filter(genotype1=='LH195 X PHZ51' & genotype2=='PHP02 X PHJ89') %>%
+  filter(if_any(contains('yieldPerAcreScore.'), ~ .x == 1)) %>%
+  filter(genotype1=='PHK56 X 3IIH6' & genotype2=='PHP02 X PHJ89')%>%
   # select(contains('yieldPerAcreScore.E11'))
-  select(yieldPerAcreSigDiff.E11, yieldPerAcreSigDiff.E26, yieldPerAcreSigDiff.E27, yieldPerAcreSigDiff.E28)
+  select(genotype1, genotype2, yieldPerAcreSigDiff.E7, yieldPerAcreSigDiff.E15, yieldPerAcreSigDiff.E27, 
+         yieldPerAcreSigDiff.E1, yieldPerAcreRank.E7.G1, yieldPerAcreRank.E7.G2, yieldPerAcreRank.E27.G1,
+         yieldPerAcreRank.E27.G2, yieldPerAcreRank.E15.G1, yieldPerAcreRank.E15.G2, yieldPerAcreRank.E1.G1, 
+         yieldPerAcreRank.E1.G2, yieldPerAcreScore.E7.27, yieldPerAcreScore.E15.27, yieldPerAcreScore.E1.27)
 View(interactionImportanceConceptualScores)
 
-scoreZeroData <- filter(hybrids, (genotype %in% c('PHP02 X PHJ89', 'LH195 X PHZ51')) & 
-                      (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:High'))) %>%
-  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:High')))
-scoreZeroEnvs <- filter(hybrids, (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:High'))) %>%
-  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:High')))
+scoreZeroData <- filter(hybrids, (genotype %in% c('PHK56 X 3IIH6', 'PHP02 X PHJ89')) & 
+                      (environment %in% c('2023 Crawfordsville Low', '2022 Ames High'))) %>%
+  mutate(environment = factor(environment, levels = c('2023 Crawfordsville Low', '2022 Ames High')))
+scoreZeroEnvs <- filter(hybrids, (environment %in% c('2023 Crawfordsville Low', '2022 Ames High'))) %>%
+  mutate(environment = factor(environment, levels = c('2023 Crawfordsville Low', '2022 Ames High')))
 
 scoreZeroPlot <- ggplot(scoreZeroData, aes(environment, yieldPerAcre.sp, 
                                            color = genotype, 
                                            group = genotype)) + 
   geom_point() + 
   geom_smooth(method = 'lm', se = FALSE) +
-  geom_violin(aes(environment, yieldPerAcre.sp, group = environment), 
+  geom_boxplot(aes(environment, yieldPerAcre.sp, group = environment), 
               data = scoreZeroEnvs, 
               color = 'black', fill = NA) + 
-  annotate('text', x = '2022:North Platte:0:High', y = 190, label = '*', size = 9, color = 'black') +
+  annotate('text', x = '2023 Crawfordsville Low', y = 200, label = '*', size = 9, color = 'black') +
   scale_color_manual(values = viridis_pal()(4)[1:2]) +
-  scale_x_discrete(breaks = c('2022:North Platte:0:High', '2023:Crawfordsville:0:High'),
-                   labels = c(str_wrap('2022 North Platte NI High', 16), str_wrap('2023 Crawfordsville High', 16))) +
-  scale_y_continuous(limits = c(50, 200)) +
+  scale_x_discrete(breaks = c('2023 Crawfordsville Low', '2022 Ames High'),
+                   labels = c(str_wrap('2023 Crawfordsville Low', 16), str_wrap('2022 Ames High', 16))) +
+  scale_y_continuous(limits = c(10, 200)) +
   labs(x = 'Environment', y = 'Yield (bushels/acre)', color = 'Genotype', 
        title = 'Interaction Importance Score = 0') +
   theme_minimal() +
@@ -3200,23 +3217,23 @@ scoreZeroPlot <- ggplot(scoreZeroData, aes(environment, yieldPerAcre.sp,
         panel.grid = element_blank())
 scoreZeroPlot
 
-scoreOneData <- filter(hybrids, (genotype %in% c('PHP02 X PHJ89', 'LH195 X PHZ51')) & 
-                          (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium'))) %>%
-  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium')))
-scoreOneEnvs <- filter(hybrids, (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium'))) %>%
-  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium')))
+scoreOneData <- filter(hybrids, (genotype %in% c('PHK56 X 3IIH6', 'PHP02 X PHJ89')) & 
+                          (environment %in% c('2023 Crawfordsville Low', '2022 North Platte LI Low'))) %>%
+  mutate(environment = factor(environment, levels = c('2023 Crawfordsville Low', '2022 North Platte LI Low')))
+scoreOneEnvs <- filter(hybrids, (environment %in% c('2023 Crawfordsville Low', '2022 North Platte LI Low'))) %>%
+  mutate(environment = factor(environment, levels = c('2023 Crawfordsville Low', '2022 North Platte LI Low')))
 
 scoreOnePlot <- ggplot(scoreOneData, aes(environment, yieldPerAcre.sp, color = genotype, group = genotype)) + 
   geom_point() + 
   geom_smooth(method = 'lm', se = FALSE) +
-  geom_violin(aes(environment, yieldPerAcre.sp, group = environment), 
+  geom_boxplot(aes(environment, yieldPerAcre.sp, group = environment), 
               data = scoreOneEnvs, 
               color = 'black', fill = NA) + 
-  annotate('text', x = '2022:North Platte:0:High', y = 190, label = '*', size = 9, color = 'black') +
+  annotate('text', x = '2023 Crawfordsville Low', y = 200, label = '*', size = 9, color = 'black') +
   scale_color_manual(values = viridis_pal()(4)[1:2]) +
-  scale_x_discrete(breaks = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Medium'),
-                   labels = c(str_wrap('2022 North Platte NI High', 16), str_wrap('2023 Crawfordsville Medium', 16))) +
-  scale_y_continuous(limits = c(50, 200)) +
+  scale_x_discrete(breaks = c('2023 Crawfordsville Low', '2022 North Platte LI Low'),
+                   labels = c(str_wrap('2023 Crawfordsville Low', 16), str_wrap('2022 North Platte LI Low', 16))) +
+  scale_y_continuous(limits = c(10, 200)) +
   labs(x = 'Environment', y = 'Yield (bushels/acre)', color = 'Genotype', 
        title = 'Interaction Importance Score = 1') +
   theme_minimal() +
@@ -3228,24 +3245,24 @@ scoreOnePlot <- ggplot(scoreOneData, aes(environment, yieldPerAcre.sp, color = g
         panel.grid = element_blank())
 scoreOnePlot
 
-scoreTwoData <- filter(hybrids, (genotype %in% c('PHP02 X PHJ89', 'LH195 X PHZ51')) & 
-                         (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low'))) %>%
-  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low')))
-scoreTwoEnvs <- filter(hybrids, (environment %in% c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low'))) %>%
-  mutate(environment = factor(environment, levels = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low')))
+scoreTwoData <- filter(hybrids, (genotype %in% c('PHK56 X 3IIH6', 'PHP02 X PHJ89')) & 
+                         (environment %in% c('2023 Crawfordsville Low', '2022 Lincoln High'))) %>%
+  mutate(environment = factor(environment, levels = c('2023 Crawfordsville Low', '2022 Lincoln High')))
+scoreTwoEnvs <- filter(hybrids, (environment %in% c('2023 Crawfordsville Low', '2022 Lincoln High'))) %>%
+  mutate(environment = factor(environment, levels = c('2023 Crawfordsville Low', '2022 Lincoln High')))
 
 scoreTwoPlot <- ggplot(scoreTwoData, aes(environment, yieldPerAcre.sp, color = genotype, group = genotype)) + 
   geom_point() + 
   geom_smooth(method = 'lm', se = FALSE) +
-  geom_violin(aes(environment, yieldPerAcre.sp, group = environment), 
+  geom_boxplot(aes(environment, yieldPerAcre.sp, group = environment), 
               data = scoreTwoEnvs, 
               color = 'black', fill = NA) + 
-  annotate('text', x = '2022:North Platte:0:High', y = 190, label = '*', size = 9, color = 'black') +
-  annotate('text', x = '2023:Crawfordsville:0:Low', y = 190, label = '*', size = 9, color = 'black') +
+  annotate('text', x = '2023 Crawfordsville Low', y = 200, label = '*', size = 9, color = 'black') +
+  annotate('text', x = '2022 Lincoln High', y = 200, label = '*', size = 9, color = 'black') +
   scale_color_manual(values = viridis_pal()(4)[1:2]) +
-  scale_x_discrete(breaks = c('2022:North Platte:0:High', '2023:Crawfordsville:0:Low'),
-                   labels = c(str_wrap('2022 North Platte NI High', 16), str_wrap('2023 Crawfordsville Low', 16))) +
-  scale_y_continuous(limits = c(50, 200)) +
+  scale_x_discrete(breaks = c('2023 Crawfordsville Low', '2022 Lincoln High'),
+                   labels = c(str_wrap('2023 Crawfordsville Low', 16), str_wrap('2022 Lincoln High', 16))) +
+  scale_y_continuous(limits = c(10, 200)) +
   labs(x = 'Environment', y = 'Yield (bushels/acre)', color = 'Genotype', 
        title = 'Interaction Importance Score = 2') +
   theme_minimal() +
@@ -3258,15 +3275,15 @@ scoreTwoPlot <- ggplot(scoreTwoData, aes(environment, yieldPerAcre.sp, color = g
 scoreTwoPlot
 
 interactionImportanceConceptualFigure <- plot_grid(scoreZeroPlot, scoreOnePlot, scoreTwoPlot, ncol = 1)
-ggsave('../interactionImportanceConceptual.png', width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
+# ggsave('../interactionImportanceConceptual.png', width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 fig4left <- plot_grid(cxHeatmap, heatmap, ncol = 1, labels = c('A', 'C'))
 fig4 <- plot_grid(fig4left, interactionImportanceConceptualFigure, nrow = 1, labels = c('', 'B'))
 fig4
-ggsave('../fig4HighRes.png', width = 6.5, height = 8, units = 'in', dpi = 1000, bg = 'white')
+ggsave('../fig4HighRes.svg', width = 6.5, height = 8, units = 'in', dpi = 1000, bg = 'white')
 
 maxInteractionImportanceScore <- sigCrossovers %>%
-  filter(genotype1=='LH185 X W606S' & genotype2=='L 289 X OS426') %>%
+  filter(genotype1=="2369 X LH123HT" & genotype2=="K201 X OS426") %>%
   select(c(genotype1, genotype2, contains('yieldPerAcreRC')))
 
 noImportantInteractions <- sigCrossovers %>%
@@ -3275,12 +3292,12 @@ noImportantInteractions <- sigCrossovers %>%
 lowInteractionImportanceScores <- sigCrossovers %>%
   filter(yieldPerAcreScoreNormalized <= 0.05)
 
-mlcasbottom <- plot_grid(meanParentPlot, featureImportance, 
-                         yieldPredictionsPlot, percentMeanPlotExtremePlasticity, 
-                         nrow = 2, labels = c('B', 'C', 'D', 'E'), rel_heights = c(0.4, 0.6))
-mlcas <- plot_grid(experimentalDesign, mlcasbottom, nrow = 2, labels = c('A', ''), rel_heights = c(0.4, 0.6))
-mlcas
-ggsave('../mlcas.svg', width = 6.5, height = 7.25, units = 'in', dpi = 1000, bg = 'white')
+# mlcasbottom <- plot_grid(meanParentPlot, featureImportance, 
+#                          yieldPredictionsPlot, percentMeanPlotExtremePlasticity, 
+#                          nrow = 2, labels = c('B', 'C', 'D', 'E'), rel_heights = c(0.4, 0.6))
+# mlcas <- plot_grid(experimentalDesign, mlcasbottom, nrow = 2, labels = c('A', ''), rel_heights = c(0.4, 0.6))
+# mlcas
+# ggsave('../mlcas.svg', width = 6.5, height = 7.25, units = 'in', dpi = 1000, bg = 'white')
 
 amesNResponseLAH <- hybrids %>%
   filter(genotype %in% c('LH195 X LH185', 'PHB47 X PHJ89', 'F42 X MO17')) %>%
@@ -3329,5 +3346,5 @@ proposalMPPlot <- ggplot(proposalMPPData, aes(yieldPerAcre.sp.mu, yieldPerAcre.s
 proposalMPPlot
 
 
-proposal <- plot_grid(amesNPlasticityGenotypeLines, proposalMPPlot, ncol = 1, labels = 'AUTO')
-ggsave('../proposal.svg', width = 3.5, height = 7, units = 'in', dpi = 1000, bg = 'white')
+# proposal <- plot_grid(amesNPlasticityGenotypeLines, proposalMPPlot, ncol = 1, labels = 'AUTO')
+# ggsave('../proposal.svg', width = 3.5, height = 7, units = 'in', dpi = 1000, bg = 'white')
