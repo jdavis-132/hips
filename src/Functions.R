@@ -284,7 +284,7 @@ getNitrogenPlasticityByLocation <- function(data, response, locations)
     #   mutate(location = currlocation, 
     #          '{response.out}':= Init1) %>%
     #   select(!Init1)
-    pl <- estimatePlasticity(location.df, response, 'nitrogenTreatment') %>%
+    pl <- estimatePlasticity3(location.df, response, 'nitrogenTreatment') %>%
       mutate(location = currlocation)
     response.df <- bind_rows(response.df, pl)
   }
@@ -327,7 +327,7 @@ estimatePlasticity2 <- function(data, trait, environment, genotype)
               '{trait}.mu' := mu + max(g_i, na.rm = TRUE))
   return(df)
 }
-
+#spFW
 estimatePlasticity3 <- function(data, trait, environment, genotype, seed = SEED)
 {
   df.compute <- data %>%

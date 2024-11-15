@@ -1448,6 +1448,8 @@ for(i in 2:length(phenotypes))
                             suffix = c('', ''),
                             keep = FALSE)
 }
+write.csv(nResponseBlock.pl, 'analysis/nitrogenResponseBlockPlasticity.csv', quote = FALSE, row.names = FALSE)
+nResponseBlock.pl <- read.csv('analysis/nitrogenResponseBlockPlasticity.csv')
 
 nResponseBlockCorrByLocYear <- nResponseBlock.pl %>%
   pivot_wider(id_cols = c(genotype, locationYear), names_from = blockSet, names_prefix = 'b', 
@@ -2299,6 +2301,8 @@ block2 <- hybridsNOLNK22 %>%
   filter((block %% 2)!=0)
 block2.pl <- estimatePlasticity3(block2, 'yieldPerAcre.sp', 'environment', 'genotype')
 block.pl <- full_join(block1.pl, block2.pl, join_by(genotype), keep = FALSE, suffix = c('.1', '.2'))
+write.csv(block.pl, 'analysis/overallYieldBlockPlasticity.csv', quote = FALSE, row.names = FALSE)
+block.pl <- read.csv('analysis/overallYieldBlockPlasticity.csv')
 
 blockRho <- cor(block.pl$yieldPerAcre.sp.b.1, block.pl$yieldPerAcre.sp.b.2, use = 'complete.obs', method = 'spearman')
 
