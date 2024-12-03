@@ -456,6 +456,9 @@ orderedBoxplots <- hybrids %>%
           panel.grid = element_blank(),
           legend.position = 'none')
 orderedBoxplots
+
+hybridsNOLNK22 <- filter(hybrids, !(location=='Lincoln' & year=='2022'))
+hybridsNOLNK22.pl <- read_csv('analysis/hybridsNOLNK22Plasticity.csv')
 # orderedViolins <- hybrids %>%
 #   rowwise() %>%
 #   mutate(environment = factor(environment, levels = orderedEnvironments$environment),
@@ -527,6 +530,27 @@ top10PercentOverallPerformance <- hybrids %>%
   rowwise() %>%
   mutate(top10Percent = (genotype %in% top10PercentOverallGenotypes), 
          environment = factor(environment, levels = orderedEnvironments$environment))
+
+top10PercentOverallNonCommercial <- top10PercentOverallPerformance %>%
+  filter(!str_detect(genotype, 'COMMERCIAL HYBRID')) %>%
+  rowwise() %>%
+  mutate(genotype = str_to_upper(genotype),
+         earParent = str_split_i(genotype, ' X ', 1),
+         pollenParent = str_split_i(genotype, ' X ', 2)) %>%
+  left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(earParentAge = age) %>%
+  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(pollenParentAge = age) %>%
+  rowwise() %>%
+  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
+         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
+         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+
+top10PercentPlasticity <- hybridsNOLNK22.pl %>%
+  filter(genotype %in% top10PercentOverallGenotypes) %>%
+  select(genotype, yieldPerAcre.sp.b)
 
 top10PercentOverallAnova <- aov(yieldPerAcre.sp ~ factor(top10Percent)*environment, data = top10PercentOverallPerformance)
 top10PercentOverallTukey <- TukeyHSD(top10PercentOverallAnova)
@@ -616,7 +640,7 @@ hybrids <- hybrids %>%
 # meanParentAge_vp.plot
 # Okay, let's run the plasticity without LNK 2022
 # Estimate FW plasticity across all environments where phenotype was observed
-hybridsNOLNK22 <- filter(hybrids, !(location=='Lincoln' & year=='2022'))
+
 # hybridsNOLNK22.pl <- estimatePlasticity3(hybridsNOLNK22, trait = paste0(phenotypes[1], '.sp'), environment = 'environment', genotype = 'genotype')
 # 
 # for(i in 2:length(phenotypes))
@@ -665,7 +689,7 @@ hybridsNOLNK22 <- filter(hybrids, !(location=='Lincoln' & year=='2022'))
 #   mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
 # 
 # write.csv(hybridsNOLNK22.pl, 'analysis/hybridsNOLNK22Plasticity.csv', row.names = FALSE, quote = FALSE)
-hybridsNOLNK22.pl <- read_csv('analysis/hybridsNOLNK22Plasticity.csv')
+
 
 for(i in 1:length(phenotypes))
 {
@@ -1467,7 +1491,7 @@ nResponseCorSummary <- corDataYield %>%
   mutate(a1 = nPlasticityCor.a - nPlasticityCor.1,
          a2 = nPlasticityCor.a - nPlasticityCor.2) %>%
   arrange(nPlasticityCor.a)
-# nResponseCorSummary <- nResponseCorSummary[c(1, 3, 5, 7, 9, 11), ]
+nResponseCorSummary <- nResponseCorSummary[c(1, 3, 5), ]
 
 
 # for(i in 6)
@@ -1620,76 +1644,109 @@ heatmap <- plotInteractionImportanceGrid(trait = 'yieldPerAcre',
                                          legendTextAngle = 90)
 heatmap
 
-sigCrossoversGenotypeLevel <- sigCrossovers %>%
-  group_by(genotype1) %>%
-  summarise(yieldTotalNormalizedScore = sum(yieldPerAcreScoreNormalized, na.rm = TRUE)) %>%
-  left_join(yieldBLUPS, join_by(genotype1==genotype), keep = FALSE, suffix = c('', '')) %>%
-  select(genotype1, yieldTotalNormalizedScore, rankOrder)
+# sigCrossoversGenotypeLevel <- sigCrossovers %>%
+#   group_by(genotype1) %>%
+#   summarise(yieldTotalNormalizedScore = sum(yieldPerAcreScoreNormalized, na.rm = TRUE)) %>%
+#   left_join(yieldBLUPS, join_by(genotype1==genotype), keep = FALSE, suffix = c('', '')) %>%
+#   select(genotype1, yieldTotalNormalizedScore, rankOrder)
+
+upperHalfHybrids <- 
 
 freqCrossoverHybrids <- c('PHK76 X LH82', 'PHP02 X PHJ89', 'LH195 X PHM49', 'PHK56 X W606S', 'PHP02 X PHG47')
 
-freqCrossoverHybridData1LNK <- sigCrossovers %>%
-  filter((genotype1 %in% freqCrossoverHybrids)) %>%
-  select(genotype1, yieldPerAcreRank.E7.G1, yieldPerAcreRank.E8.G1, yieldPerAcreRank.E9.G1) %>%
-  rowwise() %>%
-  mutate(lnkRank = mean(c_across(c(yieldPerAcreRank.E7.G1, yieldPerAcreRank.E8.G1, yieldPerAcreRank.E9.G1)), na.rm = TRUE)) %>%
-  group_by(genotype1) %>%
-  summarise(lnkRank = mean(lnkRank, na.rm = TRUE))
+# freqCrossoverHybridData1LNK <- sigCrossovers %>%
+#   filter((genotype1 %in% freqCrossoverHybrids)) %>%
+#   select(genotype1, yieldPerAcreRank.E7.G1, yieldPerAcreRank.E8.G1, yieldPerAcreRank.E9.G1) %>%
+#   rowwise() %>%
+#   mutate(lnkRank = mean(c_across(c(yieldPerAcreRank.E7.G1, yieldPerAcreRank.E8.G1, yieldPerAcreRank.E9.G1)), na.rm = TRUE)) %>%
+#   group_by(genotype1) %>%
+#   summarise(lnkRank = mean(lnkRank, na.rm = TRUE))
+# 
+# freqCrossoverHybridData2LNK <- sigCrossovers %>%
+#   filter((genotype2 %in% freqCrossoverHybrids)) %>%
+#   select(genotype2, yieldPerAcreRank.E7.G2, yieldPerAcreRank.E8.G2, yieldPerAcreRank.E9.G2) %>%
+#   rowwise() %>%
+#   mutate(lnkRank = mean(c_across(c(yieldPerAcreRank.E7.G2, yieldPerAcreRank.E8.G2, yieldPerAcreRank.E9.G2)), na.rm = TRUE)) %>%
+#   group_by(genotype2) %>%
+#   summarise(lnkRank = mean(lnkRank, na.rm = TRUE))
+# 
+# freqCrossoverHybridData1 <- sigCrossovers %>%
+#   filter((genotype1 %in% freqCrossoverHybrids)) %>%
+#   select(c(genotype1, contains('yieldPerAcreRank'))) %>%
+#   select(c(genotype1, contains('.G1'))) %>%
+#   select(!c(yieldPerAcreRank.E7.G1, yieldPerAcreRank.E8.G1, yieldPerAcreRank.E9.G1)) %>%
+#   rowwise() %>%
+#   mutate(mean = mean(c_across(contains('yieldPerAcreRank')), na.rm = TRUE)) %>%
+#   group_by(genotype1) %>%
+#   summarise(mean = mean(mean, na.rm = TRUE)) %>%
+#   full_join(freqCrossoverHybridData1LNK, join_by(genotype1))
+# 
+# freqCrossoverHybridData2 <- sigCrossovers %>%
+#   filter((genotype2 %in% freqCrossoverHybrids)) %>%
+#   select(c(genotype2, contains('yieldPerAcreRank'))) %>%
+#   select(c(genotype2, contains('.G2'))) %>%
+#   select(!c(yieldPerAcreRank.E7.G2, yieldPerAcreRank.E8.G2, yieldPerAcreRank.E9.G2)) %>%
+#   rowwise() %>%
+#   mutate(mean = mean(c_across(contains('yieldPerAcreRank')), na.rm = TRUE)) %>%
+#   group_by(genotype2) %>%
+#   summarise(mean = mean(mean, na.rm = TRUE)) %>%
+#   full_join(freqCrossoverHybridData2LNK, join_by(genotype2))
 
-freqCrossoverHybridData2LNK <- sigCrossovers %>%
-  filter((genotype2 %in% freqCrossoverHybrids)) %>%
-  select(genotype2, yieldPerAcreRank.E7.G2, yieldPerAcreRank.E8.G2, yieldPerAcreRank.E9.G2) %>%
-  rowwise() %>%
-  mutate(lnkRank = mean(c_across(c(yieldPerAcreRank.E7.G2, yieldPerAcreRank.E8.G2, yieldPerAcreRank.E9.G2)), na.rm = TRUE)) %>%
-  group_by(genotype2) %>%
-  summarise(lnkRank = mean(lnkRank, na.rm = TRUE))
+# top72Percent <- yieldBLUPS %>%
+#   arrange(rankOrder)
+# top72Percent <- top72Percent$genotype[33:117]
 
-freqCrossoverHybridData1 <- sigCrossovers %>%
-  filter((genotype1 %in% freqCrossoverHybrids)) %>%
-  select(c(genotype1, contains('yieldPerAcreRank'))) %>%
-  select(c(genotype1, contains('.G1'))) %>%
-  select(!c(yieldPerAcreRank.E7.G1, yieldPerAcreRank.E8.G1, yieldPerAcreRank.E9.G1)) %>%
-  rowwise() %>%
-  mutate(mean = mean(c_across(contains('yieldPerAcreRank')), na.rm = TRUE)) %>%
-  group_by(genotype1) %>%
-  summarise(mean = mean(mean, na.rm = TRUE)) %>%
-  full_join(freqCrossoverHybridData1LNK, join_by(genotype1))
-
-freqCrossoverHybridData2 <- sigCrossovers %>%
-  filter((genotype2 %in% freqCrossoverHybrids)) %>%
-  select(c(genotype2, contains('yieldPerAcreRank'))) %>%
-  select(c(genotype2, contains('.G2'))) %>%
-  select(!c(yieldPerAcreRank.E7.G2, yieldPerAcreRank.E8.G2, yieldPerAcreRank.E9.G2)) %>%
-  rowwise() %>%
-  mutate(mean = mean(c_across(contains('yieldPerAcreRank')), na.rm = TRUE)) %>%
-  group_by(genotype2) %>%
-  summarise(mean = mean(mean, na.rm = TRUE)) %>%
-  full_join(freqCrossoverHybridData2LNK, join_by(genotype2))
-
-top72Percent <- yieldBLUPS %>%
+top50Percent <- yieldBLUPS %>% 
   arrange(rankOrder)
-top72Percent <- top72Percent$genotype[33:117]
+top50Percent <- top50Percent$genotype[60:117]
+
+bottom50Percent <- yieldBLUPS %>% 
+  arrange(rankOrder)
+bottom50Percent <- bottom50Percent$genotype[1:59]
 
 freqCrossoverHybridDF <- sigCrossovers %>%
-  filter(((genotype1 %in% freqCrossoverHybrids) & (genotype2 %in% top72Percent))|
-           ((genotype1 %in% top72Percent)|(genotype2 %in% freqCrossoverHybrids))) %>%
-  select(!yieldPerAcreScoreNormalized) %>%
-  rowwise() %>%
-  mutate(across(contains('yieldPerAcreScore'), ~case_when(.>0~1))) %>%
-  mutate(nonZeroEnvPairs = sum(c_across(contains('yieldPerAcreScore')), na.rm = TRUE)) %>%
-  mutate(percentNonZeroEnvPairs = (nonZeroEnvPairs/(yieldPerAcreComparedEnvs*(yieldPerAcreComparedEnvs - 1)))*100,
-         freqCrossoverHybrid1 = case_when(genotype1 %in% freqCrossoverHybrids ~ genotype1, 
-                                          .default = genotype2),
-         freqCrossoverHybrid2 = case_when((genotype1 %in%freqCrossoverHybrids) & (genotype2 %in% freqCrossoverHybrids) ~ genotype2)) %>%
-  select(genotype1, genotype2, freqCrossoverHybrid1, freqCrossoverHybrid2, nonZeroEnvPairs, percentNonZeroEnvPairs) %>%
-  arrange(freqCrossoverHybrid1, freqCrossoverHybrid2, nonZeroEnvPairs)
+  filter(((genotype1 %in% top50Percent) & (genotype2 %in% bottom50Percent)) |
+           ((genotype2 %in% top50Percent) & (genotype1 %in% bottom50Percent))) %>%
+    select(!yieldPerAcreScoreNormalized) %>%
+    rowwise() %>%
+    mutate(across(contains('yieldPerAcreScore'), ~case_when(.>0~1))) %>%
+    mutate(nonZeroEnvPairs = sum(c_across(contains('yieldPerAcreScore')), na.rm = TRUE)) %>%
+    mutate(percentNonZeroEnvPairs = (nonZeroEnvPairs/(yieldPerAcreComparedEnvs*(yieldPerAcreComparedEnvs - 1)))*100,
+           lowerRankHybrid = case_when(genotype1 %in% bottom50Percent ~ genotype1,
+                                            .default = genotype2)) %>%
+    select(genotype1, genotype2, lowerRankHybrid, nonZeroEnvPairs, percentNonZeroEnvPairs) %>%
+    arrange(lowerRankHybrid, nonZeroEnvPairs)
+freqCrossoverHybridDF <- filter(freqCrossoverHybridDF, nonZeroEnvPairs > 0)
 
-phk76lh82 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHK76 X LH82"|freqCrossoverHybrid2=="PHK76 X LH82")
-php02phj89 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHP02 X PHJ89"|freqCrossoverHybrid2=="PHP02 X PHJ89")
-lh195phm49 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="LH195 X PHM49"|freqCrossoverHybrid2=="LH195 X PHM49")
-phk56w606s <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHK56 X W606S"|freqCrossoverHybrid2=="PHK56 X W606S")
-php02phg47 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHK56 X W606S"|freqCrossoverHybrid2=="PHK56 X W606S")
-# ggsave('../interactionImportance.png', dpi = 1000)
+numHybridsNonZeroByLowerRankHybrid <- freqCrossoverHybridDF %>%
+  group_by(lowerRankHybrid) %>%
+  summarise(nonZeroHybrids = n(), 
+            maxNonZeroEnvPairs = max(nonZeroEnvPairs, na.rm = TRUE),
+            minNonZeroEnvPairs = min(nonZeroEnvPairs, na.rm = TRUE), 
+            maxPercentNonZeroEnvPairs = max(percentNonZeroEnvPairs, na.rm = TRUE),
+            minPercentNonZeroEnvPairs = min(percentNonZeroEnvPairs, na.rm = TRUE)) %>%
+  filter(nonZeroHybrids >= 29) %>%
+  left_join(yieldBLUPS, join_by(lowerRankHybrid==genotype))
+# freqCrossoverHybridDF <- sigCrossovers %>%
+#   filter(((genotype1 %in% freqCrossoverHybrids) & (genotype2 %in% top72Percent))|
+#            ((genotype1 %in% top72Percent)|(genotype2 %in% freqCrossoverHybrids))) %>%
+#   select(!yieldPerAcreScoreNormalized) %>%
+#   rowwise() %>%
+#   mutate(across(contains('yieldPerAcreScore'), ~case_when(.>0~1))) %>%
+#   mutate(nonZeroEnvPairs = sum(c_across(contains('yieldPerAcreScore')), na.rm = TRUE)) %>%
+#   mutate(percentNonZeroEnvPairs = (nonZeroEnvPairs/(yieldPerAcreComparedEnvs*(yieldPerAcreComparedEnvs - 1)))*100,
+#          freqCrossoverHybrid1 = case_when(genotype1 %in% freqCrossoverHybrids ~ genotype1, 
+#                                           .default = genotype2),
+#          freqCrossoverHybrid2 = case_when((genotype1 %in%freqCrossoverHybrids) & (genotype2 %in% freqCrossoverHybrids) ~ genotype2)) %>%
+#   select(genotype1, genotype2, freqCrossoverHybrid1, freqCrossoverHybrid2, nonZeroEnvPairs, percentNonZeroEnvPairs) %>%
+#   arrange(freqCrossoverHybrid1, freqCrossoverHybrid2, nonZeroEnvPairs)
+# 
+# phk76lh82 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHK76 X LH82"|freqCrossoverHybrid2=="PHK76 X LH82")
+# php02phj89 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHP02 X PHJ89"|freqCrossoverHybrid2=="PHP02 X PHJ89")
+# lh195phm49 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="LH195 X PHM49"|freqCrossoverHybrid2=="LH195 X PHM49")
+# phk56w606s <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHK56 X W606S"|freqCrossoverHybrid2=="PHK56 X W606S")
+# php02phg47 <- filter(freqCrossoverHybridDF, freqCrossoverHybrid1=="PHK56 X W606S"|freqCrossoverHybrid2=="PHK56 X W606S")
+# # ggsave('../interactionImportance.png', dpi = 1000)
 
 highPlasticityGenotype <- hybridsNOLNK22.pl %>%
   arrange(yieldPerAcre.sp.b)
@@ -1866,29 +1923,31 @@ percentEnvMeanDataPlotLevel <- hybridsNOLNK22 %>%
   group_by(environment) %>%
   mutate(environmentMean = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
   rowwise() %>%
-  mutate(percentEnvironmentYield = (yieldPerAcre.sp/environmentMean)*100)
+  mutate(percentEnvironmentYield = (yieldPerAcre.sp/environmentMean)*100) %>%
+  rowwise() %>%
+  mutate(genotype = str_to_upper(genotype),
+         earParent = str_split_i(genotype, ' X ', 1),
+         pollenParent = str_split_i(genotype, ' X ', 2)) %>%
+  left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(earParentAge = age) %>%
+  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(pollenParentAge = age) %>%
+  rowwise() %>%
+  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
+         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
+         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
 # Not really what we want - uses mean(percentEnvironmentMean) which is always 100 as x-axis in the regression
 # percentEnvMean.pl <- estimatePlasticity3(percentEnvMeanDataPlotLevel, 'percentEnvironmentYield', 'environment', 'genotype')
-hybridSummary <- hybridsNOLNK22 %>% 
+hybridSummary <- percentEnvMeanDataPlotLevel %>% 
   group_by(genotype) %>% 
-  summarise(meanYield = mean(yieldPerAcre.sp, na.rm = TRUE))
-# what if we try lm 
-percentEnvMeanModel <- lm(percentEnvironmentYield ~ genotype + genotype*environmentMean, 
-                          data = percentEnvMeanDataPlotLevel)
-percentEnvMu <- percentEnvMeanModel$coefficients['(Intercept)']
-environmentMeanEffect <- percentEnvMeanModel$coefficients['environmentMean']
-percentEnvMean.pl <- percentEnvMeanModel$coefficients %>%
-  as_tibble(rownames = 'genotype') %>%
-  rowwise() %>%
-  mutate(valueID = case_when(str_detect(genotype, ':environmentMean') ~ 'slope', .default = 'intercept'), 
-         genotype = str_remove(genotype, 'genotype') %>%
-           str_remove(':environmentMean')) %>%
-  pivot_wider(id_cols = genotype, 
-              names_from = valueID, 
-              values_from = value) %>%
-  filter(!(genotype %in% c('(Intercept)', 'environmentMean'))) %>%
-  mutate(expectedValue = intercept + percentEnvMu, 
-         b = slope + environmentMeanEffect + 1) %>%
+  summarise(meanYield = mean(yieldPerAcre.sp, na.rm = TRUE), 
+            meanRelativePerformance = mean(percentEnvironmentYield, na.rm = TRUE))
+
+percentEnvMean.pl <- estimatePercentEnvironmentMeanPlasticity(percentEnvMeanDataPlotLevel, genotype = 'genotype', 
+                                                              environmentMean = 'environmentMean', 
+                                                              percentEnvironmentMeanPhenotype = 'percentEnvironmentYield') %>%
   rowwise() %>%
   mutate(genotype = str_to_upper(genotype),
          earParent = str_split_i(genotype, ' X ', 1),
@@ -1906,31 +1965,131 @@ percentEnvMean.pl <- percentEnvMeanModel$coefficients %>%
   left_join(hybridSummary)
 
 
-
-percentEnvMeanPlotPlasticityVersusRelativePerformance <- ggplot(percentEnvMean.pl, aes(expectedValue, b, color = meanParentAge)) + 
+percentEnvMeanPlotPlasticityVersusRelativePerformance <- ggplot(percentEnvMean.pl, aes(meanRelativePerformance, b, color = meanParentAge)) + 
   geom_point() + 
+  geom_hline(yintercept = mean(percentEnvMean.pl$b)) +
   scale_color_viridis(direction = -1) + 
-  scale_x_continuous(breaks = c(50, 100, 150, 200),
-                     labels = c('50%', '100%', '150%', '200%')) +
-  # scale_y_continuous(breaks = c(50, 100, 150, 200), 
-  #                    labels = c('50%', '100%', '150%', '200%')) +
+  # scale_x_continuous(breaks = c(-600, -500, -400, -300, -200, -100, 0, 100, 200, 300, 400, 500), 
+  #                    labels = c('-600%', '-500%', '-400%', '-300%', '-200%', '-100%', '0%', '100%', '200%', '300%', '400%', '500%'),
+  #                    limits = c(-625, 500)) +
+  # scale_y_continuous(limits = c(-5.6, 1.6)) +
   labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity', 
-       color = str_wrap('Mean Parent Release Year', 1), title = NULL) +
+       color = 'Mean Parent Release Year', title = 'All Environments') +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
         axis.text.y = element_text(color = 'black', size = 9),
         text = element_text(color = 'black', size = 9, hjust = 0.5),
         plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
-        panel.grid = element_blank())
+        panel.grid = element_blank(),
+        legend.position = 'bottom')
+parentAgeLegend <- get_plot_component(percentEnvMeanPlotPlasticityVersusRelativePerformance, 'guide-box-bottom')
+
+percentEnvMeanPlotPlasticityVersusRelativePerformance <- ggplot(percentEnvMean.pl, aes(meanRelativePerformance, b, color = meanParentAge)) + 
+  geom_point() + 
+  # geom_hline(yintercept = mean(percentEnvMean.pl$b)) +
+  scale_color_viridis(direction = -1) + 
+  # scale_x_continuous(breaks = c(-600, -500, -400, -300, -200, -100, 0, 100, 200, 300, 400, 500), 
+  #                    labels = c('-600%', '-500%', '-400%', '-300%', '-200%', '-100%', '0%', '100%', '200%', '300%', '400%', '500%'),
+  #                    limits = c(-625, 500)) +
+  # scale_y_continuous(limits = c(-5.6, 1.6)) +
+  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity', 
+       color = str_wrap('Mean Parent Release Year', 1), title = 'All Environments') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        panel.grid = element_blank(),
+        legend.position = 'none')
+
 percentEnvMeanPlotPlasticityVersusRelativePerformance
 
 percentEnvMeanPlotPlasticityVersusMeanYield <- ggplot(percentEnvMean.pl, aes(meanYield, b, color = meanParentAge)) + 
   geom_point() + 
+  # geom_hline(yintercept = mean(percentEnvMean.pl$b)) +
   scale_color_viridis(direction = -1) + 
   # scale_x_continuous(breaks = c(50, 100, 150, 200),
   #                    labels = c('50%', '100%', '150%', '200%')) +
   # scale_y_continuous(breaks = c(50, 100, 150, 200), 
   #                    labels = c('50%', '100%', '150%', '200%')) +
+  labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity', 
+       color = str_wrap('Mean Parent Release Year', 1), title = 'All Environments') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        panel.grid = element_blank(),
+        legend.position = 'none')
+percentEnvMeanPlotPlasticityVersusMeanYield
+
+percentEnvMeanLinePlot <- ggplot(percentEnvMeanDataPlotLevel, 
+                                 aes(environmentMean, percentEnvironmentYield, 
+                                     color = meanParentAge, group = genotype)) +
+  geom_line() +
+  # geom_smooth(method = 'lm') +
+  scale_color_viridis(direction = -1) + 
+  scale_x_continuous(limits = c(140, 200))
+percentEnvMeanLinePlot
+
+percentEnvMeanWorseEnvironments <- percentEnvMeanDataPlotLevel %>%
+  filter(environmentMean < 147)
+percentEnvMeanWorseEnvironmentsHybridSummary <- percentEnvMeanWorseEnvironments %>%
+  group_by(genotype) %>%
+  summarise(hybridMeanWorseEnvironments = mean(yieldPerAcre.sp, na.rm = TRUE), 
+            meanRelativePerformance = mean(percentEnvironmentYield, na.rm = TRUE))
+
+percentEnvMeanBetterEnvironments <- percentEnvMeanDataPlotLevel %>%
+  filter(environmentMean > 156)
+percentEnvMeanBetterEnvironmentsHybridSummary <- percentEnvMeanBetterEnvironments %>%
+  group_by(genotype) %>%
+  summarise(hybridMeanBetterEnvironments = mean(yieldPerAcre.sp, na.rm = TRUE), 
+            meanRelativePerformance = mean(percentEnvironmentYield, na.rm = TRUE))
+
+worseEnvironmentPercentMean.pl <- estimatePercentEnvironmentMeanPlasticity(data = percentEnvMeanWorseEnvironments, genotype = 'genotype',
+                                                                           environmentMean = 'environmentMean', 
+                                                                           percentEnvironmentMeanPhenotype = 'percentEnvironmentYield') %>%
+  rowwise() %>%
+  mutate(genotype = str_to_upper(genotype),
+         earParent = str_split_i(genotype, ' X ', 1),
+         pollenParent = str_split_i(genotype, ' X ', 2)) %>%
+  left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(earParentAge = age) %>%
+  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(pollenParentAge = age) %>%
+  rowwise() %>%
+  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
+         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
+         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .))) %>%
+  left_join(hybridSummary) %>%
+  left_join(percentEnvMeanWorseEnvironmentsHybridSummary, join_by(genotype), suffix = c('', '.worse'))
+   
+betterEnvironmentPercentMean.pl <- estimatePercentEnvironmentMeanPlasticity(data = percentEnvMeanBetterEnvironments, genotype = 'genotype',
+                                                                            environmentMean = 'environmentMean', 
+                                                                            percentEnvironmentMeanPhenotype = 'percentEnvironmentYield') %>%
+  rowwise() %>%
+  mutate(genotype = str_to_upper(genotype),
+         earParent = str_split_i(genotype, ' X ', 1),
+         pollenParent = str_split_i(genotype, ' X ', 2)) %>%
+  left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(earParentAge = age) %>%
+  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(pollenParentAge = age) %>%
+  rowwise() %>%
+  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
+         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
+         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .))) %>%
+  left_join(hybridSummary) %>%
+  left_join(percentEnvMeanBetterEnvironmentsHybridSummary, join_by(genotype), suffix = c('', '.better'))
+# tradeoff on mean yield basis
+tradeoffMeanYieldWorseEnvs <- ggplot(worseEnvironmentPercentMean.pl, aes(hybridMeanWorseEnvironments, b, color = meanParentAge)) +
+  geom_point() + 
+  # geom_hline(yintercept = mean(worseEnvironmentPercentMean.pl$b, na.rm = TRUE)) +
+  scale_color_viridis(direction = -1) + 
   labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity', 
        color = str_wrap('Mean Parent Release Year', 1), title = NULL) +
   theme_minimal() +
@@ -1938,9 +2097,80 @@ percentEnvMeanPlotPlasticityVersusMeanYield <- ggplot(percentEnvMean.pl, aes(mea
         axis.text.y = element_text(color = 'black', size = 9),
         text = element_text(color = 'black', size = 9, hjust = 0.5),
         plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
-        panel.grid = element_blank())
-percentEnvMeanPlotPlasticityVersusMeanYield
+        panel.grid = element_blank(),
+        legend.position = 'none')
+tradeoffMeanYieldWorseEnvs
 
+cor(worseEnvironmentPercentMean.pl$hybridMeanWorseEnvironments, worseEnvironmentPercentMean.pl$b, use = 'complete.obs', method = 'spearman')
+
+tradeoffMeanYieldBetterEnvs <- ggplot(betterEnvironmentPercentMean.pl, aes(hybridMeanBetterEnvironments, b, color = meanParentAge)) +
+  geom_point() + 
+  # geom_hline(yintercept = mean(betterEnvironmentPercentMean.pl$b, na.rm = TRUE)) +
+  scale_color_viridis(direction = -1) + 
+  labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity', 
+       color = str_wrap('Mean Parent Release Year', 1), title = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        panel.grid = element_blank(),
+        legend.position = 'none')
+tradeoffMeanYieldBetterEnvs
+
+cor(betterEnvironmentPercentMean.pl$hybridMeanBetterEnvironments, betterEnvironmentPercentMean.pl$b, use = 'complete.obs', method = 'spearman')
+
+# tradeoff on performance relative to population basis
+tradeoffRelativePerformanceWorseEnvs <- ggplot(worseEnvironmentPercentMean.pl, aes(meanRelativePerformance.worse, b, color = meanParentAge)) +
+  geom_point() + 
+  # geom_hline(yintercept = mean(worseEnvironmentPercentMean.pl$b, na.rm = TRUE)) +
+  scale_color_viridis(direction = -1) + 
+  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity', 
+       color = str_wrap('Mean Parent Release Year', 1), title = 'Worst 14 Environments') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        panel.grid = element_blank(),
+        legend.position = 'none')
+tradeoffRelativePerformanceWorseEnvs
+
+cor(worseEnvironmentPercentMean.pl$meanRelativePerformance, worseEnvironmentPercentMean.pl$b, use = 'complete.obs', method = 'spearman')
+
+tradeoffRelativePerformanceBetterEnvs <- ggplot(betterEnvironmentPercentMean.pl, aes(meanRelativePerformance.better, b, color = meanParentAge)) +
+  geom_point() + 
+  # geom_hline(yintercept = mean(betterEnvironmentPercentMean.pl$b, na.rm = TRUE)) +
+  scale_color_viridis(direction = -1) + 
+  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity', 
+       color = str_wrap('Mean Parent Release Year', 1), title = 'Best 14 Environments') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.text.y = element_text(color = 'black', size = 9),
+        text = element_text(color = 'black', size = 9, hjust = 0.5),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        panel.grid = element_blank(),
+        legend.position = 'none')
+tradeoffRelativePerformanceBetterEnvs
+
+cor(betterEnvironmentPercentMean.pl$meanRelativePerformance, betterEnvironmentPercentMean.pl$b, use = 'complete.obs', method = 'spearman')
+
+percentEnvironmentMeanPlasticityPlots <- plot_grid(percentEnvMeanPlotPlasticityVersusRelativePerformance, percentEnvMeanPlotPlasticityVersusMeanYield,
+                                                   tradeoffRelativePerformanceWorseEnvs, tradeoffRelativePerformanceBetterEnvs, 
+                                                   tradeoffMeanYieldWorseEnvs, tradeoffMeanYieldBetterEnvs,
+                                                   ncol = 2, nrow = 3, labels = 'AUTO')
+percentEnvironmentMeanPlasticityPlots <- plot_grid(percentEnvironmentMeanPlasticityPlots, parentAgeLegend, nrow = 2, rel_heights = c(1, 0.075))
+percentEnvironmentMeanPlasticityPlots
+# ggsave('../SpercentEnvironmentMeanPlasticityPlots.svg', width = 6.5, height = 6.5, units = 'in', dpi = 1000, bg = 'white')
+
+percentEnvMeanModel <- lm(meanYield ~ meanParentAge + b, data = percentEnvMean.pl)
+anova(percentEnvMeanModel)
+
+percentEnvMeanModelWorse <- lm(hybridMeanWorseEnvironments ~ meanParentAge + b, data = worseEnvironmentPercentMean.pl)
+anova(percentEnvMeanModelWorse)
+
+percentEnvMeanModelBetter <- lm(hybridMeanBetterEnvironments ~ meanParentAge + b, data = betterEnvironmentPercentMean.pl)
+anova(percentEnvMeanModelBetter)
 
 phenotypeLabelsGCAVP <- c(#'Plant Density', 
                         'Test Weight', 'Harvest Moisture', 'Flag Leaf Height',
@@ -2668,7 +2898,7 @@ supplMeanParentPlots <- plot_grid(meanParentPlotLegend, meanParentPlotEarHeight,
                                                                  'I', 'J', 'K', 
                                                                  'L', 'M', 'N', 
                                                                  'O', 'P', 'Q'))
-supplMeanParentPlots <- plot_grid(supplMeanParentPlots, , ncol = 1, rel_heights = c(1.5, 0.1))
+supplMeanParentPlots <- plot_grid(supplMeanParentPlots, ncol = 1, rel_heights = c(1.5, 0.1))
 # ggsave('../figSMeanParentPlots.svg', plot = supplMeanParentPlots, width = 6.5, height = 9, units = 'in', dpi = 1000, bg = 'white')
 
 # Model relationships: are they significant?
@@ -2762,7 +2992,7 @@ FWRankChangeRankDistance <- cxData %>%
   rowwise() %>%
   mutate(rankDistance = abs(genotypeRank1 - genotypeRank2))
 
-bestEnvYield <- filter(hybridsNOLNK22, environment=='2023:Ames:0:High') %>%
+bestEnvYield <- filter(hybridsNOLNK22, environment=='2023 Ames High') %>%
   group_by(genotype) %>%
   summarise(bestEnvMeanYield = mean(yieldPerAcre.sp, na.rm = TRUE)) %>%
   full_join(sortedhybridsCommon, join_by(genotype), keep = FALSE, suffix = c('', '')) %>%
@@ -3288,15 +3518,49 @@ fig4
 ggsave('../fig4HighRes.svg', width = 6.5, height = 8, units = 'in', dpi = 1000, bg = 'white')
 
 maxInteractionImportanceScore <- sigCrossovers %>%
-  filter(genotype1=="2369 X LH123HT" & genotype2=="K201 X OS426") %>%
-  select(c(genotype1, genotype2, contains('yieldPerAcreRC')))
+  filter(yieldPerAcreScoreNormalized > 0.30) %>%
+  select(genotype1, genotype2, contains('yieldPerAcreScore'), contains('yieldPerAcreRC')) %>%
+  pivot_longer(contains('yieldPerAcre'), names_to = 'value_type', values_to = 'value') %>%
+  filter(!is.na(value))
 
+normalizedInteractionScoreDistribution <- ggplot(sigCrossovers, aes(yieldPerAcreScoreNormalized)) + 
+  geom_histogram()
+normalizedInteractionScoreDistribution
+
+highInteractionImportanceScore <- sigCrossovers %>%
+  filter(yieldPerAcreScoreNormalized >= 0.20) %>%
+  select(genotype1, genotype2, yieldPerAcreScoreNormalized) 
+# maxInteractionImportanceScore <- sigCrossovers %>%
+#   filter(genotype1=="2369 X LH123HT" & genotype2=="K201 X OS426") %>%
+#   select(c(genotype1, genotype2, contains('yieldPerAcreRC')))
+# 
 noImportantInteractions <- sigCrossovers %>%
   filter(!if_any(contains('yieldPerAcreScore.'), ~ .x > 0))
-
+# 
 lowInteractionImportanceScores <- sigCrossovers %>%
   filter(yieldPerAcreScoreNormalized <= 0.05)
 
+blockCor <- hybrids %>%
+  rowwise() %>%
+  mutate(blockSet = case_when(block %% 2 == 0 ~ 2, .default = 1)) 
+b1 <- filter(blockCor, blockSet==1)
+b2 <- filter(blockCor, blockSet==2)
+blockCor <-full_join(b1, b2, join_by(genotype, environment), suffix = c('.1', '.2')) %>%
+  select(genotype, environment, contains('.sp.1'), contains('.sp.2'), nitrogenTreatment.1)
+
+blockCorHighN <- filter(blockCor, nitrogenTreatment.1=='High')
+
+for(i in phenotypes)
+{
+  pheno1 <- paste0(i, '.sp.1')
+  pheno2 <- paste0(i, '.sp.2')
+  
+  df <- blockCorHighN %>%
+    group_by(environment) %>%
+    summarise(cor = cor(.data[[pheno1]], .data[[pheno2]], use = 'na.or.complete', method = 'spearman'))
+  
+  print(paste0(i, ': ', min(df$cor, na.rm = TRUE), ' - ', max(df$cor, na.rm = TRUE)))
+}
 # mlcasbottom <- plot_grid(meanParentPlot, featureImportance, 
 #                          yieldPredictionsPlot, percentMeanPlotExtremePlasticity, 
 #                          nrow = 2, labels = c('B', 'C', 'D', 'E'), rel_heights = c(0.4, 0.6))
@@ -3330,26 +3594,42 @@ amesNPlasticityGenotypeLines <- ggplot(amesNResponseLAH, aes(nitrogenTreatment, 
         panel.grid = element_blank())
 amesNPlasticityGenotypeLines 
 
-proposalMPPData <- hybridsNOLNK22.pl %>%
-  arrange(yieldPerAcre.sp.b)
-proposalMPPData$relPlasticity <- c(rep('Less Responsive Hybrids', 29), rep('Other Hybrids', 59), 
-                                   rep('Most Responsive Hybrids', 29))
-proposalMPPData <- mutate(proposalMPPData, relPlasticity = factor(relPlasticity, levels = c('Most Responsive Hybrids', 'Other Hybrids', 'Less Responsive Hybrids')))
-
-proposalMPPlot <- ggplot(proposalMPPData, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = relPlasticity)) +
-  geom_point() +
-  geom_hline(yintercept=1) +
-  scale_color_manual(values = moma.colors('VanGogh', 3, direction = -1)) +
-  labs(x = 'Hybrid Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = NULL) + 
-  theme_minimal() +
-  theme(axis.text.x = element_text(color = 'black', size = 9),
-        axis.text.y = element_text(color = 'black', size = 9),
-        legend.text = element_text(color = 'black', size = 9, margin = margin(0, 0, 0, 0)),
-        text = element_text(color = 'black', size = 9),
-        legend.position = 'top',
-        panel.grid = element_blank())
-proposalMPPlot
+# proposalMPPData <- hybridsNOLNK22.pl %>%
+#   arrange(yieldPerAcre.sp.b)
+# proposalMPPData$relPlasticity <- c(rep('Less Responsive Hybrids', 29), rep('Other Hybrids', 59), 
+#                                    rep('Most Responsive Hybrids', 29))
+# proposalMPPData <- mutate(proposalMPPData, relPlasticity = factor(relPlasticity, levels = c('Most Responsive Hybrids', 'Other Hybrids', 'Less Responsive Hybrids')))
+# 
+# proposalMPPlot <- ggplot(proposalMPPData, aes(yieldPerAcre.sp.mu, yieldPerAcre.sp.b, color = relPlasticity)) +
+#   geom_point() +
+#   geom_hline(yintercept=1) +
+#   scale_color_manual(values = moma.colors('VanGogh', 3, direction = -1)) +
+#   labs(x = 'Hybrid Mean Yield (bushels/acre)', y = 'Yield Linear Plasticity', color = NULL) + 
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(color = 'black', size = 9),
+#         axis.text.y = element_text(color = 'black', size = 9),
+#         legend.text = element_text(color = 'black', size = 9, margin = margin(0, 0, 0, 0)),
+#         text = element_text(color = 'black', size = 9),
+#         legend.position = 'top',
+#         panel.grid = element_blank())
+# proposalMPPlot
 
 
 # proposal <- plot_grid(amesNPlasticityGenotypeLines, proposalMPPlot, ncol = 1, labels = 'AUTO')
 # ggsave('../proposal.svg', width = 3.5, height = 7, units = 'in', dpi = 1000, bg = 'white')
+
+# leafdata <- read_excel('data/230331 SAM Height and Leaf Dimension Data Data - Digitized and Reviewed.xlsx') %>%
+#   pivot_longer(c(Leafwidth1, Leafwidth2), names_to = NULL, values_to='leafWidth') %>%
+#   pivot_longer(c(LeafLength1, LeafLength2), names_to = NULL, values_to = 'leafLength') %>%
+#   rowwise() %>%
+#   mutate(leafWidth = as.numeric(leafWidth) %>%
+#            case_when(. > 15 ~ NA, .default = .),
+#          leafLength = as.numeric(leafLength) %>%
+#            case_when(. > 120 ~ NA, .default = .)) 
+# leafwidthhist <- ggplot(leafdata, aes(leafWidth)) + 
+#   geom_histogram()
+# leafwidthhist
+# 
+# leaflengthhist <- ggplot(leafdata, aes(leafLength)) +
+#   geom_histogram()
+# leaflengthhist

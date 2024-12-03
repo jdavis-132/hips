@@ -1,6 +1,6 @@
 library(tidyverse)
 library(SpATS)
-library(spFW)
+# library(spFW)
 library(viridis)
 SEED <- 101762103
 # Returns a data frame filtered to rows of data that have values for trait 
@@ -736,10 +736,10 @@ plotInteractionImportanceGrid <- function(significantInteractionsData = sigCross
   
   heatmap <- ggplot(df, aes(rankG1, rankG2, fill = .data[[phenotypeScoreNormalized]])) + 
     geom_tile() + 
-    scale_x_continuous(limits = c(0, 120), 
+    scale_x_continuous(limits = c(0, 120)#, 
                       # breaks = seq.int(0, 120, by = 2)
                       ) +
-    scale_y_continuous(limits = c(0, 120), 
+    scale_y_continuous(limits = c(0, 120)#, 
                        # breaks = seq.int(0, 120, by = 2)
                        ) +
     # guides(fill = guide_colourbar(barheight = 0.5)) +
@@ -827,4 +827,26 @@ plotNitrogenPlasticityBlockCor <- function(nitrogenBlockPlasticity, phenotype, p
           text = element_text(color = 'black', size = 9),
           panel.grid = element_blank())
   print(nResponseCorr)
+}
+
+# All arguments except data should be strings
+estimatePercentEnvironmentMeanPlasticity <- function(data, genotype, environmentMean, percentEnvironmentMeanPhenotype)
+{
+  lm_formula <- as.formula(paste0(percentEnvironmentMeanPhenotype, ' ~ ', genotype,  ' + ', genotype, '*', environmentMean))
+  model <- lm(lm_formula, data = data, na.action = na.omit)
+  mu <- model$coefficients['(Intercept)']
+  environmentMeanEffect <- model$coefficients[environmentMean]
+  df.pl <- model$coefficients %>%
+    as_tibble(rownames = 'genotype') %>%
+    rowwise() %>%
+    mutate(valueID = case_when(str_detect(genotype, ':environmentMean') ~ 'slope', .default = 'intercept'), 
+           genotype = str_remove(genotype, 'genotype') %>%
+             str_remove(':environmentMean')) %>%
+    pivot_wider(id_cols = genotype, 
+                names_from = valueID, 
+                values_from = value) %>%
+    filter(!(genotype %in% c('(Intercept)', environmentMean))) %>%
+    mutate(expectedValue = intercept + mu, 
+           b = slope + environmentMeanEffect + 1)
+  return(df.pl)
 }
