@@ -3,6 +3,16 @@ library(SpATS)
 # library(spFW)
 library(viridis)
 SEED <- 101762103
+
+# Functions
+printHistogram <- function(data, phenotype, title = NULL, bin_no=50)
+{
+  df <- data
+  p <- ggplot(df, aes(.data[[phenotype]])) +
+    geom_histogram(bins = bin_no) +
+    labs(title = title)
+  print(p)
+}
 # Returns a data frame filtered to rows of data that have values for trait 
 # that are less than quantile 1 - 1.5*iqr or greater than quantile 3 + 1.5*iqr
 # data is a data frame
