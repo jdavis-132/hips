@@ -4,6 +4,10 @@ library(SpATS)
 library(viridis)
 SEED <- 101762103
 
+convertUSYieldsToMTPerHa <- function(yield)
+{
+  return (yield*0.0628)
+}
 # Functions
 printHistogram <- function(data, phenotype, title = NULL, bin_no=50)
 {
