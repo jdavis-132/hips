@@ -1,7 +1,7 @@
-library(tidyverse)
 library(SpATS)
 # library(spFW)
 library(viridis)
+library(tidyverse)
 SEED <- 101762103
 
 convertUSYieldsToMTPerHa <- function(yield)
@@ -83,6 +83,67 @@ plotRepCorr <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'ge
     # ggsave(paste0('analysis/repCorrelationByLocationInbreds', i, '.png'))
   }
   return(df.wide)
+}
+ # Modify to use all replicates 
+plotRepCorr2 <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'genotype', phenotypes, facet = 'location', block = 'block', environment = 'environment', main = NULL)
+{
+  environments <- unique(data[[environment]])
+  dfWide <- tibble()
+  
+  for(e in environments)
+  {
+    df_e <- data %>% 
+      filter(.data[[environment]]==e) %>% 
+      select(any_of(c(phenotypes, environment, block, genotype, treatmentVar, facet)))
+    
+    if(length(df_e[[environment]]) == 0){ next }
+    
+    genotypes <- unique(df_e[[genotype]])
+    for(g in genotypes)
+    {
+      df_g <- df_e %>% 
+        filter(.data[[genotype]]==g)
+      
+      if(length(df_g[[genotype]]) < 2){ next }
+      
+      df1 <- df_g %>% 
+        filter((.data[[block]] %% 2)!=0)
+      df2 <- df_g %>% 
+        filter((.data[[block]] %% 2)==0) %>% 
+      rename_with(.fn = ~str_c(.x, '.2'), 
+                  .cols = everything())
+      rows_keep <- min(c(nrow(df1), nrow(df2)))
+      df1 <- df1[1:rows_keep, ]
+      df2 <- df2[1:rows_keep, ]
+      df_g <- bind_cols(df1, df2)
+ 
+      dfWide <- bind_rows(dfWide, df_g)
+    } 
+  }
+  
+  for(p in phenotypes)
+  {
+    p2 <- paste0(p, '.2')
+    plot <- ggplot(dfWide, aes(.data[[p]], .data[[p2]], color = .data[[treatmentVar]])) + 
+      geom_point() + 
+      facet_wrap(vars(.data[[facet]])) + 
+      labs(title = main) + 
+      theme_minimal() +
+      theme(text = element_text(color = 'black', size = 9),
+            axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+            axis.text = element_text(color = 'black', size = 9, hjust = 1, margin = margin(0,0,0, 0)),
+            plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+            axis.line = element_blank(),
+            panel.background = element_blank(),
+            panel.border = element_blank(),
+            panel.grid = element_blank(), 
+            plot.background = element_blank(), 
+            legend.position = 'right',
+            legend.background = element_blank())
+    print(plot)
+    print(paste0(p,': ', cor(dfWide[[p]], dfWide[[p2]], use = 'complete.obs', method = 'spearman')))
+  }
+  return(dfWide)
 }
 
 # Correlation plot for 2 variables

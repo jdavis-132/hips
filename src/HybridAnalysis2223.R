@@ -1038,7 +1038,29 @@ for(i in 1:length(phenotypes))
 nResponseLocationYears <- c('2023 Ames', '2022 Scottsbluff', '2022 North Platte LI')
 # Subset to the locations where we got a significant, classical N response on a population level and estimate plasticity --> does N plasticity correlate across location years?
 nResponse <- filter(hybrids, locationYear %in% nResponseLocationYears)
-
+# Protein response in these locations
+proteinBoxPlots <- nResponse %>%
+  filter(locationYear=='2022 Scottsbluff') %>%
+  mutate(nitrogenTreatment = factor(nitrogenTreatment, levels = c('Low', 'Medium', 'High'))) %>% 
+  ggplot(aes(nitrogenTreatment, percentProtein, fill = nitrogenTreatment)) +
+  geom_boxplot() + 
+  facet_wrap(vars(locationYear)) +
+  scale_y_continuous(breaks = seq(6, 14, by = 2), labels = c('6%', '8%', '10%', '12%', '14%')) + 
+  scale_fill_manual(values = nitrogenColors) + 
+  labs(x = 'Nitrogen Treatment', y = 'Seed Protein') + 
+  theme_minimal() +
+  theme(text = element_text(color = 'black', size = 9),
+        axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.text = element_text(color = 'black', size = 9, hjust = 1, margin = margin(0,0,0, 0)),
+        plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
+        axis.line = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_blank(),
+        panel.grid = element_blank(), 
+        plot.background = element_blank(), 
+        legend.position = 'none',
+        legend.background = element_blank())
+proteinBoxPlots
 # nTreatmentsPerLocationYear <- nResponse %>%
 #   group_by(locationYear, genotype) %>%
 #   summarise(nitrogenTreatments = n_distinct(nitrogenTreatment, na.rm = TRUE)) %>%
