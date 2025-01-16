@@ -120,6 +120,56 @@ hybrids <- read.csv('analysis/HYBRIDS_2022_2023_SPATIALLYCORRECTED.csv') %>%
                               .default = genotype)) %>%
   mutate(across(where(is.numeric), ~case_when(.==-Inf ~ NA, .default = .)))
 
+parentInfo <- read_excel('data/HIPS_Genotype_Information_2022_2023.xlsx') %>%
+  rowwise() %>%
+  mutate(age = `release year`) %>%
+  mutate(age = case_when(age=="PRE 1952" ~ '1952',
+                         age=="PRE 2003" ~ '2003', 
+                         age=="PRE 2006" ~ '2006',
+                         age=="PRE 1979" ~ '1979',
+                         age=="PRE 1999" ~ '1999',
+                         age=="PRE 1967" ~ '1967',
+                         age=="PRE 1998" ~ '1998',
+                         age=="PRE 1969" ~ '1969',
+                         age=="NEAR 1946" ~ '1946',
+                         age=="PRE 1956" ~ '1956',
+                         age=="PRE 1963" ~ '1963',
+                         age=="PRE 1932" ~ '1932',
+                         age=="PRE 1976" ~ '1976',
+                         age=="PRE 1992" ~ '1992',
+                         age=="PRE 1951" ~ '1951', 
+                         age=="PRE 1957" ~ '1957',
+                         age=="PRE 1964" ~ '1964',
+                         age=='PRE 1941' ~ '1941',
+                         .default = age)) %>%
+  mutate(age = as.numeric(age)) %>%
+  mutate(age = case_when(is.na(age) & !is.na(`received/donation year`) ~ `received/donation year`, 
+                         .default = age)) %>% 
+  select(genotype, age)
+
+hybrids <- hybrids %>%
+  rowwise() %>%
+  mutate(genotype = str_to_upper(genotype),
+         earParent = str_split_i(genotype, ' X ', 1),
+         pollenParent = str_split_i(genotype, ' X ', 2)) %>%
+  left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(earParentAge = age) %>%
+  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
+  rename(pollenParentAge = age) %>%
+  rowwise() %>%
+  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
+         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
+         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+
+hybridParents <- union(hybrids$earParent, hybrids$pollenParent)
+
+hybridParentData <- read_excel('data/HIPS_Genotype_Information_2022_2023.xlsx') %>% 
+  rowwise() %>%
+  mutate(genotype = case_when(genotype=="IOWA I 205'" ~ "'IOWA I 205'", .default = genotype)) %>%
+  filter(genotype %in% hybridParents)
+# write.csv(hybridParentData, 'outData/hybridParentInfo.csv', row.names = FALSE)
 
 envsPerHybrid <- tibble(hybrid = unique(hybrids$genotype), numEnvs = NULL)
 for(i in 1:length(unique(envsPerHybrid$hybrid)))
@@ -321,32 +371,7 @@ vp.plot
 #          earParent = str_split_i(genotype, ' X ', 1),
 #          pollenParent = str_split_i(genotype, ' X ', 2))
 
-parentInfo <- read_excel('data/HIPS_Genotype_Information_2022_2023.xlsx') %>%
-  rowwise() %>%
-  mutate(age = `release year`) %>%
-  mutate(age = case_when(age=="PRE 1952" ~ '1952',
-                         age=="PRE 2003" ~ '2003', 
-                         age=="PRE 2006" ~ '2006',
-                         age=="PRE 1979" ~ '1979',
-                         age=="PRE 1999" ~ '1999',
-                         age=="PRE 1967" ~ '1967',
-                         age=="PRE 1998" ~ '1998',
-                         age=="PRE 1969" ~ '1969',
-                         age=="NEAR 1946" ~ '1946',
-                         age=="PRE 1956" ~ '1956',
-                         age=="PRE 1963" ~ '1963',
-                         age=="PRE 1932" ~ '1932',
-                         age=="PRE 1976" ~ '1976',
-                         age=="PRE 1992" ~ '1992',
-                         age=="PRE 1951" ~ '1951', 
-                         age=="PRE 1957" ~ '1957',
-                         age=="PRE 1964" ~ '1964',
-                         age=='PRE 1941' ~ '1941',
-                         .default = age)) %>%
-  mutate(age = as.numeric(age)) %>%
-  mutate(age = case_when(is.na(age) & !is.na(`received/donation year`) ~ `received/donation year`, 
-                         .default = age)) %>% 
-  select(genotype, age)
+
 
 # missingParents <- c('I159', '66', 'A344', 'B7', 'CI 3A', 'K201', 'KYS', 'C.I. 540', 'L 289', 'W606S', 'N209', 'A12', 'WF9')
 # missingParentages <- c(1998, 2002, 1996, 1968, 1945, 1963, 1963, 1948, 1934, 1963, 1997,  1965, 1943)
@@ -586,22 +611,6 @@ top10PercentOverallPerformancePlot <- ggplot(top10PercentOverallPerformance, aes
 top10PercentOverallPerformancePlot
 # ggsave('../top10PercentOverallPerformance.svg', plot = top10PercentOverallPerformancePlot,
        # width = 6.5, height = 9, units = 'in', dpi=1000, bg = 'white')
-
-hybrids <- hybrids %>%
-  rowwise() %>%
-  mutate(genotype = str_to_upper(genotype),
-         earParent = str_split_i(genotype, ' X ', 1),
-         pollenParent = str_split_i(genotype, ' X ', 2)) %>%
-  left_join(parentInfo, join_by(earParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
-  rename(earParentAge = age) %>%
-  left_join(parentInfo, join_by(pollenParent==genotype), suffix = c('', ''), keep = FALSE, relationship = 'many-to-one') %>%
-  rename(pollenParentAge = age) %>%
-  rowwise() %>%
-  mutate(oldestParentAge = min(earParentAge, pollenParentAge, na.rm = TRUE),
-         youngestParentAge = max(earParentAge, pollenParentAge, na.rm = TRUE),
-         meanParentAge = mean(c(earParentAge, pollenParentAge), na.rm = TRUE)) %>%
-  ungroup() %>%
-  mutate(across(where(is.numeric), ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
 
 # # How important is mean parent age to explaining yield in each environment
 # vc_meanParentAge <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL, environment = NULL)
@@ -1672,7 +1681,6 @@ heatmap
 #   left_join(yieldBLUPS, join_by(genotype1==genotype), keep = FALSE, suffix = c('', '')) %>%
 #   select(genotype1, yieldTotalNormalizedScore, rankOrder)
 
-upperHalfHybrids <- 
 
 freqCrossoverHybrids <- c('PHK76 X LH82', 'PHP02 X PHJ89', 'LH195 X PHM49', 'PHK56 X W606S', 'PHP02 X PHG47')
 
@@ -1937,8 +1945,8 @@ percentMeanPlotOverallPerformance
 
 percentMeanPlots <- plot_grid(percentMeanPlotExtremePlasticity, percentMeanPlotOverallPerformance, 
                               ncol = 1, labels = 'AUTO')
-ggsave('../percentMeanPlots.png', plot = percentMeanPlots, width = 6.5, height = 9, units = 'in',
-       dpi = 1000, bg = 'white')
+# ggsave('../percentMeanPlots.png', plot = percentMeanPlots, width = 6.5, height = 9, units = 'in',
+       # dpi = 1000, bg = 'white')
 
 # Estimate plasticity using percent mean data
 percentEnvMeanDataPlotLevel <- hybridsNOLNK22 %>%
@@ -1995,8 +2003,8 @@ percentEnvMeanPlotPlasticityVersusRelativePerformance <- ggplot(percentEnvMean.p
   #                    labels = c('-600%', '-500%', '-400%', '-300%', '-200%', '-100%', '0%', '100%', '200%', '300%', '400%', '500%'),
   #                    limits = c(-625, 500)) +
   # scale_y_continuous(limits = c(-5.6, 1.6)) +
-  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity', 
-       color = 'Mean Parent Release Year', title = 'All Environments') +
+  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity \n All Environments', 
+       color = 'Mean Parent Release Year') +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
         axis.text.y = element_text(color = 'black', size = 9),
@@ -2014,8 +2022,8 @@ percentEnvMeanPlotPlasticityVersusRelativePerformance <- ggplot(percentEnvMean.p
   #                    labels = c('-600%', '-500%', '-400%', '-300%', '-200%', '-100%', '0%', '100%', '200%', '300%', '400%', '500%'),
   #                    limits = c(-625, 500)) +
   # scale_y_continuous(limits = c(-5.6, 1.6)) +
-  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity', 
-       color = str_wrap('Mean Parent Release Year', 1), title = 'All Environments') +
+  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity \n All Environments', 
+       color = str_wrap('Mean Parent Release Year', 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
         axis.text.y = element_text(color = 'black', size = 9),
@@ -2034,8 +2042,8 @@ percentEnvMeanPlotPlasticityVersusMeanYield <- ggplot(percentEnvMean.pl, aes(mea
   #                    labels = c('50%', '100%', '150%', '200%')) +
   # scale_y_continuous(breaks = c(50, 100, 150, 200), 
   #                    labels = c('50%', '100%', '150%', '200%')) +
-  labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity', 
-       color = str_wrap('Mean Parent Release Year', 1), title = 'All Environments') +
+  labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity \n All Environments', 
+       color = str_wrap('Mean Parent Release Year', 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
         axis.text.y = element_text(color = 'black', size = 9),
@@ -2112,7 +2120,7 @@ tradeoffMeanYieldWorseEnvs <- ggplot(worseEnvironmentPercentMean.pl, aes(hybridM
   geom_point() + 
   # geom_hline(yintercept = mean(worseEnvironmentPercentMean.pl$b, na.rm = TRUE)) +
   scale_color_viridis(direction = -1) + 
-  labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity', 
+  labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity \n 14 Worst Environments', 
        color = str_wrap('Mean Parent Release Year', 1), title = NULL) +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
@@ -2129,7 +2137,7 @@ tradeoffMeanYieldBetterEnvs <- ggplot(betterEnvironmentPercentMean.pl, aes(hybri
   geom_point() + 
   # geom_hline(yintercept = mean(betterEnvironmentPercentMean.pl$b, na.rm = TRUE)) +
   scale_color_viridis(direction = -1) + 
-  labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity', 
+  labs(x = 'Mean Hybrid Yield (bushels/acre)', y = 'Linear Plasticity \n 14 Best Environments', 
        color = str_wrap('Mean Parent Release Year', 1), title = NULL) +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
@@ -2147,8 +2155,8 @@ tradeoffRelativePerformanceWorseEnvs <- ggplot(worseEnvironmentPercentMean.pl, a
   geom_point() + 
   # geom_hline(yintercept = mean(worseEnvironmentPercentMean.pl$b, na.rm = TRUE)) +
   scale_color_viridis(direction = -1) + 
-  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity', 
-       color = str_wrap('Mean Parent Release Year', 1), title = 'Worst 14 Environments') +
+  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity \n Worst 14 Environments', 
+       color = str_wrap('Mean Parent Release Year', 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
         axis.text.y = element_text(color = 'black', size = 9),
@@ -2164,8 +2172,8 @@ tradeoffRelativePerformanceBetterEnvs <- ggplot(betterEnvironmentPercentMean.pl,
   geom_point() + 
   # geom_hline(yintercept = mean(betterEnvironmentPercentMean.pl$b, na.rm = TRUE)) +
   scale_color_viridis(direction = -1) + 
-  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity', 
-       color = str_wrap('Mean Parent Release Year', 1), title = 'Best 14 Environments') +
+  labs(x = 'Mean Hybrid Percent of Environment Mean', y = 'Linear Plasticity \n Best 14 Environments', 
+       color = str_wrap('Mean Parent Release Year', 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(color = 'black', size = 9, hjust = 0.5),
         axis.text.y = element_text(color = 'black', size = 9),
@@ -2214,15 +2222,15 @@ for(i in 1:length(phenotypes))
 
 gca_vp <- gca_vp %>%
   rowwise() %>%
-  mutate(grp = case_when(grp=='earParent' ~ 'Parent GCA',
-                         grp=='pollenParent' ~ 'Parent GCA',
+  mutate(grp = case_when(grp=='earParent' ~ 'Parental GCA',
+                         grp=='pollenParent' ~ 'Parental GCA',
                          .default = grp) %>%
-           factor(levels = c('Parent GCA', 'Residual'))) %>%
+           factor(levels = c('Parental GCA', 'Residual'))) %>%
   group_by(grp, responseVar, label) %>%
   summarise(pctVar = sum(pctVar, na.rm = TRUE))
 
 gcaImportanceOrder <- gca_vp %>%
-  filter(grp=='Parent GCA') %>%
+  filter(grp=='Parental GCA') %>%
   arrange(desc(pctVar))
 gcaImportanceOrder <-gcaImportanceOrder$label
 
