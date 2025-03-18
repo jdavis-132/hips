@@ -567,11 +567,11 @@ fixGenos <- function(data, givenKey)
 {
   key <- givenKey
   df_ok <- filter(data, !(genotype %in% key$orig))
-  print(unique(df_ok$genotype))
+  #print(unique(df_ok$genotype))
   df_fix <- filter(data, genotype %in% key$orig)
-  print(unique(df_fix$genotype))
-  df_fix <- full_join(df_fix, key, join_by(genotype == orig), keep = FALSE, relationship = 'many-to-one')
-  df_fix %>% select(starts_with('correct')) %>% print()
+  #print(unique(df_fix$genotype))
+  df_fix <- left_join(df_fix, key, join_by(genotype == orig), keep = FALSE, relationship = 'many-to-one')
+  #df_fix %>% select(starts_with('correct')) %>% print()
   df_fix <- df_fix %>%
     rowwise() %>%
     mutate(genotype = correct) %>%
