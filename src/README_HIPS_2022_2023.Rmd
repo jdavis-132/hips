@@ -1308,7 +1308,7 @@ the location were dropped from the data set.
     inbreds in 2022, this information was taken from the file
     'HIPS_Sites_Summary_2022.xlsx'. In 2023 inbreds, this was taken from
     the file 'HIPS_Sites_Summary_2023.xlsx'.
--   **Data Processing Notes:** In the case where a single date was
+-   **Data Processing Notes:** In the case where a single date was not
     available for hand harvest of inbreds, the first date in the range
     was used.
 
