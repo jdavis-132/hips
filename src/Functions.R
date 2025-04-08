@@ -152,12 +152,10 @@ plotRepCorr2 <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'g
 # y is the second variable
 plotVarCorr <- function(data, x, y)
 {
-  x.str <- deparse(substitute(x))
-  y.str <- deparse(substitute(y))
-  p <- ggplot({{data}}, aes({{x}}, {{y}}, color = nitrogenTreatment)) + 
+  p <- ggplot({{data}}, aes(.data[[x]], .data[[y]], color = locationYear)) + 
     geom_point() +
-    facet_wrap(vars(location)) +
-    labs(subtitle = str_c('R = ', cor(data[[x.str]], data[[y.str]], use = 'complete.obs')))
+    # facet_wrap(vars(location)) +
+    labs(subtitle = str_c('R = ', cor(data[[x]], data[[y]], use = 'complete.obs')))
   print(p)
 }
 
@@ -416,7 +414,7 @@ estimatePlasticity3 <- function(data, trait, environment, genotype, seed = SEED)
   geno <- df.compute[[genotype]]
   env <- df.compute[[environment]]
   
-  model <- HFWM_est(Y = y,
+  model <- spFW::HFWM_est(Y = y,
                     VAR = geno,
                     ENV = env, 
                     seed = SEED)

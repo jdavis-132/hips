@@ -188,49 +188,32 @@ hybridInfoTable <- hybridInfoTable %>%
                            group=="Used in past Schnable ISU yield trials for N studies" ~ "Used in past nitrogen study yield trials", 
                            str_detect(genotype, 'COMMERCIAL') ~ "Commercial Hybrid",
                            .default = group))
-g2fHybrids <- read.csv('../plasticityReview/analysis/G2F_HYBRIDS_2014_2022.csv')
-g2fHybrids <- unique(g2fHybrids$genotype) %>% 
-  str_replace(fixed('/'), ' X ')
-hybridInfoTable <- hybridInfoTable %>% 
-  rowwise() %>%
-  mutate(everInG2F = case_when(genotype %in% g2fHybrids ~ 'Yes', 
-                               reciprocalHybrid %in% g2fHybrids ~ 'Reciprocal')) %>% 
-  mutate(across(is.numeric, ~case_when(.==-Inf|.==Inf ~ NA, .default = .)))
+g2fHybrids <- read.csv('../../plasticityReview/analysis/G2F_HYBRIDS_2014_2022.csv')
 
-hybridParents <- union(hybrids$earParent, hybrids$pollenParent)
+rep_data_stdcount <- plotRepCorr2(hybrids, phenotypes = c('totalStandCount'), facet = 'locationYear')
+rep_data_stdcount_summary <- rep_data_stdcount %>% 
+  filter(totalStandCount > 25 & totalStandCount.2 > 25) %>% 
+  group_by(locationYear) %>% 
+  summarise(standCountCor = cor(totalStandCount, totalStandCount.2, use = 'complete.obs'))
+standcount_scatter <- rep_data_stdcount %>% 
+  filter(totalStandCount > 25 & totalStandCount.2 > 25) %>% 
+  ggplot(aes(totalStandCount,  totalStandCount.2)) + 
+  geom_point()
+standcount_scatter
 
-hybridParentData <- read_excel('data/HIPS_Genotype_Information_2022_2023.xlsx') %>% 
-  rowwise() %>%
-  mutate(genotype = case_when(genotype=="IOWA I 205'" ~ "'IOWA I 205'", .default = genotype)) %>%
-  filter(genotype %in% hybridParents)
-# write.csv(hybridParentData, 'outData/hybridParentInfo.csv', row.names = FALSE)
-
-envsPerHybrid <- tibble(hybrid = unique(hybrids$genotype), numEnvs = NULL)
-for(i in 1:length(unique(envsPerHybrid$hybrid)))
+# cor of phenos with standcount after spatial correction:
+for(p in phenotypes)
 {
-  hybridData <- filter(hybrids, genotype==envsPerHybrid$hybrid[i])
-  envsPerHybrid$numEnvs[i] <- length(unique(hybridData$environment))
+  p <- str_c(p, '.sp')
+  df <- hybrids
+  # df <- filter(hybrids, totalStandCount > 25)
+  plotVarCorr(df, p, 'totalStandCount')
 }
 
-singleEnvHybrids <- envsPerHybrid$hybrid[envsPerHybrid$numEnvs<4]
-hybrids <- filter(hybrids, !(genotype %in% singleEnvHybrids)) %>%
-  rowwise() %>%
-  mutate(locationYear = str_c(year, semanticLocation, sep = ' ')) %>%
-  mutate(locationYear = case_when(location=='North Platte1' ~ str_c(locationYear, ' FI'),
-                                  location=='North Platte2' ~ str_c(locationYear, ' LI'),
-                                  location=='North Platte3' ~ str_c(locationYear, ' NI'),
-                                  locationYear=='2023 North Platte' & irrigationProvided==0 ~ str_c(locationYear, ' NI'),
-                                  locationYear=='2023 North Platte' & irrigationProvided > 0 ~ str_c(locationYear, ' LI'),
-                                  .default = locationYear)) %>%
-  mutate(environment = str_c(locationYear, nitrogenTreatment, sep = ' '))
-# # Location or irrigationProvided, which is mostly location, is most important for 15/19 traits when we don't count residual
-# vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
-# for(i in 1:length(phenotypes))
-# {
-#   var <- paste0(phenotypes[i], '.sp')
-#   vc_all <- bind_rows(vc_all, partitionVariance3(hybrids, var, phenotypes[i], '~ (1|year) + (1|semanticLocation/nitrogenTreatment) + (1|genotype) + (1|irrigationProvided) + (1|semanticLocation:genotype) + (1|nitrogenTreatment:genotype)'))
-# }
-
+pheno_standct_cor <- hybrids %>% 
+  filter(totalStandCount <25) %>%
+  group_by(environment) %>%
+  summarise(across(all_of(paste0(phenotypes, '.sp')), ~cor(.x, totalStandCount, use = 'na.or.complete')))
 # So let's fit a simpler model
 vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
 for(i in 1:length(phenotypes))
