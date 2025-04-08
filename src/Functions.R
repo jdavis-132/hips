@@ -14,6 +14,7 @@ printHistogram <- function(data, phenotype, title = NULL, bin_no=50)
   df <- data
   p <- ggplot(df, aes(.data[[phenotype]])) +
     geom_histogram(bins = bin_no) +
+    scale_x_continuous(n.breaks = 20) +
     labs(title = title)
   print(p)
 }

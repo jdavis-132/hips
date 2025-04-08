@@ -211,9 +211,28 @@ for(p in phenotypes)
 }
 
 pheno_standct_cor <- hybrids %>% 
-  filter(totalStandCount <25) %>%
+  group_by(locationYear) %>% 
+  mutate(expectedStand = case_when(locationYear %in% c('2022 Crawfordsville', '2023 Crawfordsville', 
+                                                       '2023 Ames') ~ 72,
+                                   locationYear=='2022 Ames' ~ 74, 
+                                   .default = 70)) %>%
+  rowwise() %>%
+  mutate(percentStand = totalStandCount/expectedStand) %>% 
+  ungroup() %>%
   group_by(environment) %>%
-  summarise(across(all_of(paste0(phenotypes, '.sp')), ~cor(.x, totalStandCount, use = 'na.or.complete')))
+  summarise(across(all_of(paste0(phenotypes, '.sp')), ~cor(.x, percentStand, use = 'na.or.complete')))
+
+locYears <- unique(hybrids$locationYear)
+for(l in locYears)
+{
+  df <- filter(hybrids, locationYear==l) 
+  print(l)
+  print(max(df$totalStandCount, na.rm = TRUE))
+  printHistogram(df, 'totalStandCount', title = l, bin_no = 30)
+}
+
+
+
 # So let's fit a simpler model
 vc_all <- tibble(grp = NULL, responseVar = NULL, vcov = NULL, pctVar = NULL)
 for(i in 1:length(phenotypes))
