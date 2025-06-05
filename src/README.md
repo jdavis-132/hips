@@ -1,20 +1,6 @@
----
-title: "HIPS README"
-author: "Jensina Davis"
-date: "`r Sys.Date()`"
-output: 
-  html_document: default
-  pdf_document: default
-editor_options: 
-  markdown: 
-    wrap: 72
----
+# HIPS README
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-This is the documentation for the HIPS 2022 & 2023 Dataset.
+This is the documentation for the HIPS 2022, 2023, & 2024 Dataset.
 
 # Variable Definitions And Notes
 
