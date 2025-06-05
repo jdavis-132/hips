@@ -1,8 +1,12 @@
 # HIPS: High Intensity Phenotyping Sites
-Repository for the HIPS project. 
-For documentation of the dataset, please see the file src/README_HYBRID_HIPS2022.html. 
-For the latest version of the dataset, please see the folder outData and choose the latest version. 
-
+Repository for the HIPS project collaboration between the Schnable lab at Iowa State University and the Schnable and Santra labs at the University of Nebraska-Lincoln. 
+Contains trait data and associated metadata for 122 maize hybrids across 16 location years (defined as a unique combination of location, year, and irrigation level) in Iowa and Nebraska between 2022 and 2024. 9 of the location years also have 368 inbred lines from the maize SAM panel. In 11 of the hybrid location years, there were 2-3 levels of nitrogen fertilizer applied to different blocks of the field. In 4 of the inbred location years, there were 3 levels of nitrogen fertilizer applied to different blocks of the field. All other location years had one level of nitrogen fertilizer applied to the entire field. 
+## Overview of Experimental Design
+### 2022 hybrids
+### 2022 inbreds
+### 2023 hybrids
+### 2023 inbreds
+### 2024 hybrids
 ## Citation
 If you use the hybrid data in your work, please cite the following paper: 
 
@@ -26,4 +30,4 @@ Bibtex:
            year = {2025}
 }
 ```
-
+Please contact schnable@unl.edu if you wish to use the inbred data in your work. 
