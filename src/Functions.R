@@ -86,7 +86,7 @@ plotRepCorr <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'ge
   return(df.wide)
 }
  # Modify to use all replicates 
-plotRepCorr2 <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'genotype', phenotypes, facet = 'location', block = 'block', environment = 'environment', main = NULL)
+plotRepCorr2 <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'genotype', phenotypes, facet = 'locationYear', block = 'block', environment = 'environment', main = NULL)
 {
   environments <- unique(data[[environment]])
   dfWide <- tibble()
@@ -135,9 +135,9 @@ plotRepCorr2 <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'g
             axis.text = element_text(color = 'black', size = 9, hjust = 1, margin = margin(0,0,0, 0)),
             plot.title = element_text(color = 'black', size = 9, hjust = 0.5),
             axis.line = element_blank(),
-            panel.background = element_blank(),
-            panel.border = element_blank(),
-            panel.grid = element_blank(), 
+            # panel.background = element_blank(),
+            # panel.border = element_blank(),
+            # panel.grid = element_blank(), 
             plot.background = element_blank(), 
             legend.position = 'right',
             legend.background = element_blank())
