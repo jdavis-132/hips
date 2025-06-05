@@ -1,9 +1,3 @@
-# HIPS README
-
-This is the documentation for the HIPS 2022, 2023, & 2024 Dataset.
-
-
-
 # Location Notes
 
 ## Lincoln 2022
