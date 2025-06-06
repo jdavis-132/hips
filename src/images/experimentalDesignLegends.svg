@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' class='svglite' width='922.29pt' height='440.23pt' viewBox='0 0 922.29 440.23'>
+<defs>
+  <style type='text/css'><![CDATA[
+    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    .svglite text {
+      white-space: pre;
+    }
+  ]]></style>
+</defs>
+<rect width='100%' height='100%' style='stroke: none; fill: none;'/>
+<defs>
+  <clipPath id='cpMC4wMHw5MjIuMjl8MC4wMHw0NDAuMjM='>
+    <rect x='0.00' y='0.00' width='922.29' height='440.23' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMC4wMHw5MjIuMjl8MC4wMHw0NDAuMjM=)'>
+<text x='140.54' y='218.47' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='37.75px' lengthAdjust='spacingAndGlyphs'>Nitrogen</text>
+<text x='140.54' y='228.19' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='36.71px' lengthAdjust='spacingAndGlyphs'>Fertilizer</text>
+<rect x='180.18' y='211.74' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #FFEDA0;' />
+<rect x='222.80' y='211.74' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #FEB24C;' />
+<rect x='281.05' y='211.74' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #F03B20;' />
+<text x='201.23' y='222.89' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='17.24px' lengthAdjust='spacingAndGlyphs'>Low</text>
+<text x='243.85' y='222.89' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='35.09px' lengthAdjust='spacingAndGlyphs'>Medium</text>
+<text x='302.10' y='222.89' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='20.10px' lengthAdjust='spacingAndGlyphs'>High</text>
+<text x='622.40' y='218.47' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='39.97px' lengthAdjust='spacingAndGlyphs'>Irrigation</text>
+<text x='622.40' y='228.19' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='37.65px' lengthAdjust='spacingAndGlyphs'>Provided</text>
+<rect x='662.97' y='211.74' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #F0F0F0;' />
+<rect x='698.22' y='211.74' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #BDBDBD;' />
+<rect x='731.97' y='211.74' width='15.86' height='15.86' style='stroke-width: 1.07; stroke: none; stroke-linecap: butt; stroke-linejoin: miter; fill: #636363;' />
+<text x='684.03' y='222.89' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='9.89px' lengthAdjust='spacingAndGlyphs'>NI</text>
+<text x='719.27' y='222.89' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='7.77px' lengthAdjust='spacingAndGlyphs'>LI</text>
+<text x='753.03' y='222.89' style='font-size: 9.00px; font-family: "Liberation Sans";' textLength='7.73px' lengthAdjust='spacingAndGlyphs'>FI</text>
+</g>
+</svg>

@@ -1,19 +1,36 @@
 # HIPS: High Intensity Phenotyping Sites
-Repository for the HIPS project collaboration between the Schnable lab at Iowa State University and the Schnable and Santra labs at the University of Nebraska-Lincoln. 
-Contains trait data and associated metadata for 122 maize hybrids across 16 location years (defined as a unique combination of location, year, and irrigation level) in Iowa and Nebraska between 2022 and 2024. 9 of the location years also have 368 inbred lines from the maize SAM panel. In 11 of the hybrid location years, there were 2-3 levels of nitrogen fertilizer applied to different blocks of the field. In 4 of the inbred location years, there were 3 levels of nitrogen fertilizer applied to different blocks of the field. All other location years had one level of nitrogen fertilizer applied to the entire field. 
-## Overview of Experimental Design
+
+Repository for the HIPS project collaboration between the Schnable lab at Iowa State University and the Schnable and Santra labs at the University of Nebraska-Lincoln. Contains trait data and associated metadata for 122 maize hybrids across 16 location years (defined as a unique combination of location, year, and irrigation level) in Iowa and Nebraska between 2022 and 2024. 9 of the location years also have 368 inbred lines from the maize SAM panel. In 11 of the hybrid location years, there were 2-3 levels of nitrogen fertilizer applied to different blocks of the field. In 4 of the inbred location years, there were 3 levels of nitrogen fertilizer applied to different blocks of the field. All other location years had one level of nitrogen fertilizer applied to the entire field. \## Overview of Experimental Design
+
 ### 2022 hybrids
+
+![](src/images/experimentalDesign2022hybrids.png)
+
 ### 2022 inbreds
+
+![](src/images/experimentalDesign2022inbreds.png)
+
 ### 2023 hybrids
+
+![](src/images/experimentalDesign2023hybrids.png)
+
 ### 2023 inbreds
+
+![](src/images/experimentalDesign2023inbreds.png)
+
 ### 2024 hybrids
+
+![](src/images/experimentalDesign2024hybrids.png)
+
 ## Citation
-If you use the hybrid data in your work, please cite the following paper: 
 
-Davis, J.M., Coffey, L.M., Turkus, J., López-Corona, L., Linders, K., Ullagaddi, C., Santra, D.K., Schnable, P.S. and Schnable, J.C. (2025), Assessing the Impact of Yield Plasticity on Hybrid Performance in Maize. Physiologia Plantarum, 177: e70278. https://doi.org/10.1111/ppl.70278
+If you use the hybrid data in your work, please cite the following paper:
 
-Bibtex: 
-```
+Davis, J.M., Coffey, L.M., Turkus, J., López-Corona, L., Linders, K., Ullagaddi, C., Santra, D.K., Schnable, P.S. and Schnable, J.C. (2025), Assessing the Impact of Yield Plasticity on Hybrid Performance in Maize. Physiologia Plantarum, 177: e70278. <https://doi.org/10.1111/ppl.70278>
+
+Bibtex:
+
+```         
 @article{davis2025assessing,
            author = {Davis, Jensina M. and Coffey, Lisa M. and Turkus, Jonathan and López-Corona, Lina and Linders, Kyle and Ullagaddi, Chidanand and Santra, Dipak K. and Schnable, Patrick S. and Schnable, James C.},
            title = {Assessing the Impact of Yield Plasticity on Hybrid Performance in Maize},
@@ -30,4 +47,5 @@ Bibtex:
            year = {2025}
 }
 ```
-Please contact schnable@unl.edu if you wish to use the inbred data in your work. 
+
+Please contact [schnable\@unl.edu](mailto:schnable@unl.edu){.email} if you wish to use the inbred data in your work.
