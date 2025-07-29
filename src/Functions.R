@@ -33,7 +33,7 @@ idOutliers <- function(data, trait)
   highCutoff <- q3 + (1.5*iqr)
   
   df_filt <- filter(df, trait<lowCutoff|trait>highCutoff) %>%
-    select(!trait)
+    dplyr::select(!trait)
   return(df_filt)
 }
 
@@ -66,7 +66,7 @@ plotRepCorr <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'ge
     mutate(rep = 1:n()) %>%
     ungroup() %>%
     pivot_longer(all_of(phenotypes), names_to = 'var', values_to = 'val') %>%
-    select(c(all_of(genotype), all_of(treatmentVar), all_of(facet), rep, var, val)) %>%
+    dplyr::select(c(all_of(genotype), all_of(treatmentVar), all_of(facet), rep, var, val)) %>%
     pivot_wider(id_cols = c(.data[[genotype]], .data[[treatmentVar]], .data[[facet]]), names_from = c(var, rep), values_from = val, names_sep = '.')
   
   for(i in phenotypes)
@@ -95,7 +95,7 @@ plotRepCorr2 <- function(data, treatmentVar = 'nitrogenTreatment', genotype = 'g
   {
     df_e <- data %>% 
       filter(.data[[environment]]==e) %>% 
-      select(any_of(c(phenotypes, environment, block, genotype, treatmentVar, facet)))
+      dplyr::select(any_of(c(phenotypes, environment, block, genotype, treatmentVar, facet)))
     
     if(length(df_e[[environment]]) == 0){ next }
     
@@ -206,7 +206,7 @@ getSpatialCorrections <- function(data, response)
         filter(!is.na(plotNumber)) %>%
         rowwise() %>%
         mutate(value = value + intercept) %>%
-        rename('{response}':= value)
+        dplyr::rename('{response}':= value)
       # Bind to df
       df.sp <- bind_rows(df.sp, sp) %>%
         mutate(plotNumber = as.numeric(plotNumber))
@@ -256,7 +256,7 @@ getSpatialCorrectionsEnvironment <- function(data, response, environment)
       filter(!is.na(plotNumber)) %>%
       rowwise() %>%
       mutate(value = value + intercept) %>%
-      rename('{response}':= value)
+      dplyr::rename('{response}':= value)
     # Bind to df
     df.sp <- bind_rows(df.sp, sp) %>%
       mutate(plotNumber = as.numeric(plotNumber))
@@ -284,7 +284,7 @@ partitionVariance2 <- function(df, response, label)
     rowwise() %>%
     mutate(pctVar = vcov/totalVar*100, 
            label = label) %>%
-    select(responseVar, grp, vcov, pctVar, label)
+    dplyr::select(responseVar, grp, vcov, pctVar, label)
   return(vc)
 }
 
@@ -307,7 +307,7 @@ partitionVariance3 <- function(df, response, label, modelStatement)
     rowwise() %>%
     mutate(pctVar = vcov/totalVar*100, 
            label = label) %>%
-    select(responseVar, grp, vcov, pctVar, label)
+    dplyr::select(responseVar, grp, vcov, pctVar, label)
   return(vc)
 }
 
@@ -357,7 +357,7 @@ getNitrogenPlasticityByLocation <- function(data, response, locations)
     #   as_tibble(rownames = 'genotype') %>%
     #   mutate(location = currlocation, 
     #          '{response.out}':= Init1) %>%
-    #   select(!Init1)
+    #   dplyr::select(!Init1)
     pl <- estimatePlasticity3(location.df, response, 'nitrogenTreatment') %>%
       mutate(location = currlocation)
     response.df <- bind_rows(response.df, pl)
@@ -422,9 +422,9 @@ estimatePlasticity3 <- function(data, trait, environment, genotype, seed = SEED)
   b <- as_tibble(model$b, rownames = 'genotype') %>%
     rowwise() %>%
     mutate(b = value + 1) %>%
-    select(!value)
+    dplyr::select(!value)
   g <- as_tibble(model$g, rownames = 'genotype') %>%
-    rename(g = value)
+    dplyr::rename(g = value)
   
   mu <- model$mu
   
@@ -433,8 +433,8 @@ estimatePlasticity3 <- function(data, trait, environment, genotype, seed = SEED)
     mutate('{trait}.mu' := mu + g,
            '{trait}.FWB' := mu + g + b*max(model$h), 
            '{trait}.FWW' := mu + g + b*min(model$h)) %>%
-    rename('{trait}.b' := b) %>%
-    select(!g)
+    dplyr::rename('{trait}.b' := b) %>%
+    dplyr::select(!g)
   return(df)
 }
 
@@ -570,11 +570,11 @@ fixGenos <- function(data, givenKey)
   df_fix <- filter(data, genotype %in% key$orig)
   #print(unique(df_fix$genotype))
   df_fix <- left_join(df_fix, key, join_by(genotype == orig), keep = FALSE, relationship = 'many-to-one')
-  #df_fix %>% select(starts_with('correct')) %>% print()
+  #df_fix %>% dplyr::select(starts_with('correct')) %>% print()
   df_fix <- df_fix %>%
     rowwise() %>%
     mutate(genotype = correct) %>%
-    select(!starts_with('correct'))
+    dplyr::select(!starts_with('correct'))
   df <- bind_rows(df_ok, df_fix)
   return (df)
 }
@@ -691,7 +691,7 @@ getSignificantCrossovers <- function(data, pheno, environments)
     
     environmentData <- data %>%
       filter(environmentCode==env) %>%
-      select(genotype, all_of(phenotype))
+      dplyr::select(genotype, all_of(phenotype))
     environmentData <- environmentData[complete.cases(environmentData), ]
     
     if(length(environmentData[[phenotype]]) < 1|length(unique(environmentData$genotype)) < 1){next}
@@ -703,16 +703,16 @@ getSignificantCrossovers <- function(data, pheno, environments)
       rowwise() %>%
       mutate(genotype1 = str_split_i(genotypes, '-', 1),
              genotype2 = str_split_i(genotypes, '-', 2)) %>%
-      rename('{phenotypeAdjustedP}' := `p adj`) %>%
+      dplyr::rename('{phenotypeAdjustedP}' := `p adj`) %>%
       mutate('{phenotypeSigDiff}' := .data[[phenotypeAdjustedP]] < 0.05) %>%
-      select(c(genotypes, genotype1, genotype2,  all_of(c(phenotypeAdjustedP, phenotypeSigDiff))))
+      dplyr::select(c(genotypes, genotype1, genotype2,  all_of(c(phenotypeAdjustedP, phenotypeSigDiff))))
     
     environmentDataSummary <- data %>%
       filter(environmentCode==env) %>%
       group_by(genotype) %>%
       summarise('{phenotypeMean}' := mean(.data[[phenotype]], na.rm = TRUE)) %>%
       mutate('{phenotypeRank}' := dense_rank(desc(.data[[phenotypeMean]]))) %>%
-      select(c(all_of(phenotypeRank), genotype))
+      dplyr::select(c(all_of(phenotypeRank), genotype))
     
     envG1Suffix <- paste0(envSuffix, '.G1')
     envG2Suffix <- paste0(envSuffix, '.G2')
@@ -720,12 +720,12 @@ getSignificantCrossovers <- function(data, pheno, environments)
     genotypePairs <- left_join(genotypePairs, tukey, join_by(genotype1==genotype1, genotype2==genotype2), keep = FALSE, suffix = c('', '')) %>%
       bind_rows(left_join(genotypePairs, tukey, join_by(genotype1==genotype2, genotype2==genotype1), keep = FALSE, suffix = c('', ''))) %>%
       distinct(genotype1, genotype2, .keep_all = TRUE) %>%
-      rename('{phenotypeAdjustedP}{envSuffix}' := .data[[phenotypeAdjustedP]],
+      dplyr::rename('{phenotypeAdjustedP}{envSuffix}' := .data[[phenotypeAdjustedP]],
              '{phenotypeSigDiff}{envSuffix}' := .data[[phenotypeSigDiff]]) %>%
       full_join(environmentDataSummary, join_by(genotype1==genotype), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
-      rename('{phenotypeRank}{envG1Suffix}' := .data[[phenotypeRank]]) %>%
+      dplyr::rename('{phenotypeRank}{envG1Suffix}' := .data[[phenotypeRank]]) %>%
       full_join(environmentDataSummary, join_by(genotype2==genotype), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
-      rename('{phenotypeRank}{envG2Suffix}' := .data[[phenotypeRank]])
+      dplyr::rename('{phenotypeRank}{envG2Suffix}' := .data[[phenotypeRank]])
   }
   
   cols <- colnames(genotypePairs)
@@ -783,13 +783,13 @@ plotInteractionImportanceGrid <- function(significantInteractionsData = sigCross
   phenotypeScoreNormalized <- paste0(phenotype, 'ScoreNormalized')
   
   df1 <- significantInteractionsData %>%
-    select(c(genotype1, genotype2, all_of(phenotypeScoreNormalized)))
+    dplyr::select(c(genotype1, genotype2, all_of(phenotypeScoreNormalized)))
   df2 <- df1 %>%
     rowwise() %>%
     mutate(genotype1A = genotype2, 
            genotype2 = genotype1) %>%
-    select(c(genotype1A, genotype2, all_of(phenotypeScoreNormalized))) %>%
-    rename(genotype1 = genotype1A)
+    dplyr::select(c(genotype1A, genotype2, all_of(phenotypeScoreNormalized))) %>%
+    dplyr::rename(genotype1 = genotype1A)
   
   df <-bind_rows(df1, df2) %>% 
     filter(!is.na(.data[[phenotypeScoreNormalized]]))
@@ -797,16 +797,16 @@ plotInteractionImportanceGrid <- function(significantInteractionsData = sigCross
   blups <- lmer(as.formula(paste0(phenotypeSpatial, ' ~ environment + (1|genotype)')), data = performanceData) 
   blups <- ranef(blups)
   blups <- as_tibble(blups$genotype, rownames = 'genotype') %>%
-    rename(blup = `(Intercept)`) %>%
+    dplyr::rename(blup = `(Intercept)`) %>%
     mutate(rank = dense_rank(blup)) %>%
-    select(genotype, rank)
+    dplyr::select(genotype, rank)
   
   df <- left_join(df, blups, join_by(genotype1==genotype), keep = FALSE, suffix = c('', ''), relationship = 'many-to-one') %>%
-    rename(rankG1 = rank) %>%
+    dplyr::rename(rankG1 = rank) %>%
     left_join(blups, join_by(genotype2==genotype), keep = FALSE, suffix = c('', '')) %>%
-    rename(rankG2 = rank) %>%
+    dplyr::rename(rankG2 = rank) %>%
     # filter(!is.na(.data[[phenotypeScoreNormalized]]))
-    select(c(genotype1, genotype2, rankG1, rankG2, all_of(phenotypeScoreNormalized)))
+    dplyr::select(c(genotype1, genotype2, rankG1, rankG2, all_of(phenotypeScoreNormalized)))
   
   heatmap <- ggplot(df, aes(rankG1, rankG2, fill = .data[[phenotypeScoreNormalized]])) + 
     geom_tile() + 
@@ -845,7 +845,7 @@ plotNPlasticityCor <- function(nitrogenResponsePlasticityData = nResponse.pl, tr
     pivot_wider(id_cols = genotype, 
                 names_from = locationYear,
                 values_from = .data[[plasticity]]) #%>% 
-    # select(where(~!all(is.na(.))))
+    # dplyr::select(where(~!all(is.na(.))))
   
   corData <- cor(dfWide[, 2:length(colnames(dfWide))], use = 'complete.obs', method = 'spearman') %>%
     as.table() %>%
