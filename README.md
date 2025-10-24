@@ -50,4 +50,4 @@ Bibtex:
 }
 ```
 
-Please contact [schnable\@unl.edu](mailto:schnable@unl.edu){.email} if you wish to use the inbred data in your work.
+Please contact [schnable\@unl.edu](mailto:schnable@unl.edu) if you wish to use the inbred data in your work.
