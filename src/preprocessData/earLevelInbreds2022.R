@@ -264,29 +264,29 @@ inbreds <- inbreds %>%
          kernelsPerEar, shelledCobWidth, shelledCobLength, shelledCobMass, hundredKernelMass, kernelMassPerEar, notes, experiment,
          plantDensity, plantingDate, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, totalStandCount)
 
-# Missouri Valley height data
-mv.plantData.inb <- read_excel('rawData/2022/Plant_data_MO_Valley_2022.xlsx',
-                               sheet = '2211',
-                               col_names = c('row', 'range', 'notes', 'flagLeafHeight', 'earHeight', 'genotype'),
-                               col_types = c('skip', 'numeric', 'numeric', 'skip', 'skip', 'text', 'numeric', 'numeric', 'text', 'skip'),
-                               skip = 1)
-mv.plantData.inb <- mv.plantData.inb %>%
-  filter(is.na(notes)) %>%
-  rowwise() %>%
-  mutate(flagLeafHt = case_when(flagLeafHeight=='n/a' ~ NA, .default = flagLeafHeight),
-         earHeight = case_when(earHeight=='n/a' ~ NA, .default = earHeight),
-         genotype = str_to_upper(genotype),
-         location = 'Missouri Valley',
-         sublocation = 'Missouri Valley',
-         nitrogenTreatment = 'Medium',
-         irrigationProvided = 0,
-         poundsOfNitrogenPerAcre = 175)
+# # Missouri Valley height data
+# mv.plantData.inb <- read_excel('rawData/2022/Plant_data_MO_Valley_2022.xlsx',
+#                                sheet = '2211',
+#                                col_names = c('row', 'range', 'notes', 'flagLeafHeight', 'earHeight', 'genotype'),
+#                                col_types = c('skip', 'numeric', 'numeric', 'skip', 'skip', 'text', 'numeric', 'numeric', 'text', 'skip'),
+#                                skip = 1)
+# mv.plantData.inb <- mv.plantData.inb %>%
+#   filter(is.na(notes)) %>%
+#   rowwise() %>%
+#   mutate(flagLeafHt = case_when(flagLeafHeight=='n/a' ~ NA, .default = flagLeafHeight),
+#          earHeight = case_when(earHeight=='n/a' ~ NA, .default = earHeight),
+#          genotype = str_to_upper(genotype),
+#          location = 'Missouri Valley',
+#          sublocation = 'Missouri Valley',
+#          nitrogenTreatment = 'Medium',
+#          irrigationProvided = 0,
+#          poundsOfNitrogenPerAcre = 175)
 
-inbreds <- full_join(inbreds, mv.plantData.inb, join_by(location, row, range), keep = FALSE, suffix = c('', '.mv'), relationship = 'many-to-one')
-inbreds <- inbreds %>%
-  mutate(genotype = case_when(location=='Missouri Valley' ~ genotype.mv,
-                              .default = genotype)) %>%
-  select(!ends_with('.mv'))
+# inbreds <- full_join(inbreds, mv.plantData.inb, join_by(location, row, range), keep = FALSE, suffix = c('', '.mv'), relationship = 'many-to-one')
+# inbreds <- inbreds %>%
+#   mutate(genotype = case_when(location=='Missouri Valley' ~ genotype.mv,
+#                               .default = genotype)) %>%
+#   select(!ends_with('.mv'))
 
 ac.krn <- read_excel('rawData/2022/2_KRN_trait_inbred_2022_Compiled_v3.xlsx', 
                      sheet = 'compiled data',
@@ -386,25 +386,16 @@ ac <- full_join(ac.seed.cobs.ears, ac.krn, join_by(sampleID), suffix = c('', '.k
   mutate(location = case_when(str_detect(qrCode, 'A') ~ 'Ames',
                               str_detect(qrCode, 'C') ~ 'Crawfordsville'))
 
-ac.height <- read.table('rawData/2022/AmesCrawfordsville2022InbredsHeights.tsv', sep = '\t', header = TRUE, row.names = NULL)
-ac <- full_join(ac, ac.height, join_by(qrCode, location), suffix = c('', '.ht'), keep = FALSE, relationship = 'many-to-one')
+# ac.height <- read.table('rawData/2022/AmesCrawfordsville2022InbredsHeights.tsv', sep = '\t', header = TRUE, row.names = NULL)
+# ac <- full_join(ac, ac.height, join_by(qrCode, location), suffix = c('', '.ht'), keep = FALSE, relationship = 'many-to-one')
 
-ac <- unite(ac, 'notes', notes, notes.ht, sep = ';', remove = TRUE, na.rm = FALSE)
+# ac <- unite(ac, 'notes', notes, notes.ht, sep = ';', remove = TRUE, na.rm = FALSE)
 
 inbreds2 <- full_join(inbreds, ac, join_by(location, qrCode), keep = FALSE, suffix = c('', '.ac'))
 
 inbreds2 <- inbreds2 %>%
   rowwise() %>%
-  mutate(range = max(range, range.ac, na.rm = TRUE) %>%
-           as.integer(),
-         row = max(row, row.ac, na.rm = TRUE) %>%
-           as.integer(), 
-         qrCode = max(qrCode, qrCode.krn, na.rm = TRUE),
-         flagLeafHeight = max(flagLeafHeight, flagLeafHeight.ac, flagLeafHt, na.rm = TRUE), 
-         earHeight = max(earHeight, earHeight.ac, na.rm = TRUE),
-         plotNumber = max(plotNumber, plotNumber.ac, na.rm = TRUE),
-         genotype = max(genotype, genotype.ac, na.rm = TRUE), 
-         nitrogenTreatment = max(nitrogenTreatment, nitrogenTreatment.ac, na.rm = TRUE),
+  mutate(qrCode = max(qrCode, qrCode.krn, na.rm = TRUE),
          kernelRowNumber = max(kernelRowNumber, kernelRowNumber.ac, na.rm = TRUE), 
          earWidth = max(earWidth, earWidth.ac, na.rm = TRUE),
          earLength = max(shelledCobLength, earLength, na.rm = TRUE),
@@ -414,55 +405,11 @@ inbreds2 <- inbreds2 %>%
          shelledCobMass = max(shelledCobMass, shelledCobMass.ac, na.rm = TRUE)) %>%
   unite('notes', notes, notes.ac, sep = ';', remove = TRUE, na.rm = TRUE) %>%
   select(!ends_with('.ac')) %>%
-  select(!c(looseKernels, looseKernelMass, rep, field, irrigation, population, qrCode.krn))
+  select(!c(looseKernels, looseKernelMass, qrCode.krn))
 inbreds2 <- inbreds2 %>%
   mutate(across(where(is.numeric), ~na_if(., as.integer(-Inf))))
 
-lnkFT <- read_excel('rawData/2022/2022 Digitized Flowering Notes.xlsx', 
-                    sheet = 'SAM', 
-                    col_types = c(rep('numeric', 3), 'skip', 'date', 'skip', 'date', 'skip', 'text', 'skip'),
-                    col_names = c('plotNumber', 'row', 'range', 'anthesisDate', 'silkDate', 'notes')) %>%
-  filter(!is.na(plotNumber)) %>%
-  mutate(location = 'Lincoln')
-
-inbreds3 <- full_join(inbreds2, lnkFT, join_by(location, plotNumber), suffix = c('', '.lnk'), keep = FALSE, relationship = 'many-to-one')
-inbreds3 <- inbreds3 %>%
-  rowwise() %>%
-  unite('notes', notes, notes.lnk, sep = ';', remove = TRUE, na.rm = FALSE) %>%
-  select(!ends_with('.lnk'))
-
-lnkStandCt <- read_excel('rawData/2022/2022 SAM Stand Counts - Summary.xlsx', 
-                         sheet = 'Comparison',
-                         skip = 2,
-                         col_types = c('numeric', rep('skip', 7), 'numeric', 'text', rep('skip', 11)),
-                         col_names = c('plotNumber', 'totalStandCount', 'notes')) %>%
-  mutate(location = 'Lincoln')
-inbreds4 <- full_join(inbreds3, lnkStandCt, join_by(location, plotNumber), suffix = c('', '.lnk'), keep = FALSE, relationship = 'many-to-one')
-inbreds4 <- inbreds4 %>%
-  rowwise() %>%
-  mutate(totalStandCount = max(totalStandCount, totalStandCount.lnk, na.rm = TRUE)) %>%
-  select(!ends_with('.lnk'))
-
-lnkHt <- read_excel('rawData/2022/230331 SAM Height and Leaf Dimension Data Data - Digitized and Reviewed.xlsx', 
-                    sheet = 1,
-                    col_types = c('numeric', 'text', rep('skip', 6), rep('numeric', 2), 'skip', rep('numeric', 2), rep('skip', 11)),
-                    col_names = c('plotNumber', 'genotype', 'earHeight1', 'flagLeafHeight1', 'earHeight2', 'flagLeafHeight2')) %>%
-  rowwise() %>%
-  mutate(location = 'Lincoln',
-         genotype = str_to_upper(genotype), 
-         earHeight = mean(c(earHeight1, earHeight2), na.rm = TRUE),
-         flagLeafHeight = mean(c(flagLeafHeight1, flagLeafHeight2), na.rm = TRUE)) %>%
-  select(plotNumber, location, genotype, earHeight, flagLeafHeight)
-
-inbreds5 <- full_join(inbreds4, lnkHt, join_by(location, plotNumber), suffix = c('', '.lnk'), keep = FALSE)
-inbreds5 <- inbreds5 %>%
-  rowwise() %>%
-  mutate(genotype = max(genotype, genotype.lnk, na.rm = TRUE),
-         earHeight = max(earHeight, earHeight.lnk, na.rm = TRUE),
-         flagLeafHeight = max(flagLeafHeight, flagLeafHeight.lnk, na.rm = TRUE)) %>%
-  select(!ends_with('.lnk'))
-
-inbreds5 <- filter(inbreds5, !(location=='Lincoln' & genotype=='GENOTYPE'))
+inbreds5 <- filter(inbreds2, !(location=='Lincoln' & genotype=='GENOTYPE'))
 inbreds5 <- filter(inbreds5, !(location=='Missouri Valley' & genotype %in% c('FILL', NA)))
 
 inbreds <- inbreds5 %>%
@@ -496,8 +443,7 @@ inbreds <- inbreds5 %>%
   filter(!is.na(genotype))
 
 responseVars <- c('numberPrimaryEars', 'numberSecondaryEars', 'secondaryEarKernels', 'earWidth', 'kernelFillLength', 'kernelRowNumber',
-                  'kernelsPerRow', 'kernelsPerEar', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass', 'kernelMassPerEar',
-                  'plantDensity', 'totalStandCount', 'flagLeafHeight', 'earHeight', 'earLength')
+                  'kernelsPerRow', 'kernelsPerEar', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass', 'kernelMassPerEar', 'earLength')
 # inbredsWide <- plotRepCorr(inbreds, 'nitrogenTreatment', 'genotype', responseVars, 'location')
 
 inbreds <- inbreds %>%
@@ -537,26 +483,11 @@ inbreds <- inbreds %>%
                                .default = earLength),
          kernelsPerEar = case_when(location=='Scottsbluff' & plotNumber==162 ~ NA, .default = kernelsPerEar),
          kernelRowNumber = case_when(location=='Scottsbluff' & plotNumber==677 ~ mean(c(10, 12, 13, 13, 13)), .default = kernelRowNumber),
-         plotLength = 7.5,
-         plantDensity = (totalStandCount/2)*(7.5/17)*1000,
          hundredKernelMass = case_when(is.na(hundredKernelMass) ~ (kernelMassPerEar/kernelsPerEar)*100,
                                        .default = hundredKernelMass))
-inbreds <- inbreds %>%
-  mutate(plantingDate = mdy(plantingDate),
-         daysToAnthesis = difftime(anthesisDate, plantingDate, units = 'days') %>%
-           as.integer(),
-         daysToSilk = difftime(silkDate, plantingDate, units = 'days') %>%
-           as.integer(),
-         anthesisSilkingInterval = daysToSilk - daysToAnthesis)
 
-inbreds_final_plotlevel_2022 <- read_csv('finalData/HIPS_INBREDS_V12_1.csv') %>% 
-  filter(location=='Lincoln' & year==2022) %>% 
-    select(plotNumber, location, year, GDDToAnthesis, GDDToSilk, anthesisSilkingIntervalGDD)
+inbreds <- mutate(inbreds, hundredKernelMass = case_when(hundredKernelMass <= 0 ~ NA, .default = hundredKernelMass))
 
-inbreds_plusft <- left_join(inbreds, inbreds_final_plotlevel_2022, join_by(location, year, plotNumber), keep = FALSE)
-inbreds <- mutate(inbreds_plusft, hundredKernelMass = case_when(hundredKernelMass <= 0 ~ NA, .default = hundredKernelMass))
-
-responseVars <- c(responseVars, 'daysToAnthesis', 'GDDToAnthesis', 'daysToSilk', 'GDDToSilk', 'anthesisSilkingInterval', 'anthesisSilkingIntervalGDD')
 
 inbredsWide <- plotRepCorr2(inbreds, phenotypes = responseVars)
 
@@ -601,22 +532,10 @@ for(i in responseVars)
 
 inbreds <- inbreds %>%
   rowwise() %>%
-  mutate(anthesisSilkingInterval = case_when(anthesisSilkingInterval < -10 | anthesisSilkingInterval > 20 ~ NA,
-                                             .default = anthesisSilkingInterval),
-         anthesisSilkingIntervalGDD = case_when(anthesisSilkingIntervalGDD < -250 | anthesisSilkingIntervalGDD > 500 ~ NA, 
-                                                .default = anthesisSilkingIntervalGDD),
-         daysToSilk = case_when(daysToSilk > 110 ~ NA, .default = daysToSilk),
-         earHeight = case_when(location=='Crawfordsville' & (earHeight < 12 | earHeight > 175) ~ NA, .default = earHeight),
-         earLength = case_when(earLength > 25  ~ NA, 
+  mutate(earLength = case_when(earLength > 25  ~ NA, 
                                .default = earLength),
          earWidth = case_when(!between(earWidth, 1.25, 6.25) ~ NA, 
                               .default = earWidth),
-         flagLeafHeight = case_when((flagLeafHeight > 250) | 
-                                      (location=='Ames' & flagLeafHeight < 45) | 
-                                      (location=='Lincoln' & flagLeafHeight < 50) | 
-                                      (location=='Missouri Valley' & (flagLeafHeight < 50 | flagLeafHeight > 225)) ~ NA,
-                                    .default = flagLeafHeight), 
-         GDDToSilk = case_when(GDDToSilk > 2200 ~ NA, .default = GDDToSilk),
          hundredKernelMass = case_when(!between(hundredKernelMass, 5, 40) ~ NA, 
                                        .default = hundredKernelMass),
          kernelMassPerEar = case_when(kernelMassPerEar > 155 ~ NA,
@@ -640,41 +559,16 @@ inbreds <- inbreds %>%
          shelledCobMass = round(shelledCobMass, digits = 3),
          hundredKernelMass = round(hundredKernelMass, digits = 3),
          kernelMassPerEar = round(kernelMassPerEar, digits = 1),
-         plantDensity = round(plantDensity, digits = 0),
          plantingDate = as.character(plantingDate),
-         earHeight = round(earHeight, digits = 0),
-         flagLeafHeight = round(flagLeafHeight, digits = 0),
-         earLength = round(earLength, digits = 3),
-         anthesisDate = as.character(anthesisDate),
-         silkDate = as.character(silkDate), 
-         GDDToAnthesis = round(GDDToAnthesis, digits = 2),
-         GDDToSilk = round(GDDToSilk, digits = 2),
-         anthesisSilkingIntervalGDD = round(anthesisSilkingIntervalGDD, digits = 2)) %>%
-  select(qrCode, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotLength, totalStandCount, block, row, range,
-         plotNumber, genotype, plantingDate, anthesisDate, silkDate, daysToAnthesis, daysToSilk, anthesisSilkingInterval, GDDToAnthesis, GDDToSilk,
-         anthesisSilkingIntervalGDD, earHeight, flagLeafHeight, plantDensity, earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber,
+         earLength = round(earLength, digits = 3)) %>%
+  select(qrCode, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, block, row,
+         range, plotNumber, genotype, plantingDate, earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber,
          kernelsPerEar, hundredKernelMass, kernelMassPerEar, shelledCobMass, kernelColor, notes) %>%
   arrange(location, sublocation, block, plotNumber)
 
 responseVars <- c(c('earWidth', 'earFillLength', 'kernelRowNumber',
                     'kernelsPerRow', 'kernelsPerEar', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass', 'kernelMassPerEar',
-                    'plantDensity', 'totalStandCount', 'flagLeafHeight', 'earHeight', 'earLength', 'daysToAnthesis', 'GDDToAnthesis', 'daysToSilk', 'GDDToSilk', 'anthesisSilkingInterval', 'anthesisSilkingIntervalGDD'))
-
-# inbredsWide <- plotRepCorr(inbreds4.9, 'nitrogenTreatment', 'genotype', responseVars, 'location')
-
-lnkIndex <- read_excel('rawData/2022/2022 Inbred HIPS - Lincoln Summary File.xlsx',
-                       sheet = 'Index', 
-                       skip = 1,
-                       col_types = c('numeric', rep('skip', 4), 'numeric', 'numeric'),
-                       col_names = c('plotNumber', 'row', 'range'))
-
-mvIndex <- read_excel('rawData/2022/Missouri Valley - Inbred - Summary.xlsx',
-                      sheet = 'Index', 
-                      skip = 1,
-                      col_types = c(rep('skip', 12), 'numeric', rep('skip', 5), 'numeric', 'numeric', rep('skip', 3)),
-                      col_names = c('plotNumber', 'range', 'row')) %>%
-  rowwise() %>%
-  mutate(plotNumber = case_when(range > 44 ~ plotNumber + 400, .default = plotNumber))
+                    'earLength'))
 
 inbreds4.9 <- inbreds %>%
   rowwise() %>%
@@ -702,18 +596,56 @@ inbreds4.9 <- inbreds %>%
 #          silkDate = mdy(silkDate),
 #          plantingDate = mdy(plantingDate)) %>%
 #   select(!rep)
+cf_a_index <- read_csv('finalData/HIPS_INBREDS_V12_1.csv') %>% 
+  filter(sublocation=='Crawfordsville A') %>% 
+  select(qrCode, block)
+cfa1plots <- cf_a_index$qrCode[cf_a_index$block==1]
+cfa2plots <- cf_a_index$qrCode[cf_a_index$block==2]
+cfa3plots <- cf_a_index$qrCode[cf_a_index$block==3]
+cfa4plots <- cf_a_index$qrCode[cf_a_index$block==4]
 
 v495 <- inbreds4.9 %>%
   rowwise() %>%
   mutate(range = case_when(location=='Scottsbluff' & row==13 & range < 49 ~ range - 1, .default = range), 
          year = 2022, 
          locationYear = str_c(year, location, sep = ' '), 
-         environment = str_c(locationYear, nitrogenTreatment, sep = ' '))
+         environment = str_c(locationYear, nitrogenTreatment, sep = ' '), 
+         sublocation = case_when(experiment=='LC_2233' ~ 'Ames E1', 
+                                 experiment %in% c('LC_2231', 'LC_2232') ~ 'Ames B1', 
+                                 experiment %in% c('LC_2351', 'LC_2352') ~ 'Crawfordsville A', 
+                                 experiment=='LC_2353' ~ 'Crawfordsville B', 
+                                 .default = location), 
+         nitrogenTreatment = case_when(experiment %in% c('LC_2231', 'LC_2351') ~ 'High', 
+                                       experiment %in% c('LC_2233', 'LC_2352') ~ 'Low', 
+                                       .default = 'Medium'), 
+         poundsOfNitrogenPerAcre = case_when(location %in% c('Ames', 'Crawfordsville') & nitrogenTreatment=='Low' ~ 75, 
+                                             location %in% c('Ames', 'Crawfordsville') & nitrogenTreatment=='Medium' ~ 150, 
+                                             location=='Ames' & nitrogenTreatment=='High' ~ 250, 
+                                             location=='Crawfordsville' & nitrogenTreatment=='High' ~ 225, 
+                                             .default = poundsOfNitrogenPerAcre), 
+         block = case_when(sublocation=='Ames B1' & range < 32 & nitrogenTreatment=='Medium' ~ 1, 
+                           sublocation=='Ames B1' & range < 32 & nitrogenTreatment=='High' ~ 3,
+                           sublocation=='Ames B1' & range >= 32 & nitrogenTreatment=='Medium' ~ 2,
+                           sublocation=='Ames B1' & range >= 32 & nitrogenTreatment=='High' ~ 4,
+                           sublocation=='Ames E1' & range < 26 ~ 1, 
+                           sublocation=='Ames E1' & range >= 26 ~ 2, 
+                           sublocation=='Crawfordsville B' & range < 41 ~ 1, 
+                           sublocation=='Crawfordsville B' & range >= 41 ~ 2, 
+                           sublocation=='Crawfordsville A' & qrCode %in% cfa1plots ~ 1, 
+                           sublocation=='Crawfordsville A' & qrCode %in% cfa2plots ~ 2, 
+                           sublocation=='Crawfordsville A' & qrCode %in% cfa3plots ~ 3, 
+                           sublocation=='Crawfordsville A' & qrCode %in% cfa4plots ~ 4, 
+                           .default = block), 
+         genotype = case_when(genotype %in% c('AK-29', 'AK-32', 'AK-33', 'AK-50', 'AK-51', 'AK-52', 'AK-56', 'AK-57') ~ 'MO17', 
+                              genotype %in% c('AK-58', 'AK-61', 'AK-63') ~ NA, .default = genotype), 
+         environment = str_c(locationYear, nitrogenTreatment, sep = ' ')) %>% 
+  filter(!is.na(genotype)) %>% 
+  select(!plantingDate)
 v495_wide <- plotRepCorr2(v495, phenotypes = responseVars)
 # compFix <- v5 %>%
 #   filter(location=='Scottsbluff') %>% 
 #   full_join(sb495, join_by(row, range), keep = FALSE, suffix = c('.5', '.495')) %>%
 #   select(qrCode.5, qrCode.495, row, range, genotype.5, genotype.495, plotNumber.5, plotNumber.495, kernelRowNumber.5, kernelRowNumber.495)
 
-write_csv(v495, 'finalData/HIPS_INBREDS_2022_EARLEVEL.csv')
+write_csv(v495, 'finalData/HIPS_INBREDS_2022_EARLEVEL_V2.csv')
 
