@@ -133,14 +133,23 @@ ia_data <- left_join(ia_eardata, ac_plotdata, join_by(qrCode), relationship = 'm
 # ne ear data
 ne_eardata <- read_csv('rawData/2023/inbreds/2023_Inbred_Hips_Ear_Phenotyping_MV_LNK_Final_KL_Curated_DataEntrySheet.csv', 
                        col_names = c('qrCode', 'rowbandNotes', 'earNotes', 'earWidth', 'kernelFillLength', 'kernelRowNumber', 'kernelsPerRow', 
-                                     'earMass', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass', 'kernelsPerEar', 'primaryKernelColor', 
-                                     'secondaryKernelColor', 'adminNotes'), 
+                                     'earMass', 'shelledCobWidth', 'shelledCobLength', 'shelledCobMass', 'hundredKernelMass', 'kernelsPerEar',
+                                     'primaryKernelColor', 'secondaryKernelColor', 'adminNotes'), 
                        col_types = '--c--c-----ccciiccccciccc', 
                        skip = 1) %>% 
-  mutate(across(all_of(c('earWidth', 'kernelFillLength', 'earMass', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass'))), 
-         .fns = ~ str_remove(.x, '=')) %>% 
-  mutate(across(all_of(c('earWidth', 'kernelFillLength', 'earMass', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass'))), 
-         .fns = as.numeric)
+  mutate(across(all_of(c('earWidth', 'kernelFillLength', 'earMass', 'shelledCobWidth', 'shelledCobLength', 'shelledCobMass', 
+                         'hundredKernelMass')), 
+         .fns = ~stringr::str_remove(.x, fixed('=')))) %>% 
+  mutate(across(all_of(c('earWidth', 'kernelFillLength', 'earMass', 'shelledCobWidth', 'shelledCobLength', 'shelledCobMass', 
+                         'hundredKernelMass')), 
+         .fns = as.numeric)) %>% 
+  rowwise() %>%
+  mutate(qrCode = str_to_upper(qrCode), 
+         secondaryKernelColor = case_when(secondaryKernelColor=='No Secondary Color$' ~ NA, .default = secondaryKernelColor),
+         primaryKernelColor = stringr::str_remove_all(primaryKernelColor, fixed('$'))) %>% 
+  unite('notes', c(rowbandNotes, earNotes, adminNotes), sep = ';', remove = TRUE, na.rm = TRUE) %>% 
+  unite('kernelColor', c(primaryKernelColor, secondaryKernelColor), sep = ';', remove = TRUE, na.rm = TRUE) %>%
+  mutate(notes = case_when(notes=='' ~ NA, .default = notes))
 # ne metadata
 # join ne data
 # join ne & ia data
