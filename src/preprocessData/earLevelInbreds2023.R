@@ -110,10 +110,7 @@ ac <- full_join(krn_ears_cobs, seeds, join_by(sampleID, qrCode)) %>%
 
 phenotypes <- c('earLength', 'earWidth', 'earMass', 'kernelRowNumber', 'cobLength', 'cobWidth', 'kernelsPerEar',
                 'kernelMassPerEar')
-for(p in phenotypes)
-{
-  printHistogram(ear_level_df, p, title = p)
-}
+
 # Address additional notes cols from krn in this call
 ia_eardata <- ac %>% 
   select(!c(earMass, earLength)) %>%
@@ -125,17 +122,28 @@ ia_eardata <- ac %>%
         seedSpilled, sep = ';', na.rm = TRUE, remove = TRUE)
 ac_plotdata <- read_excel('rawData/2023/2023_yield_ICIA_v3.xlsx', 
                           sheet = '2-row plots', 
-                          col_names = c('qrCode', 'poundsOfNitrogenPerAcre', 'genotype', 'plantingDate', 'experiment', 'rep', 'row', 'range',
-                                        'flagLeafHeight', 'earHeight'), 
-                          col_types = c(rep('skip', 5), 'text', 'numeric', 'skip', 'text', 'skip', 'date', 'text', rep('skip', 4), 'numeric', rep('skip', 5),
-                                        'numeric', 'numeric', 'skip', 'skip', 'numeric', 'numeric', 'skip'), 
+                          col_names = c('qrCode', 'poundsOfNitrogenPerAcre', 'genotype', 'experiment', 'rep', 'row', 'range'), 
+                          col_types = c(rep('skip', 5), 'text', 'numeric', 'skip', 'text', 'skip', 'skip', 'text', rep('skip', 4), 'numeric', rep('skip', 5),
+                                        'numeric', 'numeric', 'skip', 'skip', 'skip', 'skip', 'skip'), 
                           skip = 1) %>% 
   mutate(genotype = str_remove(genotype, '@'))
 
-ia_data <- full_join(ia_eardata, ac_plotdata, join_by(qrCode), relationship = 'many-to-one') %>%
-  mutate()
+ia_data <- left_join(ia_eardata, ac_plotdata, join_by(qrCode), relationship = 'many-to-one')
 
-responseVars <- c('kernelRowNumber', 'earWidth', 'cobLength', 'shelledCobWidth', 'shelledCobMass', 'kernelsPerEar', 'kernelMassPerEar', 'hundredKernelMass',
-                  'flagLeafHeight', 'earHeight')
-
-# ne_eardata <- read_csv('')
+# ne ear data
+ne_eardata <- read_csv('rawData/2023/inbreds/2023_Inbred_Hips_Ear_Phenotyping_MV_LNK_Final_KL_Curated_DataEntrySheet.csv', 
+                       col_names = c('qrCode', 'rowbandNotes', 'earNotes', 'earWidth', 'kernelFillLength', 'kernelRowNumber', 'kernelsPerRow', 
+                                     'earMass', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass', 'kernelsPerEar', 'primaryKernelColor', 
+                                     'secondaryKernelColor', 'adminNotes'), 
+                       col_types = '--c--c-----ccciiccccciccc', 
+                       skip = 1) %>% 
+  mutate(across(all_of(c('earWidth', 'kernelFillLength', 'earMass', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass'))), 
+         .fns = ~ str_remove(.x, '=')) %>% 
+  mutate(across(all_of(c('earWidth', 'kernelFillLength', 'earMass', 'shelledCobWidth', 'shelledCobMass', 'hundredKernelMass'))), 
+         .fns = as.numeric)
+# ne metadata
+# join ne data
+# join ne & ia data
+# check metadata
+# check correlation
+# write out 2023 ear level inbreds
