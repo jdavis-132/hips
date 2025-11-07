@@ -218,7 +218,7 @@ phenotypes <- c('kernelRowNumber', 'earWidth', 'shelledCobWidth', 'shelledCobMas
                 'earFillLength', 'kernelsPerRow', 'earMass', 'earLength')
 # check metadata
 # check correlation
-inbreds_wide <- plotRepCorr2(inbreds, phenotypes = phenotypes)
+# inbreds_wide <- plotRepCorr2(inbreds, phenotypes = phenotypes)
 # Remove outliers
 inbreds <- inbreds %>% 
   mutate(kernelRowNumber = case_when(kernelRowNumber > 25 ~ NA, .default = kernelRowNumber), 
@@ -229,6 +229,15 @@ inbreds <- inbreds %>%
          hundredKernelMass = case_when(hundredKernelMass < 0 | hundredKernelMass > 50 ~ NA, 
                                        .default = hundredKernelMass), 
          earLength = case_when(earLength < 25 ~ NA, .default = earLength)) %>% 
-  select(c(qrCode, sampleID, year, locationYear, environment, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotNumber, block, row, range, all_of(phenotypes), kernelColor, notes))
-
+  select(c(qrCode, sampleID, year, locationYear, environment, location, sublocation, irrigationProvided, nitrogenTreatment,
+           poundsOfNitrogenPerAcre, experiment, plotNumber, block, row, range, all_of(phenotypes), kernelColor, notes)) %>% 
+  arrange(location, sublocation, block, plotNumber)
+# add 2022 cleaned data + check metadata
+inbreds2022_earlevel <- read_csv('finalData/oldVersions/HIPS_INBREDS_2022_EARLEVEL_V2.csv')
+inbreds_all <- bind_rows(inbreds2022_earlevel, inbreds) %>% 
+  mutate(block = case_when(experiment=='LC_2351' & (range < 26 | (range==26 & row > 4)) ~ 3, 
+                           experiment=='LC_2351' & !(range < 26 | (range==26 & row >4)) ~ 4,
+                           experiment=='LC_2352' & (range < 24 | (range==24 & row < 25)) ~ 1, 
+                           experiment=='LC_2352' & !(range < 24 | (range==24 & row < 25)) ~ 2,
+                           .default = block))
 # write out 2023 ear level inbreds
