@@ -240,4 +240,6 @@ inbreds_all <- bind_rows(inbreds2022_earlevel, inbreds) %>%
                            experiment=='LC_2352' & (range < 24 | (range==24 & row < 25)) ~ 1, 
                            experiment=='LC_2352' & !(range < 24 | (range==24 & row < 25)) ~ 2,
                            .default = block))
+
+write_csv(inbreds_all, 'finalData/HIPS_INBREDS_2022_2023_EARLEVEL.csv')
 # write out 2023 ear level inbreds
