@@ -109,9 +109,6 @@ ac <- full_join(krn_ears_cobs, seeds, join_by(sampleID, qrCode)) %>%
                                       kernelMassPerEar > 200 ~ NA,
                                       .default = kernelMassPerEar))
 
-phenotypes <- c('earLength', 'earWidth', 'earMass', 'kernelRowNumber', 'cobLength', 'cobWidth', 'kernelsPerEar',
-                'kernelMassPerEar')
-
 # Address additional notes cols from krn in this call
 ia_eardata <- ac %>% 
   select(!c(earMass, earLength)) %>%
@@ -191,6 +188,7 @@ inbreds <- bind_rows(ia_data, ne_eardata) %>%
          genotype = str_to_upper(genotype), 
          irrigationProvided = 0) %>% 
   rename(earLength = shelledCobLength) %>% 
+  rowwise() %>% 
   mutate(genotype = case_when(genotype=='AK-01' ~ 'UFMU-02421', 
                               genotype=='AK-02' ~ 'UFMU-05595',
                               genotype=='AK-03' ~ 'UFMU-07581',
@@ -203,9 +201,9 @@ inbreds <- bind_rows(ia_data, ne_eardata) %>%
                               genotype=='AK-10' ~ 'W22 R1-R',
                               genotype=='AK-11' ~ 'B73',
                               genotype=="[WHITE VARIEGATED (ISO. FROM BM4 AC3252) (B73-1)]" ~ 'WHITE VARIEGATED',
-                              .default = genotype)) %>% 
+                              .default = genotype), 
+         earLength = max(earLength, cobLength, na.rm = TRUE)) %>% 
   filter(!(genotype %in% c(NA, 'FILLER', 'PIONEER P1185AM'))) %>% 
-  rowwise() %>% 
   mutate(kernelMassPerEar = case_when((is.na(kernelMassPerEar) | str_detect(notes, 'spill')) & !(is.na(earMass) | is.na(shelledCobMass)) 
                                       ~ earMass - shelledCobMass, 
                                       .default = kernelMassPerEar), 
@@ -216,8 +214,21 @@ inbreds <- bind_rows(ia_data, ne_eardata) %>%
   #        range, plotNumber, genotype, earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber,
   #        kernelsPerEar, hundredKernelMass, earMass, kernelMassPerEar, shelledCobMass, kernelColor, notes) %>%
   # arrange(location, sublocation, block, plotNumber)
-
-inbreds_wide <- plotRepCorr2(inbreds, phenotypes = phenotypes)
+phenotypes <- c('kernelRowNumber', 'earWidth', 'shelledCobWidth', 'shelledCobMass', 'kernelsPerEar', 'kernelMassPerEar', 'hundredKernelMass', 
+                'earFillLength', 'kernelsPerRow', 'earMass', 'earLength')
 # check metadata
 # check correlation
+inbreds_wide <- plotRepCorr2(inbreds, phenotypes = phenotypes)
+# Remove outliers
+inbreds <- inbreds %>% 
+  mutate(kernelRowNumber = case_when(kernelRowNumber > 25 ~ NA, .default = kernelRowNumber), 
+         shelledCobMass = case_when(shelledCobMass > 100 ~ NA, .default = shelledCobMass), 
+         kernelsPerEar = case_when(kernelsPerEar > 825 ~ NA, .default = kernelsPerEar), 
+         kernelMassPerEar = case_when(kernelMassPerEar < 0 | kernelMassPerEar > 200 ~ NA, 
+                                      .default = kernelMassPerEar), 
+         hundredKernelMass = case_when(hundredKernelMass < 0 | hundredKernelMass > 50 ~ NA, 
+                                       .default = hundredKernelMass), 
+         earLength = case_when(earLength < 25 ~ NA, .default = earLength)) %>% 
+  select(c(qrCode, sampleID, year, locationYear, environment, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, plotNumber, block, row, range, all_of(phenotypes), kernelColor, notes))
+
 # write out 2023 ear level inbreds
