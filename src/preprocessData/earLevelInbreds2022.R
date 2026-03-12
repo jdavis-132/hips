@@ -533,22 +533,22 @@ for(i in responseVars)
 
 inbreds <- inbreds %>%
   rowwise() %>%
-  mutate(earLength = case_when(earLength > 25  ~ NA, 
+  mutate(earLength = case_when(earLength > 25  ~ NA,
                                .default = earLength),
-         earWidth = case_when(!between(earWidth, 1.25, 6.25) ~ NA, 
+         earWidth = case_when(!between(earWidth, 1.25, 6.25) ~ NA,
                               .default = earWidth),
-         hundredKernelMass = case_when(!between(hundredKernelMass, 5, 40) ~ NA, 
+         hundredKernelMass = case_when(!between(hundredKernelMass, 5, 40) ~ NA,
                                        .default = hundredKernelMass),
          kernelMassPerEar = case_when(kernelMassPerEar > 155 ~ NA,
                                       .default = kernelMassPerEar),
          kernelRowNumber = case_when(kernelRowNumber < 5 ~ NA,
                                      .default = kernelRowNumber),
-         kernelsPerEar = case_when(kernelsPerEar > 650 ~ NA, 
+         kernelsPerEar = case_when(kernelsPerEar > 650 ~ NA,
                                    .default = kernelsPerEar),
          kernelsPerRow = case_when(kernelsPerRow > 45 ~ NA, .default = kernelsPerRow),
          shelledCobMass = case_when(shelledCobMass > 40  ~ NA,
                                     .default = shelledCobMass),
-         shelledCobWidth = case_when(!between(shelledCobWidth, 0.75, 3.5) ~ NA, 
+         shelledCobWidth = case_when(!between(shelledCobWidth, 0.75, 3.5) ~ NA,
                                      .default = shelledCobWidth))
 inbreds <- inbreds %>%
   mutate(earWidth = round(earWidth, digits = 3),
