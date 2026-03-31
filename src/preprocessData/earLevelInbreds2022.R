@@ -261,7 +261,7 @@ inbreds <- inbreds %>%
   unite('notes', c(notes, notes.ia), sep = ';', na.rm = TRUE) %>%
   select(location, plotNumber, qrCode, row, range, genotype, block, numberPrimaryEars, numberSecondaryEars, looseKernels, 
          looseKernelMass, secondaryEarKernels, kernelColor, kernelStriping, earWidth, kernelFillLength, kernelRowNumber, kernelsPerRow,
-         kernelsPerEar, shelledCobWidth, shelledCobLength, shelledCobMass, hundredKernelMass, kernelMassPerEar, notes, experiment,
+         kernelsPerEar, shelledCobWidth, shelledCobLength, shelledCobMass, hundredKernelMass, kernelMassPerEar, earMass, notes, experiment,
          plantDensity, plantingDate, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, totalStandCount)
 
 # # Missouri Valley height data
@@ -402,7 +402,8 @@ inbreds2 <- inbreds2 %>%
          shelledCobWidth = max(shelledCobWidth, shelledCobWidth.ac, na.rm = TRUE), 
          kernelsPerEar = max(kernelsPerEar, kernelsPerEar.ac, na.rm = TRUE),
          kernelMassPerEar = max(kernelMassPerEar, kernelMassPerEar.ac, na.rm = TRUE),
-         shelledCobMass = max(shelledCobMass, shelledCobMass.ac, na.rm = TRUE)) %>%
+         shelledCobMass = max(shelledCobMass, shelledCobMass.ac, na.rm = TRUE), 
+         earMass = max(earMass, earMass.ac, na.rm = TRUE)) %>%
   unite('notes', notes, notes.ac, sep = ';', remove = TRUE, na.rm = TRUE) %>%
   select(!ends_with('.ac')) %>%
   select(!c(looseKernels, looseKernelMass, qrCode.krn))
@@ -532,22 +533,22 @@ for(i in responseVars)
 
 inbreds <- inbreds %>%
   rowwise() %>%
-  mutate(earLength = case_when(earLength > 25  ~ NA, 
+  mutate(earLength = case_when(earLength > 25  ~ NA,
                                .default = earLength),
-         earWidth = case_when(!between(earWidth, 1.25, 6.25) ~ NA, 
+         earWidth = case_when(!between(earWidth, 1.25, 6.25) ~ NA,
                               .default = earWidth),
-         hundredKernelMass = case_when(!between(hundredKernelMass, 5, 40) ~ NA, 
+         hundredKernelMass = case_when(!between(hundredKernelMass, 5, 40) ~ NA,
                                        .default = hundredKernelMass),
          kernelMassPerEar = case_when(kernelMassPerEar > 155 ~ NA,
                                       .default = kernelMassPerEar),
          kernelRowNumber = case_when(kernelRowNumber < 5 ~ NA,
                                      .default = kernelRowNumber),
-         kernelsPerEar = case_when(kernelsPerEar > 650 ~ NA, 
+         kernelsPerEar = case_when(kernelsPerEar > 650 ~ NA,
                                    .default = kernelsPerEar),
          kernelsPerRow = case_when(kernelsPerRow > 45 ~ NA, .default = kernelsPerRow),
          shelledCobMass = case_when(shelledCobMass > 40  ~ NA,
                                     .default = shelledCobMass),
-         shelledCobWidth = case_when(!between(shelledCobWidth, 0.75, 3.5) ~ NA, 
+         shelledCobWidth = case_when(!between(shelledCobWidth, 0.75, 3.5) ~ NA,
                                      .default = shelledCobWidth))
 inbreds <- inbreds %>%
   mutate(earWidth = round(earWidth, digits = 3),
@@ -563,7 +564,7 @@ inbreds <- inbreds %>%
          earLength = round(earLength, digits = 3)) %>%
   select(qrCode, location, sublocation, irrigationProvided, nitrogenTreatment, poundsOfNitrogenPerAcre, experiment, block, row,
          range, plotNumber, genotype, plantingDate, earLength, earFillLength, earWidth, shelledCobWidth, kernelsPerRow, kernelRowNumber,
-         kernelsPerEar, hundredKernelMass, kernelMassPerEar, shelledCobMass, kernelColor, notes) %>%
+         kernelsPerEar, hundredKernelMass, kernelMassPerEar, shelledCobMass, kernelColor, earMass, notes) %>%
   arrange(location, sublocation, block, plotNumber)
 
 responseVars <- c(c('earWidth', 'earFillLength', 'kernelRowNumber',
@@ -647,5 +648,5 @@ v495_wide <- plotRepCorr2(v495, phenotypes = responseVars)
 #   full_join(sb495, join_by(row, range), keep = FALSE, suffix = c('.5', '.495')) %>%
 #   select(qrCode.5, qrCode.495, row, range, genotype.5, genotype.495, plotNumber.5, plotNumber.495, kernelRowNumber.5, kernelRowNumber.495)
 
-write_csv(v495, 'finalData/HIPS_INBREDS_2022_EARLEVEL_V2.csv')
+write_csv(v495, 'finalData/oldVersions/HIPS_INBREDS_2022_EARLEVEL_V2.csv')
 
