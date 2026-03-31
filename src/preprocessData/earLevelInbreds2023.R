@@ -228,7 +228,11 @@ inbreds <- inbreds %>%
                                       .default = kernelMassPerEar), 
          hundredKernelMass = case_when(hundredKernelMass < 0 | hundredKernelMass > 50 ~ NA, 
                                        .default = hundredKernelMass), 
-         earLength = case_when(earLength < 25 ~ NA, .default = earLength)) %>% 
+         earLength = case_when(earLength < 25 ~ NA, .default = earLength)) %>%
+  mutate(earWidth = earWidth*0.1, 
+         shelledCobWidth = shelledCobWidth*0.1, 
+         earFillLength = earFillLength*0.1, 
+         earLength = earLength*0.1) %>%
   select(c(qrCode, sampleID, year, locationYear, environment, location, sublocation, irrigationProvided, nitrogenTreatment,
            poundsOfNitrogenPerAcre, experiment, plotNumber, block, row, range, genotype, all_of(phenotypes), kernelColor, notes)) %>% 
   arrange(location, sublocation, block, plotNumber)
@@ -241,6 +245,13 @@ inbreds_all <- bind_rows(inbreds2022_earlevel, inbreds) %>%
                            experiment=='LC_2352' & !(range < 24 | (range==24 & row < 25)) ~ 2,
                            .default = block))
 
-write_csv(inbreds_all, 'finalData/HIPS_INBREDS_2022_2023_EARLEVEL_v3.csv')
+for(p in phenotypes)
+{
+  p <- ggplot(inbreds_all, aes(.data[[p]], fill = as.factor(year))) + 
+    geom_histogram()
+  print(p)
+}
+
+write_csv(inbreds_all, 'finalData/HIPS_INBREDS_2022_2023_EARLEVEL_v3.1.csv')
 
 # write out 2023 ear level inbreds
