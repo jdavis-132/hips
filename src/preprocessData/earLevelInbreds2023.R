@@ -230,7 +230,7 @@ inbreds <- inbreds %>%
                                        .default = hundredKernelMass), 
          earLength = case_when(earLength < 25 ~ NA, .default = earLength)) %>% 
   select(c(qrCode, sampleID, year, locationYear, environment, location, sublocation, irrigationProvided, nitrogenTreatment,
-           poundsOfNitrogenPerAcre, experiment, plotNumber, block, row, range, all_of(phenotypes), kernelColor, notes)) %>% 
+           poundsOfNitrogenPerAcre, experiment, plotNumber, block, row, range, genotype, all_of(phenotypes), kernelColor, notes)) %>% 
   arrange(location, sublocation, block, plotNumber)
 # add 2022 cleaned data + check metadata
 inbreds2022_earlevel <- read_csv('finalData/oldVersions/HIPS_INBREDS_2022_EARLEVEL_V2.csv')
@@ -241,5 +241,5 @@ inbreds_all <- bind_rows(inbreds2022_earlevel, inbreds) %>%
                            experiment=='LC_2352' & !(range < 24 | (range==24 & row < 25)) ~ 2,
                            .default = block))
 
-write_csv(inbreds_all, 'finalData/HIPS_INBREDS_2022_2023_EARLEVEL.csv')
+write_csv(inbreds_all, 'finalData/HIPS_INBREDS_2022_2023_EARLEVEL_v2.csv')
 # write out 2023 ear level inbreds
